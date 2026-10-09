@@ -7,6 +7,25 @@ from rck.core.structures import AdjacencyGroup, AdjacencyGroupType
 from rck.core.io import AG_LABELING, EXTERNAL_NA_ID
 
 
+def connected_component_subgraphs(G, copy=True):
+    """Connected components as subgraphs.
+
+    networkx removed ``connected_component_subgraphs`` in 2.4; this is the replacement
+    its own deprecation notice gives.
+
+    Args:
+        G: An undirected graph.
+        copy: Return independent copies rather than views.
+
+    Yields:
+        One subgraph per connected component.
+    """
+    for component in nx.connected_components(G):
+        subgraph = G.subgraph(component)
+        yield subgraph.copy() if copy else subgraph
+
+
+
 def refine_labeling_groups_old(adj_groups, gid_suffix="", retain_source_gids=False, iag=None):
     graph = nx.Graph()
     entries_to_adj_groups = defaultdict(list)
@@ -22,7 +41,7 @@ def refine_labeling_groups_old(adj_groups, gid_suffix="", retain_source_gids=Fal
             graph.add_edge(l, r)
     result = []
     cnt = 0
-    for cc in nx.connected_component_subgraphs(graph):
+    for cc in connected_component_subgraphs(graph):
         entries = list(cc.nodes())
         gids = set()
         for entry in entries:
@@ -64,7 +83,7 @@ def refine_labeling_groups_without_iag(adj_groups, gid_suffix="", retain_source_
             graph.add_edge(l, r)
     result = []
     cnt = 0
-    for cc in nx.connected_component_subgraphs(graph):
+    for cc in connected_component_subgraphs(graph):
         entries = list(cc.nodes())
         gids = set()
         for entry in entries:
@@ -126,7 +145,7 @@ def refined_labeling_groups(adj_groups, iag=None, adjacencies=None, gid_suffix="
                     graph.add_edge(u, v)
     result = []
     cnt = 0
-    for cc in nx.connected_component_subgraphs(graph):
+    for cc in connected_component_subgraphs(graph):
         internal_entries = list(cc.nodes())
         gids = set()
         for entry in internal_entries:

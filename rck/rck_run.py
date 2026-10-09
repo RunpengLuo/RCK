@@ -145,7 +145,7 @@ def main():
     args = parser.parse_args()
 
     from rck.core.ilp_gurobi import OptModelMultiClone, DEFAULT_GROUP_M_FP, SEGMENT_LENGTH_ATTRIBUTE, DEFAULT_GROUP_N_FP, merge_variables_from_presolve
-    import gurobi as g
+    import gurobipy as g
     logger = get_standard_logger_from_args(args=args, program_name="RCK")
 
     workdir = args.workdir if args.workdir is not None else "RCK-{date}".format(date=str(datetime.date.today()))
@@ -645,7 +645,7 @@ def main():
     scnt_base_name = args.out_prefix_name + "rck.scnt.tsv"
     if scnt_base_name.startswith("."):
         scnt_base_name = scnt_base_name[1:]
-    scnt_base_name = re.sub("\.+", ".", scnt_base_name)
+    scnt_base_name = re.sub(r"\.+", ".", scnt_base_name)
     scnt_file_path = os.path.join(output_dir, scnt_base_name)
     logger.info("Writing inferred diploid segment copy number data to {file}".format(file=scnt_file_path))
     remove_cn_data_from_segments(segments=segments)
@@ -653,7 +653,7 @@ def main():
     acnt_base_name = args.out_prefix_name + "rck.acnt.tsv"
     if acnt_base_name.startswith("."):
         acnt_base_name = acnt_base_name[1:]
-    acnt_base_name = re.sub("\.+", ".", acnt_base_name)
+    acnt_base_name = re.sub(r"\.+", ".", acnt_base_name)
     acnt_file_path = os.path.join(output_dir, acnt_base_name)
     logger.info("Writing inferred diploid adjacency copy number data to {file}".format(file=acnt_file_path))
     remove_cn_data_from_adjacencies(adjacencies=adjacencies)

@@ -5,6 +5,25 @@ import networkx as nx
 from rck.core.structures import propagate_haplotype_segment_to_positions, propagate_phasing_adjacency_to_positions
 from rck.core.structures import SegmentCopyNumberProfile, AdjacencyCopyNumberProfile, StructureProfile, Segment, Adjacency, AdjacencyType, HAPLOTYPE, Haplotype, Phasing, PHASING
 
+
+def connected_component_subgraphs(G, copy=True):
+    """Connected components as subgraphs.
+
+    networkx removed ``connected_component_subgraphs`` in 2.4; this is the replacement
+    its own deprecation notice gives.
+
+    Args:
+        G: An undirected graph.
+        copy: Return independent copies rather than views.
+
+    Yields:
+        One subgraph per connected component.
+    """
+    for component in nx.connected_components(G):
+        subgraph = G.subgraph(component)
+        yield subgraph.copy() if copy else subgraph
+
+
 COPY_NUMBER = "copy_number"
 
 
@@ -197,7 +216,7 @@ class IntervalAdjacencyGraph(object):
         if nov:
             for u, v, data in self.nov_adjacency_edges(data=True, sort=True):
                 adjacency_edge_only_iag.graph.add_edge(u, v, **data)
-        for adj_iag_cc in nx.connected_component_subgraphs(G=adjacency_edge_only_iag.graph, copy=copy):
+        for adj_iag_cc in connected_component_subgraphs(adjacency_edge_only_iag.graph, copy=copy):
             iag = self.__class__()
             iag.graph = adj_iag_cc
             yield iag

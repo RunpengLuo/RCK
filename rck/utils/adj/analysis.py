@@ -5,6 +5,25 @@ import networkx as nx
 from rck.core.structures import Adjacency, Position, Strand, AdjacencyType
 
 
+def connected_component_subgraphs(G, copy=True):
+    """Connected components as subgraphs.
+
+    networkx removed ``connected_component_subgraphs`` in 2.4; this is the replacement
+    its own deprecation notice gives.
+
+    Args:
+        G: An undirected graph.
+        copy: Return independent copies rather than views.
+
+    Yields:
+        One subgraph per connected component.
+    """
+    for component in nx.connected_components(G):
+        subgraph = G.subgraph(component)
+        yield subgraph.copy() if copy else subgraph
+
+
+
 class ComplexRearrSignature(object):
     def __init__(self, adjacencies: Iterable[Adjacency], ref_locations: Iterable[Adjacency] = None):
         self.adjacencies: List[Adjacency] = list(adjacencies)
@@ -32,6 +51,6 @@ def get_complex_rearrangements_signatures(adjacencies: Iterable[Adjacency]) -> I
             p2 = Position.get_reciprocal(position=p2)
         cr_graph.add_edge(p1, p2, adjacency=adjacency)
     result: List[ComplexRearrSignature] = []
-    for cc in nx.connected_component_subgraphs(cr_graph):
+    for cc in connected_component_subgraphs(cr_graph):
         result.append(ComplexRearrSignature(adjacencies=[edge[2]["adjacency"] for edge in cc.edges(data=True)]))
     return result

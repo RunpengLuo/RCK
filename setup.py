@@ -39,9 +39,9 @@ setup(
         ]
     },
     install_requires=[
-        "networkx>=2",
+        "networkx>=2.4",
         "scipy",
-        "pyvcf",
+        "pyvcf3",
         "pysam",
         "sortedcontainers",
         "pandas",

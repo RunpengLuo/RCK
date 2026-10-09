@@ -1,4 +1,7 @@
-import gurobi as g
+# Gurobi 9 renamed the importable module to gurobipy and moved the
+# addConstr(lhs, sense, rhs, name) signature to addLConstr; addConstr now takes a
+# single expression. Every constraint in this module is linear, so addLConstr is exact.
+import gurobipy as g
 
 from rck.core.graph import IntervalAdjacencyGraph
 from rck.core.io import FALSE_POSITIVE, EXTERNAL_NA_ID, AG_LABELING
@@ -450,7 +453,7 @@ class OptModelMultiClone(object):
                 sid = segment.stable_id_non_hap
                 fid = self.hapl_segments_to_fragments[sid]
                 f_var = self.variables[FRAGMENT_ALLELE][fid]
-                self.gm.addConstr(f_var, g.GRB.EQUAL, 1, name="allele-flipping-fix-haploid-{{{cid},{fid}}}".format(cid=clone_id, fid=str(fid)))
+                self.gm.addLConstr(f_var, g.GRB.EQUAL, 1, name="allele-flipping-fix-haploid-{{{cid},{fid}}}".format(cid=clone_id, fid=str(fid)))
 
     def define_segment_copy_number_boundary_constraints(self):
         """
@@ -483,10 +486,10 @@ class OptModelMultiClone(object):
                 if self.solve_as_haploid:
                     lower_b, upper_b = 0, 0
                 ####
-                self.gm.addConstr(s_cn_a_var, g.GRB.LESS_EQUAL, f_var * upper_a + (1 - f_var) * upper_b, name="scnb-A-upper-{{{cid},{sid}}}".format(cid=clone_id, sid=sid))
-                self.gm.addConstr(s_cn_a_var, g.GRB.GREATER_EQUAL, f_var * lower_a + (1 - f_var) * lower_b, name="scnb-A-lower-{{{cid},{sid}}}".format(cid=clone_id, sid=sid))
-                self.gm.addConstr(s_cn_b_var, g.GRB.LESS_EQUAL, (1 - f_var) * upper_a + f_var * upper_b, name="scnb-B-upper-{{{cid},{sid}}}".format(cid=clone_id, sid=sid))
-                self.gm.addConstr(s_cn_b_var, g.GRB.GREATER_EQUAL, (1 - f_var) * lower_a + f_var * lower_b, name="scnb-B-lower-{{{cid},{sid}}}".format(cid=clone_id, sid=sid))
+                self.gm.addLConstr(s_cn_a_var, g.GRB.LESS_EQUAL, f_var * upper_a + (1 - f_var) * upper_b, name="scnb-A-upper-{{{cid},{sid}}}".format(cid=clone_id, sid=sid))
+                self.gm.addLConstr(s_cn_a_var, g.GRB.GREATER_EQUAL, f_var * lower_a + (1 - f_var) * lower_b, name="scnb-A-lower-{{{cid},{sid}}}".format(cid=clone_id, sid=sid))
+                self.gm.addLConstr(s_cn_b_var, g.GRB.LESS_EQUAL, (1 - f_var) * upper_a + f_var * upper_b, name="scnb-B-upper-{{{cid},{sid}}}".format(cid=clone_id, sid=sid))
+                self.gm.addLConstr(s_cn_b_var, g.GRB.GREATER_EQUAL, (1 - f_var) * lower_a + f_var * lower_b, name="scnb-B-lower-{{{cid},{sid}}}".format(cid=clone_id, sid=sid))
 
     def define_big_m_constraints_for_adjacencies_copy_numbers(self):
         for clone_id in self.clone_ids:
@@ -505,14 +508,14 @@ class OptModelMultiClone(object):
                 c_max = max(s1_cn_boundaries + s2_cn_boundaries)
                 for ph in [Phasing.AA, Phasing.AB, Phasing.BA, Phasing.BB]:
                     aid = adjacency.stable_id_non_phased
-                    self.gm.addConstr(c_max * self.variables[P][clone_id][aid][ph], g.GRB.GREATER_EQUAL, self.variables[PROD][PY][clone_id][aid][ph])
-                    self.gm.addConstr(self.variables[PROD][PY][clone_id][aid][ph], g.GRB.GREATER_EQUAL, 0.0)
+                    self.gm.addLConstr(c_max * self.variables[P][clone_id][aid][ph], g.GRB.GREATER_EQUAL, self.variables[PROD][PY][clone_id][aid][ph])
+                    self.gm.addLConstr(self.variables[PROD][PY][clone_id][aid][ph], g.GRB.GREATER_EQUAL, 0.0)
                     if adjacency.adjacency_type == AdjacencyType.NOVEL:
                         a_cn_var = self.variables[YN][clone_id][aid]
                     else:
                         a_cn_var = self.variables[YR][clone_id][aid][ph]
-                    self.gm.addConstr(a_cn_var, g.GRB.GREATER_EQUAL, self.variables[PROD][PY][clone_id][aid][ph])
-                    self.gm.addConstr(a_cn_var - c_max * (1 - self.variables[P][clone_id][aid][ph]), g.GRB.LESS_EQUAL,
+                    self.gm.addLConstr(a_cn_var, g.GRB.GREATER_EQUAL, self.variables[PROD][PY][clone_id][aid][ph])
+                    self.gm.addLConstr(a_cn_var - c_max * (1 - self.variables[P][clone_id][aid][ph]), g.GRB.LESS_EQUAL,
                                       self.variables[PROD][PY][clone_id][aid][ph])
 
     def define_constraints_for_labeling(self):
@@ -531,7 +534,7 @@ class OptModelMultiClone(object):
             for adjacency in filter(lambda a: a.adjacency_type == AdjacencyType.REFERENCE, self.hapl_adjacencies):
                 aid = adjacency.stable_id_non_phased
                 for ph in [Phasing.AB, Phasing.BA]:
-                    self.gm.addConstr(self.variables[P][clone_id][aid][ph], g.GRB.EQUAL, 0, name="ph_{{r,{cid},{aid},{phas}}}".format(cid=str(clone_id),
+                    self.gm.addLConstr(self.variables[P][clone_id][aid][ph], g.GRB.EQUAL, 0, name="ph_{{r,{cid},{aid},{phas}}}".format(cid=str(clone_id),
                                                                                                                                       aid=str(aid),
                                                                                                                                       phas=str(ph)))
                 ###
@@ -539,7 +542,7 @@ class OptModelMultiClone(object):
                 #   via fixing binary indicator at 0)
                 ###
                 if self.solve_as_haploid:
-                    self.gm.addConstr(self.variables[P][clone_id][aid][Phasing.BB], g.GRB.EQUAL, 0, name="ph_{{r,{cid},{aid},hapl-{phas}}}".format(cid=str(clone_id),
+                    self.gm.addLConstr(self.variables[P][clone_id][aid][Phasing.BB], g.GRB.EQUAL, 0, name="ph_{{r,{cid},{aid},hapl-{phas}}}".format(cid=str(clone_id),
                                                                                                                                                    aid=str(aid),
                                                                                                                                                    phas=str(Phasing.BB)))
 
@@ -549,7 +552,7 @@ class OptModelMultiClone(object):
         for adjacency in filter(lambda a: a.adjacency_type == AdjacencyType.NOVEL, self.hapl_adjacencies):
             aid = adjacency.stable_id_non_phased
             fp_lin_expr.add(g.quicksum([self.variables[PROD][PP][aid][ph] for ph in [Phasing.AA, Phasing.AB, Phasing.BA, Phasing.BB]]), mult=(1.0 / hapl_nov_adjs_cnt))
-        self.gm.addConstr(fp_lin_expr, g.GRB.GREATER_EQUAL, g.LinExpr(1 - self.hapl_nov_adjacencies_fp), name="nov-adj-fp")
+        self.gm.addLConstr(fp_lin_expr, g.GRB.GREATER_EQUAL, g.LinExpr(1 - self.hapl_nov_adjacencies_fp), name="nov-adj-fp")
 
     def define_constraints_for_novel_labeling(self):
         for adjacency in filter(lambda a: a.adjacency_type == AdjacencyType.NOVEL, self.hapl_adjacencies):
@@ -565,7 +568,7 @@ class OptModelMultiClone(object):
             ###
             # force presence of a diploid counterpart adjacency for an observed unlabeled one
             ###
-            self.gm.addConstr(g.quicksum([self.variables[PROD][PP][aid][ph] for ph in [Phasing.AA, Phasing.AB, Phasing.BA, Phasing.BB]]),
+            self.gm.addLConstr(g.quicksum([self.variables[PROD][PP][aid][ph] for ph in [Phasing.AA, Phasing.AB, Phasing.BA, Phasing.BB]]),
                               g.GRB.LESS_EQUAL, 1, name="pp-nov-uniq-dip_{{{aid}}}".format(aid=str(aid)))
 
             ###
@@ -574,14 +577,14 @@ class OptModelMultiClone(object):
             ###
             if adjacency.is_self_loop_hapl:
                 for ph in [Phasing.AB, Phasing.BA]:
-                    self.gm.addConstr(self.variables[PROD][PP][aid][ph], g.GRB.EQUAL, 0)
+                    self.gm.addLConstr(self.variables[PROD][PP][aid][ph], g.GRB.EQUAL, 0)
             ###
             # If we are solving the problem in a haploid setting, then we must force every labeling choice, except for AA one, to not be present
             # (i.e., indicator forced to equal to 0)
             ###
             if self.solve_as_haploid:
                 for ph in [Phasing.AB, Phasing.BA, Phasing.BB]:
-                    self.gm.addConstr(self.variables[PROD][PP][aid][ph], g.GRB.EQUAL, 0)
+                    self.gm.addLConstr(self.variables[PROD][PP][aid][ph], g.GRB.EQUAL, 0)
 
     def define_constraints_on_each_location(self):
         self.reciprocal_locations = []
@@ -603,13 +606,13 @@ class OptModelMultiClone(object):
                     expr1.add(self.variables[PROD][PP][u_na_id][get_abba_for_na_and_position(novel_adjacency=u_na, position=u, haplotype=Haplotype.A)], mult=1)
                     expr1.add(self.variables[PROD][PP][v_na_id][get_abba_for_na_and_position(novel_adjacency=v_na, position=v, haplotype=Haplotype.B)], mult=1)
                     expr1.add(self.variables[PROD][PP][v_na_id][get_aabb_for_ra(haplotype=Haplotype.B)], mult=1)
-                    self.gm.addConstr(expr1, g.GRB.LESS_EQUAL, 1, name="reciprocal_location_1_{{{u},{v},{u_aid},{v_aid}}}"
+                    self.gm.addLConstr(expr1, g.GRB.LESS_EQUAL, 1, name="reciprocal_location_1_{{{u},{v},{u_aid},{v_aid}}}"
                                                                        "".format(u=str(u), v=str(v), u_aid=str(u_na_id), v_aid=str(v_na_id)))
                     expr2.add(self.variables[PROD][PP][u_na_id][get_aabb_for_ra(haplotype=Haplotype.B)], mult=1)
                     expr2.add(self.variables[PROD][PP][u_na_id][get_abba_for_na_and_position(novel_adjacency=u_na, position=u, haplotype=Haplotype.B)], mult=1)
                     expr2.add(self.variables[PROD][PP][v_na_id][get_abba_for_na_and_position(novel_adjacency=v_na, position=v, haplotype=Haplotype.A)], mult=1)
                     expr2.add(self.variables[PROD][PP][v_na_id][get_aabb_for_ra(haplotype=Haplotype.A)], mult=1)
-                    self.gm.addConstr(expr2, g.GRB.LESS_EQUAL, 1, name="reciprocal_location_2_{{{u},{v},{u_aid},{v_aid}}}"
+                    self.gm.addLConstr(expr2, g.GRB.LESS_EQUAL, 1, name="reciprocal_location_2_{{{u},{v},{u_aid},{v_aid}}}"
                                                                        "".format(u=str(u), v=str(v), u_aid=str(u_na_id), v_aid=str(v_na_id)))
             # if len(u_na_edges_w_data) > 1 or len(v_na_edges_w_data) > 1:
             #     continue
@@ -626,8 +629,8 @@ class OptModelMultiClone(object):
             # expr.add(g.LinExpr(self.variables[PROD][PP][v_na_id][get_abba_for_na_and_position(novel_adjacency=v_na, position=v, haplotype=Haplotype.B)]), mult=1)
             # expr.add(g.LinExpr(self.variables[PROD][PP][u_na_id][get_aabb_for_ra(haplotype=Haplotype.B)]), mult=-1)
             # expr.add(g.LinExpr(self.variables[PROD][PP][u_na_id][get_abba_for_na_and_position(novel_adjacency=u_na, position=u, haplotype=Haplotype.B)]), mult=-1)
-            # self.gm.addConstr(expr, g.GRB.GREATER_EQUAL, -1, name="recip_nov_l_{{{u},{v},{u_aid},{v_aid}}}".format(u=str(u), v=str(v), u_aid=str(u_na_id), v_aid=str(v_na_id)))
-            # self.gm.addConstr(expr, g.GRB.LESS_EQUAL, 1, name="recip_nov_u_{{{u},{v},{u_aid},{v_aid}}}".format(u=str(u), v=str(v), u_aid=str(u_na_id), v_aid=str(v_na_id)))
+            # self.gm.addLConstr(expr, g.GRB.GREATER_EQUAL, -1, name="recip_nov_l_{{{u},{v},{u_aid},{v_aid}}}".format(u=str(u), v=str(v), u_aid=str(u_na_id), v_aid=str(v_na_id)))
+            # self.gm.addLConstr(expr, g.GRB.LESS_EQUAL, 1, name="recip_nov_u_{{{u},{v},{u_aid},{v_aid}}}".format(u=str(u), v=str(v), u_aid=str(u_na_id), v_aid=str(v_na_id)))
 
     def define_constraints_for_adjacency_groups(self):
         self.define_constraints_for_adjacency_groups_molecule()
@@ -649,12 +652,12 @@ class OptModelMultiClone(object):
                 # in every clone, we force the total number of "realized" novel adjacencies in the group to be greater or equal to (1 - fp) * |u| * p_{i,u}
                 #   when p_{i,u} is 0, this inequality always holds, while when it is 1, the total number is forced to be greater or equal to the (1 - fp) * |u| of the group
                 ###
-                self.gm.addConstr(g.LinExpr(group_var * group_size * (1 - fp)), g.GRB.LESS_EQUAL, lin_expr, name="group-molecule_{{{cid},{gid}}}".format(cid=str(clone_id),
+                self.gm.addLConstr(g.LinExpr(group_var * group_size * (1 - fp)), g.GRB.LESS_EQUAL, lin_expr, name="group-molecule_{{{cid},{gid}}}".format(cid=str(clone_id),
                                                                                                                                                          gid=str(adj_group.gid)))
             ###
             # we force in at least 1 clone the p_{i, u} variable to be equal to 1, thus forcing at least one clone-specific inequality to force the group (fraction) realization
             ###
-            self.gm.addConstr(g.quicksum([self.variables[ADJ_GROUPS_M][clone_id][adj_group.gid] for clone_id in self.clone_ids]),
+            self.gm.addLConstr(g.quicksum([self.variables[ADJ_GROUPS_M][clone_id][adj_group.gid] for clone_id in self.clone_ids]),
                               g.GRB.GREATER_EQUAL, 1, name="group-molecule-across_{{{gid}}}".format(gid=str(adj_group.gid)))
 
     def define_constraints_for_adjacency_groups_general(self):
@@ -665,7 +668,7 @@ class OptModelMultiClone(object):
             for adjacency in adj_group.adjacencies:
                 aid = adjacency.stable_id_non_phased
                 fp_lin_expr.add(g.quicksum([self.variables[PROD][PP][aid][ph] for ph in [Phasing.AA, Phasing.AB, Phasing.BA, Phasing.BB]]), mult=(1.0 / group_size))
-            self.gm.addConstr(fp_lin_expr, g.GRB.GREATER_EQUAL, g.LinExpr(1 - fp), name="general_group-fp_{{{gid}}}".format(gid=adj_group.gid))
+            self.gm.addLConstr(fp_lin_expr, g.GRB.GREATER_EQUAL, g.LinExpr(1 - fp), name="general_group-fp_{{{gid}}}".format(gid=adj_group.gid))
 
     def define_constraints_for_adjacency_groups_labeling(self):
         if self.solve_as_haploid:
@@ -696,7 +699,7 @@ class OptModelMultiClone(object):
                                                                                                                         position=position, haplotype=haplotype)])
                 self.gm.addGenConstrOr(group_var, positions_adjacency_variables, name="labeling_group-{{{gid},{hap}}}".format(gid=adj_group.gid,
                                                                                                                               hap=haplotype.value))
-            self.gm.addConstr(g.quicksum(group_vars), g.GRB.LESS_EQUAL, 1, name="labeling_group-{{{gid}}}".format(gid=adj_group.gid))
+            self.gm.addLConstr(g.quicksum(group_vars), g.GRB.LESS_EQUAL, 1, name="labeling_group-{{{gid}}}".format(gid=adj_group.gid))
 
     def define_constraints_on_nodes(self):
         """
@@ -708,10 +711,10 @@ class OptModelMultiClone(object):
                 for haplotype in [Haplotype.A, Haplotype.B]:
                     lin_exp = self.get_lin_expr_for_node_haplotype(clone_id=clone_id, node=node, haplotype=haplotype)
                     if node in self.hapl_telomeres:
-                        self.gm.addConstr(lin_exp, g.GRB.GREATER_EQUAL, 0, name="cne_{{{cid},{v},{hap}}}".format(cid=str(clone_id),
+                        self.gm.addLConstr(lin_exp, g.GRB.GREATER_EQUAL, 0, name="cne_{{{cid},{v},{hap}}}".format(cid=str(clone_id),
                                                                                                                  v=str(node), hap=str(haplotype)))
                     else:
-                        self.gm.addConstr(lin_exp, g.GRB.EQUAL, 0, name="cnb_{{{cid},{v},{hap}}}".format(cid=str(clone_id), v=str(node), hap=str(haplotype)))
+                        self.gm.addLConstr(lin_exp, g.GRB.EQUAL, 0, name="cnb_{{{cid},{v},{hap}}}".format(cid=str(clone_id), v=str(node), hap=str(haplotype)))
 
     def get_lin_expr_for_node_haplotype(self, clone_id, node, haplotype):
         result = g.LinExpr()
@@ -762,17 +765,17 @@ class OptModelMultiClone(object):
                 delta_var_a = self.variables[DELTA][clone_id][sid][Haplotype.A]
                 delta_var_b = self.variables[DELTA][clone_id][sid][Haplotype.B]
                 s_a_lin_expr = g.LinExpr(s_cn_a_var - f_var * s_cn_a - (1 - f_var) * s_cn_b)
-                self.gm.addConstr(delta_var_a, g.GRB.GREATER_EQUAL, s_a_lin_expr, name="delta-u_{{{cid},{sid},{hap}}}".format(cid=str(clone_id),
+                self.gm.addLConstr(delta_var_a, g.GRB.GREATER_EQUAL, s_a_lin_expr, name="delta-u_{{{cid},{sid},{hap}}}".format(cid=str(clone_id),
                                                                                                                               sid=str(sid),
                                                                                                                               hap=str(Haplotype.A)))
-                self.gm.addConstr(delta_var_a, g.GRB.GREATER_EQUAL, -1 * s_a_lin_expr, name="delta-l_{{{cid},{sid},{hap}}}".format(cid=str(clone_id),
+                self.gm.addLConstr(delta_var_a, g.GRB.GREATER_EQUAL, -1 * s_a_lin_expr, name="delta-l_{{{cid},{sid},{hap}}}".format(cid=str(clone_id),
                                                                                                                                    sid=str(sid),
                                                                                                                                    hap=str(Haplotype.A)))
                 s_b_lin_exp = g.LinExpr(s_cn_b_var - (1 - f_var) * s_cn_a - f_var * s_cn_b)
-                self.gm.addConstr(delta_var_b, g.GRB.GREATER_EQUAL, s_b_lin_exp, name="delta-u_{{{cid},{sid},{hap}}}".format(cid=str(clone_id),
+                self.gm.addLConstr(delta_var_b, g.GRB.GREATER_EQUAL, s_b_lin_exp, name="delta-u_{{{cid},{sid},{hap}}}".format(cid=str(clone_id),
                                                                                                                              sid=str(sid),
                                                                                                                              hap=str(Haplotype.B)))
-                self.gm.addConstr(delta_var_b, g.GRB.GREATER_EQUAL, -1 * s_b_lin_exp, name="delta-l_{{{cid},{sid},{hap}}}".format(cid=str(clone_id),
+                self.gm.addLConstr(delta_var_b, g.GRB.GREATER_EQUAL, -1 * s_b_lin_exp, name="delta-l_{{{cid},{sid},{hap}}}".format(cid=str(clone_id),
                                                                                                                                   sid=str(sid),
                                                                                                                                   hap=str(Haplotype.B)))
 

@@ -156,6 +156,8 @@ where:
 Additionally one can specify the `--workdir` working directory, where the input, preprocessing, and the output will be stored.
 For more on the `rck` command usage please refer to [usage documentation](docs/Usage.md).
 
+For circular, allele-specific ecDNA reconstruction from an ecDNA breakpoint subgraph (`rck-ecdna`), see the [ecDNA documentation](docs/ecDNA.md).
+
 ### Results
 Here is the description of the results produced by `rck` main method for cancer karyotype reconstruction. 
 For results on segment/adjacency conversion/processing, please refer to respective [segment](docs/Segments.md)/[adjacency](docs/Adjacencies.md) documentations.

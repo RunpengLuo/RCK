@@ -5,6 +5,7 @@ Example (demo3 simulation)::
     rck-ecdna \\
         --subgraph-dir subgraphs/demo3/amplicon_0 \\
         --obs-dir simulations/runs/demo3_clone1_ecdna/obs \\
+        --truth-dir simulations/runs/demo3_clone1_ecdna \\
         --outdir rck_ecdna_out/amplicon_0
 
 See docs/ecDNA.md for the model and every option.
@@ -76,6 +77,12 @@ def build_parser() -> argparse.ArgumentParser:
     dc.add_argument("--alternatives-mode", choices=["pool", "nogood"], default="pool")
     dc.add_argument("--max-orderings", type=int, default=20, help="Alternative orderings enumerated per species")
 
+    ev = parser.add_argument_group("evaluation (optional)")
+    ev.add_argument("--truth-dir", default=None, help="Simulator run directory with truth/ and obs/ (amplicon-allele-analysis)")
+    ev.add_argument("--truth-cycles", default=None, help="Explicit truth table: species order chrom start end strand hap weight")
+    ev.add_argument("--truth-sample", default=None, help="Tumor sample in truth/proportions.tsv (default: first tumor)")
+    ev.add_argument("--eval-tol-bp", type=int, default=10_000, help="Coordinate tolerance for junction and order matching")
+
     gu = parser.add_argument_group("Gurobi")
     gu.add_argument("--threads", type=int, default=None)
     gu.add_argument("--time-limit", type=float, default=None, help="Seconds, per MILP")
@@ -131,10 +138,21 @@ def run(args) -> Dict[str, object]:
     outputs = write_all(args.outdir, graph, obs, sol, decompositions,
                         extra={"inputs": inputs, "runtime_s": round(time.time() - started, 2),
                                "paths_loaded": 0 if paths is None else len(paths)})
+    evaluation = None
+    if args.truth_dir or args.truth_cycles:
+        from rck.ecdna.evaluate import evaluate, load_truth, write_evaluation, write_truth_table
+
+        truth = load_truth(args.truth_dir, args.truth_cycles, args.truth_sample)
+        write_truth_table(os.path.join(args.outdir, "truth_cycles.tsv"), truth)
+        frame, evaluation = evaluate(outputs["decompositions"], truth, tol=args.eval_tol_bp)
+        outputs.update({"evaluation_" + k: v for k, v in write_evaluation(args.outdir, frame, evaluation).items()})
+        log.info("evaluation: first rank with every truth species in order: %s; best mean haplotype Jaccard %.3f (rank %s)",
+                 evaluation["first_rank_with_all_orders_matched"], evaluation["best_mean_jaccard_hap"], evaluation["best_mean_jaccard_rank"])
     for d in decompositions[:3]:
         log.info("decomposition %d: objective %.4f, %d species (%s)", d.rank, d.objective, len(d.species),
                  ", ".join("w={w} len={l}".format(w=s.weight, l=s.length_bp) for s in d.species))
-    return {"graph": graph, "observations": obs, "flow": sol, "decompositions": decompositions, "outputs": outputs, "inputs": inputs}
+    return {"graph": graph, "observations": obs, "flow": sol, "decompositions": decompositions, "outputs": outputs, "inputs": inputs,
+            "evaluation": evaluation}
 
 
 def main(argv: Optional[List[str]] = None) -> int:

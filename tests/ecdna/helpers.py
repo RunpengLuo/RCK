@@ -134,3 +134,36 @@ def write_windows(directory, chroms, sample_rows=None):
     pd.DataFrame(sample_rows, columns=["SAMPLE", "sample_id", "dataset_id", "sample_type"]).to_csv(
         os.path.join(directory, "sample_ids.tsv"), sep="\t", index=False)
     return directory
+
+
+def loops_graph(directory, loops=("a", "b", "c")):
+    """A hub segment ``x`` (chr1) and one loop segment per name, each on its own chromosome.
+
+    Junctions ``x>NAME`` (x head -> NAME tail) and ``NAME>x`` (NAME head -> x tail) let a walk
+    visit ``x`` once per loop. Returns {name: (tail, head)} including ``x``.
+    """
+    b = SubgraphBuilder()
+    ends = {"x": b.chain("chr1", [0, 1000], [100.0])[0]}
+    for i, name in enumerate(loops, start=2):
+        ends[name] = b.chain("chr{i}".format(i=i), [0, 1000], [100.0])[0]
+    for name in loops:
+        b.variant(ends["x"][1], ends[name][0], 50, hap="A", aid="x>{n}".format(n=name))
+        b.variant(ends[name][1], ends["x"][0], 50, hap="A", aid="{n}>x".format(n=name))
+    b.write(directory)
+    return ends
+
+
+def loop_counts(graph, ends, uses, weight=1):
+    """Phased (haplotype A) edge multiset for a walk that visits x once per loop in ``uses``."""
+    from rck.ecdna.phased import adj_key, seg_key
+
+    def sid(name):
+        tail_node = ends[name][0]
+        return graph.nodes[tail_node].segment
+
+    counts = {seg_key(sid("x"), "A"): weight * len(uses)}
+    for name in uses:
+        counts[seg_key(sid(name), "A")] = counts.get(seg_key(sid(name), "A"), 0) + weight
+        for aid in ("x>{n}".format(n=name), "{n}>x".format(n=name)):
+            counts[adj_key(aid, "AA")] = counts.get(adj_key(aid, "AA"), 0) + weight
+    return counts

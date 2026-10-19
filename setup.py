@@ -16,11 +16,12 @@ setup(
     license="MIT",
     keywords="RCK, rck, cancer, cancer genomics, cancer karyotypes, clonality, subclonality, copy number aberrations, breakpoints, structural variations, novel adjacencies",
     url="https://github.com/aganezov/rck",
-    packages=["", "rck", "rck.core", "rck.utils", "rck.utils.scn", "rck.utils.adj"],
+    packages=["", "rck", "rck.core", "rck.ecdna", "rck.utils", "rck.utils.scn", "rck.utils.adj"],
     include_package_data=True,
     entry_points={
         "console_scripts": [
             "rck = rck.rck_run:main",
+            "rck-ecdna = rck.ecdna_run:main",
             "rck-scnt-x2rck = rck.utils.scn.rck_scnt_x2rck:main",
             "rck-scnt-process = rck.utils.scn.rck_scnt_process:main",
             "rck-scnt-rck2x = rck.utils.scn.rck_scnt_rck2x:main",

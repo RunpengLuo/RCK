@@ -84,6 +84,27 @@ class TestTables(unittest.TestCase):
         self.assertFalse(bool(frame[frame.decomposition_rank == 2].iloc[0].order_match))
 
 
+class TestLowWeight(unittest.TestCase):
+    def test_low_weight_species_are_not_scored_by_default(self):
+        def walk(steps):
+            return ",".join("{c}:{s}-{e}:{h}:{st}".format(c=x.chrom, s=x.start, e=x.end, h=x.hap, st=x.strand) for x in steps)
+
+        rows = [
+            {"decomposition_rank": 1, "objective": 1.0, "species": "ec1", "status": "species", "weight": 12, "ordering_rank": 1,
+             "walk": walk(TRUTH)},
+            {"decomposition_rank": 1, "objective": 1.0, "species": "ec2", "status": "low_weight", "weight": 1, "ordering_rank": 1,
+             "walk": walk(TRUTH[:1])},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "decompositions.tsv")
+            pd.DataFrame(rows).to_csv(path, sep="\t", index=False)
+            frame, _ = evaluate(path, [Cycle("truth1", 12.0, [TRUTH])], tol=0)
+            frame_all, _ = evaluate(path, [Cycle("truth1", 12.0, [TRUTH])], tol=0, include_low_weight=True)
+        self.assertEqual(int(frame.iloc[0].n_species_inferred), 1)
+        self.assertEqual(int(frame.iloc[0].n_low_weight), 1)
+        self.assertEqual(int(frame_all.iloc[0].n_species_inferred), 2)
+
+
 class TestSimulatorTruth(unittest.TestCase):
     """demo3_clone1_ecdna: one episome species, 14 segments, 16 steps, phi 16."""
 

@@ -88,6 +88,38 @@ class TestDecompose(unittest.TestCase):
             self.assertGreaterEqual(len(decs), 2, mode)
             self.assertEqual(len(decs[1].species), 2, mode)
 
+    def test_repeated_circle_is_one_circle_at_double_weight(self):
+        """Regression: going round one circle twice at weight w is that circle at weight 2w."""
+        with tempfile.TemporaryDirectory() as tmp:
+            directory, _ = single_circle(tmp)
+            g = read_subgraph(directory)
+        from rck.ecdna.phased import adj_key, seg_key
+
+        flow = {seg_key(sid, "A"): 10 for sid in g.segments}
+        for a in g.adjacencies.values():
+            if a.aid == "circ" or (a.kind == "reference" and a.reads and a.reads > 50):
+                flow[adj_key(a.aid, "AA")] = 10
+        decs = self.run_decompose(g, flow, num_alternatives=10, pool_gap=1.0)
+        self.assertEqual(len(decs[0].species), 1)
+        self.assertEqual(decs[0].species[0].weight, 10)
+        self.assertEqual(set(decs[0].species[0].counts.values()), {1})
+        sigs = [d.signature for d in decs]
+        self.assertEqual(len(sigs), len(set(sigs)))
+        for d in decs:
+            for sp in d.species:
+                self.assertIn(1, sp.counts.values())  # no species is a multiple of a smaller walk
+
+    def test_low_weight_species_are_flagged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ends = loops_graph(tmp, loops=("a", "b"))
+            g = read_subgraph(tmp)
+        flow = add(loop_counts(g, ends, ["a"], weight=20), loop_counts(g, ends, ["b"], weight=1))
+        best = self.run_decompose(g, flow)[0]
+        self.assertEqual([s.weight for s in best.species], [20, 1])
+        self.assertEqual([s.status for s in best.species], ["species", "low_weight"])
+        explicit = self.run_decompose(g, flow, min_species_weight=1)[0]
+        self.assertEqual([s.low_weight for s in explicit.species], [False, False])
+
     def test_orderings_are_reported(self):
         with tempfile.TemporaryDirectory() as tmp:
             ends = loops_graph(tmp)
@@ -121,6 +153,13 @@ class TestCommandLine(unittest.TestCase):
             self.assertEqual(summary["flow"]["imputed_used"], [])
             with open(os.path.join(out, "aa", "amp_decomp1_cycles.txt")) as handle:
                 self.assertIn("Copy_count=10.0", handle.read())
+            self.assertEqual(top.status.iloc[0], "species")
+            # regression: gurobipy's logger must not flood the console at the default verbosity
+            import logging
+
+            self.assertGreaterEqual(logging.getLogger("gurobipy").level, logging.WARNING)
+            with open(os.path.join(out, "gurobi_flow.log")) as handle:
+                self.assertIn("Optimal solution found", handle.read())
 
 
 if __name__ == "__main__":

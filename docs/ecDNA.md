@@ -150,7 +150,13 @@ copy weight w and a per-edge multiplicity m between 0 and `--max-multiplicity`. 
 - each slot is balanced with alternation;
 - each slot is connected (enforced with lazy cuts), so it forms a single closed walk.
 
-The objective minimizes the residual plus `--species-penalty` × the number of species.
+The objective minimizes the residual plus `--species-penalty` × the number of species. A tiny
+penalty on total edge traversals breaks ties in favour of the simplest walk, and a slot that
+goes round the same circle g times is reported as that circle at g times the weight. Species
+lighter than `--min-species-weight` (default `--min-species-weight-frac` = 10% of the
+heaviest species) are kept but flagged `low_weight`: they usually absorb small unevenness in
+the flow rather than describing a molecule, and the evaluation ignores them unless
+`--include-low-weight` is passed to `rck-ecdna-eval`.
 Alternatives come from Gurobi's solution pool (`--alternatives-mode pool`) or from repeated
 solves with a no-good cut (`--alternatives-mode nogood`), within `--pool-gap` of the
 optimum. Every alternative is re-checked and deduplicated.
@@ -167,7 +173,7 @@ order.
 
 | File | Content |
 |---|---|
-| `decompositions.tsv` | one row per decomposition, species and ordering: `weight` (copies per cell, bulk average), `length_bp`, `path_support`, `uses_imputed`, `junctions`, `walk` (`chrom:start-end:hap:strand`, comma-separated) and `joins` (adjacency after each step, `kind:aid:phasing`) |
+| `decompositions.tsv` | one row per decomposition, species and ordering: `status` (`species` or `low_weight`), `weight` (copies per cell, bulk average), `length_bp`, `path_support`, `uses_imputed`, `junctions`, `walk` (`chrom:start-end:hap:strand`, comma-separated) and `joins` (adjacency after each step, `kind:aid:phasing`) |
 | `flow_segments.tsv` | per segment: observed total and allele copy numbers, plus inferred ecDNA and background copy numbers for A and B |
 | `flow_adjacencies.tsv` | per adjacency labeling: read support, observed copy number, ecDNA and background flow |
 | `aa/<name>_graph.txt`, `aa/<name>_decomp<k>_cycles.txt` | AmpliconArchitect-style graph and cycles (total copy number; cycle lines also carry `Haplotypes=`) |
@@ -235,6 +241,10 @@ python -m unittest discover -s tests/ecdna -t . -v
 python -m pytest tests/ecdna -v
 ```
 
+Gurobi uses `--threads`, else `SLURM_CPUS_PER_TASK`, else the CPUs the process may run on,
+so it never starts more threads than the job was given. Its log goes to `gurobi_*.log`; pass
+`-v` to also see it on the console.
+
 Tests that solve a MILP are skipped when `gurobipy` cannot be imported. `test_demo3.py`
 also needs a full Gurobi license. Setting `RCK_ECDNA_DEMO3_OBS` to
 `.../simulations/runs/demo3_clone1_ecdna/obs` enables its second test, which estimates the
@@ -248,4 +258,5 @@ scales from the windows.
 | `test_evaluate.py` | no | Jaccard with multiplicity; junction scores; order match with rotation, reversal, finer segmentation and tolerance; truth table I/O; rebuilding the demo3 truth from the simulator (16 steps, 2,343,000 bp, seg4 on A and B, seg10 on B) |
 | `test_ilp_circular.py` | yes (small) | single circle (10 copies on A plus a 1+1 background); haplotype crossings; imputed closing edge used when cheap and not when expensive; `--enforce-is` |
 | `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; end-to-end `rck-ecdna` |
+| `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
 | `test_demo3.py` | yes (full license) | `amplicon_0` against the demo3 truth: best-matching species with haplotype Jaccard ≥ 0.8, junction recall ≥ 0.9, copy-number error ≤ 30% |

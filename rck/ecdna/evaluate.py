@@ -215,14 +215,24 @@ def _parse_step(token: str) -> CStep:
     return CStep(chrom, int(start), int(end), hap, strand)
 
 
-def read_inferred(decompositions_tsv: str) -> Dict[int, Dict[str, object]]:
-    """{rank: {"objective": float, "cycles": [Cycle]}} from ``decompositions.tsv``."""
+def read_inferred(decompositions_tsv: str, include_low_weight: bool = False) -> Dict[int, Dict[str, object]]:
+    """{rank: {"objective": float, "cycles": [Cycle], "n_low_weight": int}} from ``decompositions.tsv``.
+
+    Species flagged ``low_weight`` are left out unless ``include_low_weight``.
+    """
     frame = pd.read_csv(decompositions_tsv, sep="\t")
     result: Dict[int, Dict[str, object]] = {}
+    for rank, group in frame.groupby("decomposition_rank", sort=True):
+        low = 0
+        if "status" in group:
+            low = int(group.loc[group["status"] == "low_weight", "species"].nunique())
+        result[int(rank)] = {"objective": float(group["objective"].iloc[0]), "cycles": [], "n_low_weight": low}
+    if "status" in frame and not include_low_weight:
+        frame = frame[frame["status"] != "low_weight"]
     for (rank, species), group in frame.groupby(["decomposition_rank", "species"], sort=True):
         group = group.sort_values("ordering_rank")
         orderings = [[_parse_step(t) for t in str(w).split(",")] for w in group["walk"]]
-        entry = result.setdefault(int(rank), {"objective": float(group["objective"].iloc[0]), "cycles": []})
+        entry = result[int(rank)]
         entry["cycles"].append(Cycle(name=str(species), weight=float(group["weight"].iloc[0]), orderings=orderings))
     return result
 
@@ -460,8 +470,9 @@ def score_decomposition(truth: Sequence[Cycle], inferred: Sequence[Cycle], tol: 
     return result
 
 
-def evaluate(decompositions_tsv: str, truth: Sequence[Cycle], tol: int = 10_000) -> Tuple[pd.DataFrame, Dict[str, object]]:
-    inferred = read_inferred(decompositions_tsv)
+def evaluate(decompositions_tsv: str, truth: Sequence[Cycle], tol: int = 10_000,
+             include_low_weight: bool = False) -> Tuple[pd.DataFrame, Dict[str, object]]:
+    inferred = read_inferred(decompositions_tsv, include_low_weight=include_low_weight)
     rows = []
     best_order_rank, best_jaccard, best_jaccard_rank = None, -1.0, None
     for rank in sorted(inferred):
@@ -475,6 +486,7 @@ def evaluate(decompositions_tsv: str, truth: Sequence[Cycle], tol: int = 10_000)
         for s in scores:
             row = asdict(s)
             row.update({"decomposition_rank": rank, "objective": inferred[rank]["objective"], "n_species_inferred": len(cycles),
+                        "n_low_weight": inferred[rank]["n_low_weight"],
                         "n_species_truth": len(truth)})
             rows.append(row)
     frame = pd.DataFrame(rows)
@@ -514,6 +526,7 @@ def main(argv=None) -> int:
     parser.add_argument("--truth-cycles", default=None, help="Explicit truth table (species order chrom start end strand hap weight)")
     parser.add_argument("--truth-sample", default=None)
     parser.add_argument("--tol-bp", type=int, default=10_000)
+    parser.add_argument("--include-low-weight", action="store_true", help="Also score species flagged low_weight")
     parser.add_argument("--outdir", default=None, help="Default: the directory of --decompositions")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -521,7 +534,7 @@ def main(argv=None) -> int:
     outdir = args.outdir or os.path.dirname(os.path.abspath(args.decompositions))
     os.makedirs(outdir, exist_ok=True)
     write_truth_table(os.path.join(outdir, "truth_cycles.tsv"), truth)
-    frame, summary = evaluate(args.decompositions, truth, tol=args.tol_bp)
+    frame, summary = evaluate(args.decompositions, truth, tol=args.tol_bp, include_low_weight=args.include_low_weight)
     write_evaluation(outdir, frame, summary)
     log.info("first decomposition rank with every truth species in order: %s; best mean haplotype Jaccard %.3f (rank %s)",
              summary["first_rank_with_all_orders_matched"], summary["best_mean_jaccard_hap"], summary["best_mean_jaccard_rank"])

@@ -26,6 +26,16 @@ class TestDepthScale(unittest.TestCase):
         values = [30.0] * 40 + [15.0] * 10 + [45.0] * 10
         self.assertAlmostEqual(_log_mode(values), 30.0, delta=1.0)
 
+    def test_log_mode_identical_values(self):
+        # regression: the smoothing kernel is longer than the histogram here; this used to
+        # raise IndexError or return a value shifted by one kernel offset (31.58 for 30)
+        self.assertAlmostEqual(_log_mode([30.0] * 50), 30.0, places=6)
+        self.assertAlmostEqual(_log_mode([1.0] * 20), 1.0, places=6)
+
+    def test_log_mode_narrow_spread(self):
+        values = [30.0 * (1 + 0.002 * i) for i in range(-5, 6)] * 4 + [45.0] * 5
+        self.assertAlmostEqual(_log_mode(values), 30.0, delta=0.6)
+
     def test_gamma_from_balanced_blocks(self):
         with tempfile.TemporaryDirectory() as tmp:
             directory, _ = single_circle(os.path.join(tmp, "sg"))

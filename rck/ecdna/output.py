@@ -14,7 +14,7 @@ from rck.ecdna.scale import Observations
 from rck.ecdna.subgraph_io import HAPLOTYPES, REFERENCE, ECGraph
 from rck.ecdna.walk import describe_join, describe_step
 
-DECOMPOSITION_COLUMNS = ["decomposition_rank", "objective", "residual", "n_species", "species", "weight", "length_bp",
+DECOMPOSITION_COLUMNS = ["decomposition_rank", "objective", "residual", "n_species", "species", "status", "weight", "length_bp",
                          "ordering_rank", "n_orderings", "path_support", "paths_matched", "paths_applicable",
                          "n_steps", "uses_imputed", "junctions", "walk", "joins"]
 
@@ -22,7 +22,8 @@ DECOMPOSITION_COLUMNS = ["decomposition_rank", "objective", "residual", "n_speci
 def decomposition_table(graph: ECGraph, decompositions: List[Decomposition]) -> pd.DataFrame:
     """One row per (decomposition, species, ordering).
 
-    ``walk`` lists the steps as ``chrom:start-end:hap:strand``; ``joins`` lists, for each step,
+    ``status`` is ``species`` or ``low_weight`` (below the minimum species weight; usually flow
+    residue rather than a molecule). ``walk`` lists the steps as ``chrom:start-end:hap:strand``; ``joins`` lists, for each step,
     the adjacency taken after it as ``kind:aid:phasing`` (the last one closes the circle).
     """
     rows = []
@@ -31,7 +32,7 @@ def decomposition_table(graph: ECGraph, decompositions: List[Decomposition]) -> 
             for j, o in enumerate(sp.orderings, start=1):
                 rows.append({
                     "decomposition_rank": d.rank, "objective": d.objective, "residual": d.residual, "n_species": len(d.species),
-                    "species": "ec{i}".format(i=i), "weight": sp.weight, "length_bp": sp.length_bp, "ordering_rank": j,
+                    "species": "ec{i}".format(i=i), "status": sp.status, "weight": sp.weight, "length_bp": sp.length_bp, "ordering_rank": j,
                     "n_orderings": len(sp.orderings), "path_support": o.path_score, "paths_matched": o.paths_matched,
                     "paths_applicable": o.paths_applicable, "n_steps": len(o.steps), "uses_imputed": ",".join(sp.imputed) or ".",
                     "junctions": ",".join(sp.junctions) or ".",
@@ -120,7 +121,7 @@ def write_all(outdir: str, graph: ECGraph, obs: Observations, sol: FlowSolution,
                  "ecdna_copies_total": int(sum(sol.ecdna_edges().values()))},
         "decompositions": [
             {"rank": d.rank, "objective": d.objective, "residual": d.residual,
-             "species": [{"weight": s.weight, "length_bp": s.length_bp, "n_orderings": len(s.orderings),
+             "species": [{"weight": s.weight, "status": s.status, "length_bp": s.length_bp, "n_orderings": len(s.orderings),
                           "imputed": s.imputed, "junctions": s.junctions} for s in d.species]}
             for d in decompositions
         ],

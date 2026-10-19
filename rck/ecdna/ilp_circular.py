@@ -35,6 +35,7 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
 from rck.core.structures import Haplotype, Phasing
+from rck.ecdna.gurobi_env import default_threads
 from rck.ecdna.phased import adj_key, seg_key
 from rck.ecdna.scale import Observations
 from rck.ecdna.subgraph_io import HAPLOTYPES, IMPUTED, REFERENCE, ECGraph
@@ -162,8 +163,7 @@ class OptModelCircular:
             m.Params.LogFile = p.log_file
         if p.time_limit:
             m.Params.TimeLimit = p.time_limit
-        if p.threads:
-            m.Params.Threads = p.threads
+        m.Params.Threads = default_threads(p.threads)
         m.Params.MIPGap = p.mip_gap
 
         for sid in sorted(g.segments):

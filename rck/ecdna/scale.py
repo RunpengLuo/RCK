@@ -252,13 +252,19 @@ def _log_mode(values: np.ndarray, bandwidth: float = 0.02) -> float:
     if len(values) < 3:
         return float(np.median(values))
     x = np.log(values)
+    if x.max() - x.min() <= bandwidth:
+        # (nearly) identical values: the histogram would be narrower than the kernel
+        return float(math.exp(np.median(x)))
     lo, hi = x.min() - 3 * bandwidth, x.max() + 3 * bandwidth
     nbins = max(int(math.ceil((hi - lo) / bandwidth)), 1)
     hist, edges = np.histogram(x, bins=nbins, range=(lo, hi))
     width = 2.0
-    offsets = np.arange(-int(3 * width), int(3 * width) + 1)
+    radius = int(3 * width)
+    offsets = np.arange(-radius, radius + 1)
     kernel = np.exp(-0.5 * (offsets / width) ** 2)
-    smooth = np.convolve(hist.astype(float), kernel, mode="same")
+    # 'full' convolution sliced back to the histogram, so index i is always histogram bin i
+    # (mode='same' returns len(kernel) values when the kernel is longer than the histogram)
+    smooth = np.convolve(hist.astype(float), kernel, mode="full")[radius:radius + len(hist)]
     i = int(np.argmax(smooth))
     return float(math.exp(0.5 * (edges[i] + edges[i + 1])))
 

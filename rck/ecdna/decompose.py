@@ -23,9 +23,11 @@ from __future__ import annotations
 
 import logging
 import math
+from functools import reduce
 from dataclasses import dataclass, field
 from typing import Dict, FrozenSet, List, Optional, Sequence, Tuple
 
+from rck.ecdna.gurobi_env import default_threads
 from rck.ecdna.phased import ADJ, SEG, EdgeKey, PhasedNode, endpoints, is_balanced, segment_key_at
 from rck.ecdna.subgraph_io import IMPUTED, NOVEL, ECGraph
 from rck.ecdna.walk import ReadPath, Step, alternating_circuit, enumerate_circuits, path_support, walk_length
@@ -38,6 +40,9 @@ class DecompositionParams:
     max_species: int = 4
     max_multiplicity: int = 3
     species_penalty: float = 1.0
+    multiplicity_penalty: float = 1e-4  # tie-break: prefer the walk with fewer edge traversals
+    min_species_weight: Optional[int] = None  # species below this weight are flagged low_weight
+    min_species_weight_frac: float = 0.10  # default threshold: this fraction of the heaviest species
     adj_residual_weight: float = 1.0
     seg_length_cap: int = 50_000
     min_seg_weight: float = 0.05
@@ -69,6 +74,11 @@ class Species:
     length_bp: int = 0
     imputed: List[str] = field(default_factory=list)
     junctions: List[str] = field(default_factory=list)
+    low_weight: bool = False  # below the minimum species weight: likely flow residue, not a molecule
+
+    @property
+    def status(self) -> str:
+        return "low_weight" if self.low_weight else "species"
 
     @property
     def signature(self) -> Tuple[int, FrozenSet]:
@@ -138,8 +148,7 @@ class CycleDecomposer:
             m.Params.LogFile = p.log_file
         if p.time_limit:
             m.Params.TimeLimit = p.time_limit
-        if p.threads:
-            m.Params.Threads = p.threads
+        m.Params.Threads = default_threads(p.threads)
         m.Params.MIPGap = p.mip_gap
         m.Params.LazyConstraints = 1
 
@@ -200,6 +209,8 @@ class CycleDecomposer:
             self.res[e] = r
             terms.append(self._omega(e) * r)
         terms.append(p.species_penalty * gp.quicksum(self.u.values()))
+        if p.multiplicity_penalty:
+            terms.append(p.multiplicity_penalty * gp.quicksum(self.mult[k, e] for k in range(K) for e in E))
         m.setObjective(gp.quicksum(terms), GRB.MINIMIZE)
         m.update()
         return m
@@ -245,6 +256,11 @@ class CycleDecomposer:
                     counts[e] = value
             if not counts or weight <= 0:
                 continue
+            # a walk that goes round the same circle g times is that circle at g times the weight
+            g = reduce(math.gcd, counts.values())
+            if g > 1:
+                counts = {e: v // g for e, v in counts.items()}
+                weight *= g
             if is_balanced(self.graph, counts) or len(_components(self.graph, list(counts))) > 1:
                 valid = False
             species.append(Species(weight=weight, counts=counts))
@@ -345,6 +361,12 @@ def decompose(graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[Decompo
     result = []
     for rank, (objective, species) in enumerate(raw, start=1):
         species = sorted(species, key=lambda s: (-s.weight, -sum(s.counts.values())))
+        if species:
+            threshold = params.min_species_weight
+            if threshold is None:
+                threshold = max(1, int(math.ceil(params.min_species_weight_frac * species[0].weight)))
+            for s in species:
+                s.low_weight = len(species) > 1 and s.weight < threshold
         annotated = [_annotate(graph, s, params, paths) for s in species]
         result.append(Decomposition(rank=rank, objective=objective, residual=decomposer._residual(annotated), species=annotated))
     return result

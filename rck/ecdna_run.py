@@ -21,6 +21,7 @@ import time
 from typing import Dict, List, Optional
 
 from rck.ecdna.decompose import DecompositionParams, decompose
+from rck.ecdna.gurobi_env import default_threads, quiet_gurobi_logger
 from rck.ecdna.ilp_circular import CircularParams, solve_flow
 from rck.ecdna.output import write_all
 from rck.ecdna.scale import ScaleParams, build_observations
@@ -72,6 +73,9 @@ def build_parser() -> argparse.ArgumentParser:
     dc.add_argument("--max-species", type=int, default=4)
     dc.add_argument("--max-multiplicity", type=int, default=3, help="Largest number of times one species may use an edge")
     dc.add_argument("--species-penalty", type=float, default=1.0)
+    dc.add_argument("--min-species-weight", type=int, default=None,
+                    help="Species lighter than this are flagged low_weight (default: --min-species-weight-frac of the heaviest)")
+    dc.add_argument("--min-species-weight-frac", type=float, default=0.10)
     dc.add_argument("--num-alternatives", type=int, default=10)
     dc.add_argument("--pool-gap", type=float, default=0.10)
     dc.add_argument("--alternatives-mode", choices=["pool", "nogood"], default="pool")
@@ -84,7 +88,7 @@ def build_parser() -> argparse.ArgumentParser:
     ev.add_argument("--eval-tol-bp", type=int, default=10_000, help="Coordinate tolerance for junction and order matching")
 
     gu = parser.add_argument_group("Gurobi")
-    gu.add_argument("--threads", type=int, default=None)
+    gu.add_argument("--threads", type=int, default=None, help="Default: SLURM_CPUS_PER_TASK, else the CPUs this process may use")
     gu.add_argument("--time-limit", type=float, default=None, help="Seconds, per MILP")
     gu.add_argument("--mip-gap", type=float, default=1e-4)
     gu.add_argument("-v", "--verbose", action="store_true")
@@ -105,10 +109,12 @@ def _resolve_inputs(args) -> Dict[str, Optional[str]]:
 
 def run(args) -> Dict[str, object]:
     started = time.time()
+    args.threads = default_threads(args.threads)
+    quiet_gurobi_logger(getattr(args, "verbose", False))
     os.makedirs(args.outdir, exist_ok=True)
     inputs = _resolve_inputs(args)
     graph = read_subgraph(args.subgraph_dir, phantom_max_bp=args.phantom_max_bp, soft_junction_hap=args.soft_junction_hap, name=args.name)
-    log.info("graph %s: %d segments, %d adjacencies", graph.name, len(graph.segments), len(graph.adjacencies))
+    log.info("graph %s: %d segments, %d adjacencies; Gurobi threads %d", graph.name, len(graph.segments), len(graph.adjacencies), args.threads)
 
     scale_params = ScaleParams(depth_per_copy=args.depth_per_copy, junction_reads_per_copy=args.junction_reads_per_copy,
                                baseline_cn=args.baseline_cn, depth_mode=args.depth_mode, sample=args.sample,
@@ -127,7 +133,8 @@ def run(args) -> Dict[str, object]:
 
     paths = read_paths(inputs["paths"], graph) if inputs["paths"] else None
     dec_params = DecompositionParams(max_species=args.max_species, max_multiplicity=args.max_multiplicity,
-                                     species_penalty=args.species_penalty, num_alternatives=args.num_alternatives,
+                                     species_penalty=args.species_penalty, min_species_weight=args.min_species_weight,
+                                     min_species_weight_frac=args.min_species_weight_frac, num_alternatives=args.num_alternatives,
                                      pool_gap=args.pool_gap, mode=args.alternatives_mode, max_orderings=args.max_orderings,
                                      time_limit=args.time_limit, threads=args.threads, mip_gap=args.mip_gap,
                                      log_file=os.path.join(args.outdir, "gurobi_decompose.log"), log_to_console=args.verbose)
@@ -150,7 +157,7 @@ def run(args) -> Dict[str, object]:
                  evaluation["first_rank_with_all_orders_matched"], evaluation["best_mean_jaccard_hap"], evaluation["best_mean_jaccard_rank"])
     for d in decompositions[:3]:
         log.info("decomposition %d: objective %.4f, %d species (%s)", d.rank, d.objective, len(d.species),
-                 ", ".join("w={w} len={l}".format(w=s.weight, l=s.length_bp) for s in d.species))
+                 ", ".join("w={w} len={l}{f}".format(w=s.weight, l=s.length_bp, f=" low_weight" if s.low_weight else "") for s in d.species))
     return {"graph": graph, "observations": obs, "flow": sol, "decompositions": decompositions, "outputs": outputs, "inputs": inputs,
             "evaluation": evaluation}
 
@@ -158,6 +165,7 @@ def run(args) -> Dict[str, object]:
 def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+    quiet_gurobi_logger(args.verbose)
     run(args)
     return 0
 

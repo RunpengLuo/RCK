@@ -27,7 +27,7 @@ from functools import reduce
 from dataclasses import dataclass, field
 from typing import Dict, FrozenSet, List, Optional, Sequence, Tuple
 
-from rck.ecdna.gurobi_env import default_threads
+from rck.ecdna.gurobi_env import close_model, default_threads
 from rck.ecdna.phased import ADJ, SEG, EdgeKey, PhasedNode, endpoints, is_balanced, segment_key_at
 from rck.ecdna.subgraph_io import IMPUTED, NOVEL, ECGraph
 from rck.ecdna.walk import ReadPath, Step, alternating_circuit, enumerate_circuits, path_support, walk_length
@@ -299,7 +299,9 @@ class CycleDecomposer:
             m.Params.PoolGap = p.pool_gap
             m.optimize(cb)
             if m.SolCount == 0:
-                raise RuntimeError("decomposition MILP returned no solution (status {s})".format(s=m.Status))
+                status = m.Status
+                self.close()
+                raise RuntimeError("decomposition MILP returned no solution (status {s})".format(s=status))
             for i in range(m.SolCount):
                 m.Params.SolutionNumber = i
                 species, valid = self._read(lambda v: v.Xn)
@@ -331,8 +333,14 @@ class CycleDecomposer:
             raise ValueError("unknown decomposition mode {m}".format(m=p.mode))
         if self.discarded:
             log.warning("discarded %d pool solution(s) that violated balance or connectivity", self.discarded)
+        self.close()
         solutions.sort(key=lambda t: (round(t[0], 9), len(t[1])))
         return solutions
+
+    def close(self) -> None:
+        """Free the Gurobi model and close its log file (see OptModelCircular.close)."""
+        close_model(self.model)
+        self.model = None
 
 
 def _annotate(graph: ECGraph, species: Species, params: DecompositionParams, paths: Optional[List[ReadPath]]) -> Species:

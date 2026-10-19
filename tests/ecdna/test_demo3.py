@@ -12,12 +12,11 @@ and segment depths estimated from the windows, extremities and long-read paths.
 
 import json
 import os
-import tempfile
 import unittest
 
 import pandas as pd
 
-from tests.ecdna.helpers import DATA_DIR, requires_gurobi
+from tests.ecdna.helpers import DATA_DIR, requires_gurobi, temp_dir
 
 SUBGRAPH = os.path.join(DATA_DIR, "amplicon_0")
 TRUTH = os.path.join(DATA_DIR, "demo3_truth")
@@ -50,14 +49,14 @@ class TestDemo3(unittest.TestCase):
         return evaluation
 
     def test_fixed_scales_from_subgraph(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             result = run(tmp, ["--depth-per-copy", "15", "--junction-reads-per-copy", "6"])
             evaluation = self.check(result, tmp)
         print("\ndemo3 (fixed scales):", json.dumps(evaluation, indent=1, default=str))
 
     @unittest.skipUnless(OBS and os.path.isdir(OBS or ""), "set RCK_ECDNA_DEMO3_OBS to the demo3 obs directory")
     def test_scales_from_observations(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             result = run(tmp, ["--obs-dir", OBS])
             scale = result["observations"].scale
             self.assertAlmostEqual(scale.depth_per_copy, 15.0, delta=2.0)

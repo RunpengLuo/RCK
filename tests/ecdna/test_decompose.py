@@ -1,12 +1,11 @@
 import json
 import os
-import tempfile
 import unittest
 
 import pandas as pd
 
 from rck.ecdna.subgraph_io import read_subgraph
-from tests.ecdna.helpers import SubgraphBuilder, loop_counts, loops_graph, requires_gurobi, single_circle
+from tests.ecdna.helpers import loop_counts, loops_graph, requires_gurobi, single_circle, SubgraphBuilder, temp_dir
 
 
 def add(*multisets):
@@ -25,7 +24,7 @@ class TestDecompose(unittest.TestCase):
         return decompose(g, flow, DecompositionParams(**params))
 
     def test_single_species_with_repeated_segment(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             ends = loops_graph(tmp, loops=("a", "b"))
             g = read_subgraph(tmp)
         flow = loop_counts(g, ends, ["a", "b"], weight=16)  # x visited twice per copy
@@ -42,7 +41,7 @@ class TestDecompose(unittest.TestCase):
         {x a: 10, x b: 7} and {x a x b: 7, x a: 3}. Both explain the flow exactly with two species,
         so both must be reported; the tie-break on edge traversals ranks the simpler one
         (8 traversals against 12) first."""
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             ends = loops_graph(tmp, loops=("a", "b"))
             g = read_subgraph(tmp)
         flow = add(loop_counts(g, ends, ["a"], weight=10), loop_counts(g, ends, ["b"], weight=7))
@@ -57,7 +56,7 @@ class TestDecompose(unittest.TestCase):
         self.assertIn((3, 7), equivalent)
 
     def test_disconnected_circles_are_separate_species(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             d1 = os.path.join(tmp, "one")
             b = SubgraphBuilder()
             s1 = b.chain("chr1", [0, 1000, 2000], [100.0, 100.0])
@@ -79,7 +78,7 @@ class TestDecompose(unittest.TestCase):
         self.assertAlmostEqual(best.residual, 0.0)
 
     def test_alternatives_are_distinct(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             ends = loops_graph(tmp, loops=("a", "b"))
             g = read_subgraph(tmp)
         # 10 copies through a and 10 through b: one species (x a x b) at 10, or two species at 10 each
@@ -94,7 +93,7 @@ class TestDecompose(unittest.TestCase):
 
     def test_repeated_circle_is_one_circle_at_double_weight(self):
         """Regression: going round one circle twice at weight w is that circle at weight 2w."""
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(tmp)
             g = read_subgraph(directory)
         from rck.ecdna.phased import adj_key, seg_key
@@ -114,7 +113,7 @@ class TestDecompose(unittest.TestCase):
                 self.assertIn(1, sp.counts.values())  # no species is a multiple of a smaller walk
 
     def test_low_weight_species_are_flagged(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             ends = loops_graph(tmp, loops=("a", "b"))
             g = read_subgraph(tmp)
         flow = add(loop_counts(g, ends, ["a"], weight=20), loop_counts(g, ends, ["b"], weight=1))
@@ -125,7 +124,7 @@ class TestDecompose(unittest.TestCase):
         self.assertEqual([s.low_weight for s in explicit.species], [False, False])
 
     def test_orderings_are_reported(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             ends = loops_graph(tmp)
             g = read_subgraph(tmp)
         flow = loop_counts(g, ends, ["a", "b", "c"], weight=8)
@@ -139,7 +138,7 @@ class TestCommandLine(unittest.TestCase):
     def test_single_circle_end_to_end(self):
         from rck.ecdna_run import main
 
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(os.path.join(tmp, "amp"))
             out = os.path.join(tmp, "out")
             self.assertEqual(main(["--subgraph-dir", directory, "--outdir", out, "--depth-per-copy", "15",

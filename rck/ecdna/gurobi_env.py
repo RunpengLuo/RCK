@@ -37,3 +37,17 @@ def quiet_gurobi_logger(verbose: bool = False) -> None:
     prints it even with ``LogToConsole=0``. The full log still goes to each model's LogFile.
     """
     logging.getLogger("gurobipy").setLevel(logging.DEBUG if verbose else logging.WARNING)
+
+
+def close_model(model) -> None:
+    """Close a Gurobi model's log file and free the model; safe to call twice or on None."""
+    if model is None:
+        return
+    try:
+        model.Params.LogFile = ""  # closes the log file handle
+    except Exception:  # pragma: no cover - already disposed
+        pass
+    try:
+        model.dispose()
+    except Exception:  # pragma: no cover
+        pass

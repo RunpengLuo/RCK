@@ -3,7 +3,7 @@ import os
 import unittest
 from unittest import mock
 
-from rck.ecdna.gurobi_env import default_threads, quiet_gurobi_logger
+from rck.ecdna.gurobi_env import close_model, default_threads, quiet_gurobi_logger
 
 
 class TestGurobiEnv(unittest.TestCase):
@@ -21,6 +21,9 @@ class TestGurobiEnv(unittest.TestCase):
             n = default_threads(None)
         self.assertGreaterEqual(n, 1)
         self.assertLessEqual(n, os.cpu_count() or n)
+
+    def test_close_model_tolerates_none(self):
+        close_model(None)
 
     def test_quiet_logger(self):
         quiet_gurobi_logger(verbose=False)

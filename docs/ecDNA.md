@@ -247,6 +247,12 @@ Gurobi uses `--threads`, else `SLURM_CPUS_PER_TASK`, else the CPUs the process m
 so it never starts more threads than the job was given. Its log goes to `gurobi_*.log`; pass
 `-v` to also see it on the console.
 
+Test outputs go to `$RCK_ECDNA_TEST_TMP` if set, else the system temp directory if it has at
+least 200 MB free, else `~/.cache/rck-ecdna-tests`, and temp-directory cleanup errors (such as
+`.nfsXXXX` placeholders on NFS homes) never fail a test. Every Gurobi model is disposed, and its
+log file closed, as soon as its solution has been read. `docs/examples/ecdna_demo3_tests.sbatch`
+runs the whole suite, both demo3 tests included, as a Slurm job on ionic.
+
 Tests that solve a MILP are skipped when `gurobipy` cannot be imported. `test_demo3.py`
 also needs a full Gurobi license. Setting `RCK_ECDNA_DEMO3_OBS` to
 `.../simulations/runs/demo3_clone1_ecdna/obs` enables its second test, which estimates the

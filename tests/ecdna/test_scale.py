@@ -1,12 +1,11 @@
 import os
-import tempfile
 import unittest
 
 import pandas as pd
 
 from rck.ecdna.scale import ScaleParams, Windows, _log_mode, build_observations
 from rck.ecdna.subgraph_io import read_subgraph
-from tests.ecdna.helpers import single_circle, write_windows
+from tests.ecdna.helpers import single_circle, temp_dir, write_windows
 
 
 def background_windows(tmp, amp_depth=180.0, shared_bias=1.0):
@@ -37,7 +36,7 @@ class TestDepthScale(unittest.TestCase):
         self.assertAlmostEqual(_log_mode(values), 30.0, delta=0.6)
 
     def test_gamma_from_balanced_blocks(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(os.path.join(tmp, "sg"))
             g = read_subgraph(directory)
             windows = background_windows(tmp)
@@ -54,7 +53,7 @@ class TestDepthScale(unittest.TestCase):
             self.assertAlmostEqual(value, 2.0, delta=0.2)
 
     def test_override_and_subgraph_weight_fallback(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(os.path.join(tmp, "sg"))
             g = read_subgraph(directory)
             obs = build_observations(g, ScaleParams(depth_per_copy=15.0, junction_reads_per_copy=6.0))
@@ -66,7 +65,7 @@ class TestDepthScale(unittest.TestCase):
         self.assertEqual(obs.background[next(iter(obs.background))], 2.0)
 
     def test_ratio_mode_removes_shared_bias(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(os.path.join(tmp, "sg"))
             g = read_subgraph(directory)
             windows = background_windows(tmp, shared_bias=0.8)
@@ -78,7 +77,7 @@ class TestDepthScale(unittest.TestCase):
             self.assertLess(tumor.segments[sid].total, 10.5)  # biased low without the normal
 
     def test_junction_scale_from_extremities(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(os.path.join(tmp, "sg"))
             g = read_subgraph(directory)
             windows = background_windows(tmp)
@@ -90,7 +89,7 @@ class TestDepthScale(unittest.TestCase):
         self.assertAlmostEqual(obs.scale.junction_reads_per_copy, 6.0, delta=0.4)
 
     def test_junction_scale_fallback(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(os.path.join(tmp, "sg"))
             g = read_subgraph(directory)
             obs = build_observations(g, ScaleParams(depth_per_copy=15.0))
@@ -98,7 +97,7 @@ class TestDepthScale(unittest.TestCase):
         self.assertGreater(obs.scale.junction_reads_per_copy, 0)
 
     def test_sample_selection(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             windows = background_windows(tmp)
             w = Windows(windows)
             self.assertEqual((w.normal_col, w.tumor_col), (0, 1))

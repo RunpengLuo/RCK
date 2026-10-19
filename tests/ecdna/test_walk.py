@@ -1,5 +1,4 @@
 import os
-import tempfile
 import unittest
 
 import pandas as pd
@@ -8,7 +7,7 @@ from rck.ecdna.phased import adj_key, is_balanced, seg_key
 from rck.ecdna.subgraph_io import read_subgraph
 from rck.ecdna.walk import (ReadPath, alternating_circuit, canonical, enumerate_circuits, path_support, read_paths,
                             reverse_walk, walk_counts)
-from tests.ecdna.helpers import SubgraphBuilder, head, loop_counts, loops_graph, single_circle, tail
+from tests.ecdna.helpers import head, loop_counts, loops_graph, single_circle, SubgraphBuilder, tail, temp_dir
 
 
 def circle_counts(g):
@@ -21,7 +20,7 @@ def circle_counts(g):
 
 class TestAlternatingCircuit(unittest.TestCase):
     def test_single_circle(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(tmp)
             g = read_subgraph(directory)
         counts = circle_counts(g)
@@ -32,7 +31,7 @@ class TestAlternatingCircuit(unittest.TestCase):
         self.assertEqual(len({s.strand for s in steps}), 1)
 
     def test_canonical_is_rotation_and_reversal_invariant(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(tmp)
             g = read_subgraph(directory)
         steps = alternating_circuit(g, circle_counts(g))
@@ -42,7 +41,7 @@ class TestAlternatingCircuit(unittest.TestCase):
         self.assertEqual(walk_counts(reverse_walk(steps)), walk_counts(steps))
 
     def test_tandem_duplicated_segment(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             b = SubgraphBuilder()
             segs = b.chain("chr1", [0, 100_000, 200_000, 300_000], [100.0] * 3)
             b.variant(segs[1][1], segs[1][0], 50, aid="dup")
@@ -61,7 +60,7 @@ class TestAlternatingCircuit(unittest.TestCase):
         self.assertEqual(len(enumerate_circuits(g, counts)), 1)
 
     def test_three_loops_have_two_orderings(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             ends = loops_graph(tmp)
             g = read_subgraph(tmp)
         counts = loop_counts(g, ends, ["a", "b", "c"])
@@ -73,7 +72,7 @@ class TestAlternatingCircuit(unittest.TestCase):
         self.assertEqual(len({canonical(s) for s in orderings}), 2)
 
     def test_balance_checks(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             ends = loops_graph(tmp, loops=("a", "b"))
             g = read_subgraph(tmp)
         counts = loop_counts(g, ends, ["a"])
@@ -92,7 +91,7 @@ class TestAlternatingCircuit(unittest.TestCase):
 
 class TestPathSupport(unittest.TestCase):
     def test_paths_rank_orderings(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             ends = loops_graph(tmp)
             g = read_subgraph(tmp)
             a_t, a_h = ends["a"]
@@ -115,7 +114,7 @@ class TestPathSupport(unittest.TestCase):
         self.assertEqual(scores, [0.0, 40.0])
 
     def test_single_junction_paths_do_not_score(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             ends = loops_graph(tmp)
             g = read_subgraph(tmp)
         counts = loop_counts(g, ends, ["a", "b", "c"])

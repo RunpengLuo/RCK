@@ -7,6 +7,9 @@ amplicon-allele-analysis ``subgraph_construct.py``. Breakpoints use the real-dat
 """
 
 import os
+import shutil
+import sys
+import tempfile
 import unittest
 
 import numpy as np
@@ -22,6 +25,38 @@ except ImportError:  # pragma: no cover
 requires_gurobi = unittest.skipUnless(HAVE_GUROBI, "gurobipy is not installed")
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
+MIN_TEMP_FREE_BYTES = 200 * 1024 ** 2
+
+
+def temp_base() -> str:
+    """Where test outputs go: $RCK_ECDNA_TEST_TMP, else the system temp dir if it has at least
+    200 MB free, else ~/.cache/rck-ecdna-tests (a full node-local /tmp is common on clusters)."""
+    base = os.environ.get("RCK_ECDNA_TEST_TMP")
+    if base:
+        os.makedirs(base, exist_ok=True)
+        return base
+    default = tempfile.gettempdir()
+    try:
+        if shutil.disk_usage(default).free >= MIN_TEMP_FREE_BYTES:
+            return default
+    except OSError:
+        pass
+    fallback = os.path.join(os.path.expanduser("~"), ".cache", "rck-ecdna-tests")
+    os.makedirs(fallback, exist_ok=True)
+    return fallback
+
+
+def temp_dir():
+    """A TemporaryDirectory under temp_base() whose cleanup never fails a test.
+
+    On NFS a file that is still open leaves a ``.nfsXXXX`` placeholder when deleted, which makes
+    the final rmdir fail; ignore_cleanup_errors (Python 3.10+) keeps that from becoming a test error.
+    """
+    kwargs = {"dir": temp_base()}
+    if sys.version_info >= (3, 10):
+        kwargs["ignore_cleanup_errors"] = True
+    return tempfile.TemporaryDirectory(**kwargs)
 
 NODE_COLUMNS = ["NODE_ID", "EID", "#CHR", "POS", "ORIENT", "SOURCE"]
 EDGE_COLUMNS = ["NODE_1", "NODE_2", "EDGE_TYPE", "WEIGHT", "CHROM_1", "POS_1", "CHROM_2", "POS_2", "AID",

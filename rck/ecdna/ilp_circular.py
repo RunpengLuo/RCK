@@ -35,7 +35,7 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
 from rck.core.structures import Haplotype, Phasing
-from rck.ecdna.gurobi_env import default_threads
+from rck.ecdna.gurobi_env import close_model, default_threads
 from rck.ecdna.phased import adj_key, seg_key
 from rck.ecdna.scale import Observations
 from rck.ecdna.subgraph_io import HAPLOTYPES, IMPUTED, REFERENCE, ECGraph
@@ -291,6 +291,7 @@ class OptModelCircular:
                  GRB.INFEASIBLE: "infeasible", GRB.INF_OR_UNBD: "inf_or_unbd", GRB.INTERRUPTED: "interrupted"}
         status = names.get(m.Status, str(m.Status))
         if m.SolCount == 0:
+            self.close()
             raise RuntimeError("flow MILP returned no solution (status {s})".format(s=status))
 
         def val(v):
@@ -303,8 +304,19 @@ class OptModelCircular:
         terminal = {k: val(v) for k, v in self.t.items()}
         imputed = sorted({aid for (aid, ph), v in self.pv.items() if v.X > 0.5 and self.graph.adjacencies[aid].kind == IMPUTED})
         gap = m.MIPGap if m.IsMIP else 0.0
-        return FlowSolution(status=status, objective=float(m.ObjVal), mip_gap=float(gap), seg_ec=seg_ec, seg_bg=seg_bg,
-                            adj_ec=adj_ec, adj_bg=adj_bg, terminal_bg=terminal, imputed_used=imputed)
+        solution = FlowSolution(status=status, objective=float(m.ObjVal), mip_gap=float(gap), seg_ec=seg_ec, seg_bg=seg_bg,
+                                adj_ec=adj_ec, adj_bg=adj_bg, terminal_bg=terminal, imputed_used=imputed)
+        self.close()
+        return solution
+
+    def close(self) -> None:
+        """Free the Gurobi model and close its log file.
+
+        An open log file cannot be removed cleanly on NFS (it leaves a ``.nfsXXXX`` file behind),
+        so the model is disposed as soon as its values have been read.
+        """
+        close_model(self.model)
+        self.model = None
 
 
 def solve_flow(graph: ECGraph, obs: Observations, params: Optional[CircularParams] = None) -> FlowSolution:

@@ -1,12 +1,11 @@
 import os
-import tempfile
 import unittest
 
 import pandas as pd
 
 from rck.ecdna.evaluate import (CStep, Cycle, evaluate, jaccard, junction_scores, order_match, read_truth_table, runs,
                                 truth_from_simulation, write_truth_table)
-from tests.ecdna.helpers import DATA_DIR
+from tests.ecdna.helpers import DATA_DIR, temp_dir
 
 TRUTH = [CStep("chr1", 0, 999, "A", "+"), CStep("chr1", 5000, 5999, "A", "-"), CStep("chr2", 100, 1099, "B", "+")]
 
@@ -57,7 +56,7 @@ class TestMetrics(unittest.TestCase):
 
 class TestTables(unittest.TestCase):
     def test_truth_table_round_trip(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             path = os.path.join(tmp, "truth.tsv")
             write_truth_table(path, [Cycle("ec", 12.0, [TRUTH])])
             back = read_truth_table(path)
@@ -73,7 +72,7 @@ class TestTables(unittest.TestCase):
             {"decomposition_rank": 2, "objective": 2.0, "species": "ec1", "weight": 6, "ordering_rank": 1, "walk": walk(TRUTH[:1] + TRUTH[2:])},
             {"decomposition_rank": 2, "objective": 2.0, "species": "ec2", "weight": 6, "ordering_rank": 1, "walk": walk(TRUTH[1:2])},
         ]
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             path = os.path.join(tmp, "decompositions.tsv")
             pd.DataFrame(rows).to_csv(path, sep="\t", index=False)
             frame, summary = evaluate(path, [Cycle("truth1", 12.0, [TRUTH])], tol=0)
@@ -95,7 +94,7 @@ class TestLowWeight(unittest.TestCase):
             {"decomposition_rank": 1, "objective": 1.0, "species": "ec2", "status": "low_weight", "weight": 1, "ordering_rank": 1,
              "walk": walk(TRUTH[:1])},
         ]
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             path = os.path.join(tmp, "decompositions.tsv")
             pd.DataFrame(rows).to_csv(path, sep="\t", index=False)
             frame, _ = evaluate(path, [Cycle("truth1", 12.0, [TRUTH])], tol=0)

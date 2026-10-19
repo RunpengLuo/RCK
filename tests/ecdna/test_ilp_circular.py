@@ -1,11 +1,11 @@
-import tempfile
+import os
 import unittest
 
 from rck.core.structures import Haplotype, Phasing
 from rck.ecdna.phased import is_balanced
 from rck.ecdna.scale import ScaleParams, build_observations
 from rck.ecdna.subgraph_io import read_subgraph
-from tests.ecdna.helpers import SubgraphBuilder, head, requires_gurobi, single_circle, tail
+from tests.ecdna.helpers import head, requires_gurobi, single_circle, SubgraphBuilder, tail, temp_dir
 
 FIXED = ScaleParams(depth_per_copy=15.0, junction_reads_per_copy=6.0)
 
@@ -21,7 +21,7 @@ def solve(directory, **params):
 @requires_gurobi
 class TestSingleCircle(unittest.TestCase):
     def test_recovers_ten_copies_on_A(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(tmp)
             g, obs, sol = solve(directory)
         for sid in g.segments:
@@ -33,7 +33,7 @@ class TestSingleCircle(unittest.TestCase):
         self.assertEqual(sol.imputed_used, [])
 
     def test_background_ends_only_at_terminals(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(tmp)
             g, obs, sol = solve(directory)
         terminals = set(g.terminals())
@@ -41,8 +41,24 @@ class TestSingleCircle(unittest.TestCase):
             self.assertIn(nid, terminals)
         self.assertEqual(sum(sol.terminal_bg.values()), 4)  # one copy per haplotype enters and leaves
 
+    def test_model_is_disposed_after_solve(self):
+        """Regression: an open Gurobi log file blocked temp-dir cleanup on NFS."""
+        from rck.ecdna.ilp_circular import CircularParams, OptModelCircular
+
+        with temp_dir() as tmp:
+            directory, _ = single_circle(os.path.join(tmp, "amp"))
+            g = read_subgraph(directory)
+            obs = build_observations(g, FIXED)
+            log_file = os.path.join(tmp, "flow.log")
+            model = OptModelCircular(g, obs, CircularParams(log_file=log_file))
+            model.build()
+            model.solve()
+            self.assertIsNone(model.model)
+            os.remove(log_file)  # the handle is closed, so this leaves nothing behind
+            self.assertEqual([f for f in os.listdir(tmp) if f.startswith(".nfs")], [])
+
     def test_enforce_is_keeps_solution(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(tmp)
             g, obs, sol = solve(directory, enforce_is=True)
         self.assertEqual(sol.adj_ec["circ", Phasing.AA], 10)
@@ -62,7 +78,7 @@ class TestHaplotypeCrossing(unittest.TestCase):
         return b.write(tmp)
 
     def test_crossing_labelings(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             g, obs, sol = solve(self.build(tmp))
         sids = sorted(g.segments, key=lambda s: g.segments[s].start)
         self.assertEqual(sol.seg_ec[sids[0], Haplotype.A], 10)
@@ -85,13 +101,13 @@ class TestImputedGap(unittest.TestCase):
         return b.write(tmp)
 
     def test_cheap_imputation_is_used(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             g, obs, sol = solve(self.build(tmp), imputed_penalty=0.5)
         self.assertEqual(sol.imputed_used, ["imp_close"])
         self.assertEqual(sol.adj_ec["imp_close", Phasing.AA], 10)
 
     def test_expensive_imputation_is_not_used(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             g, obs, sol = solve(self.build(tmp), imputed_penalty=1000.0)
         self.assertEqual(sol.imputed_used, [])
         self.assertEqual(sum(sol.ecdna_edges().values()), 0)

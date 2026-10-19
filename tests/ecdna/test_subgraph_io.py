@@ -1,15 +1,14 @@
 import os
-import tempfile
 import unittest
 
 from rck.core.structures import Phasing
 from rck.ecdna.subgraph_io import IMPUTED, NOVEL, REFERENCE, read_subgraph
-from tests.ecdna.helpers import DATA_DIR, SubgraphBuilder, head, single_circle, tail
+from tests.ecdna.helpers import DATA_DIR, head, single_circle, SubgraphBuilder, tail, temp_dir
 
 
 class TestChain(unittest.TestCase):
     def test_single_circle_structure(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, segs = single_circle(tmp)
             g = read_subgraph(directory)
         self.assertEqual(len(g.segments), 3)
@@ -25,7 +24,7 @@ class TestChain(unittest.TestCase):
                 self.assertIsNotNone(g.nodes[nid].segment)
 
     def test_segment_coordinates_and_baf(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             directory, _ = single_circle(tmp)
             g = read_subgraph(directory)
         spans = sorted((s.start, s.end) for s in g.segments.values())
@@ -62,7 +61,7 @@ class TestPhantomContraction(unittest.TestCase):
         return b.write(tmp)
 
     def test_contraction(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             g = read_subgraph(self.build(tmp))
         self.assertEqual(len(g.segments), 2)
         self.assertNotIn("chr2:5000+_-", g.nodes)
@@ -80,14 +79,14 @@ class TestPhantomContraction(unittest.TestCase):
         self.assertEqual(g.validate(), [])
 
     def test_contraction_disabled(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             g = read_subgraph(self.build(tmp), phantom_max_bp=0)
         self.assertEqual(len(g.segments), 3)
 
 
 class TestParallelAndPhasing(unittest.TestCase):
     def test_parallel_imputed_merged_into_reference(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             b = SubgraphBuilder()
             b.chain("chr3", [0, 1000, 2000, 3000], [100, 100, 100])
             b.imputed(head("chr3", 1000), tail("chr3", 1000), 90, aid="inter")  # same pair as the reference join
@@ -104,7 +103,7 @@ class TestParallelAndPhasing(unittest.TestCase):
         self.assertIsNone(intra.reads)
 
     def test_junction_labels(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with temp_dir() as tmp:
             b = SubgraphBuilder()
             segs = b.chain("chr5", [0, 1000, 2000, 3000, 4000], [100] * 4)
             b.variant(segs[0][1], segs[2][0], 50, hap="A", aid="ja")

@@ -1,0 +1,80 @@
+test_fixed_scales_from_subgraph (tests.ecdna.test_demo3.TestDemo3.test_fixed_scales_from_subgraph) ... Set parameter WLSAccessID
+Set parameter WLSSecret
+Set parameter LicenseID to value 2876160
+Academic license 2876160 - for non-commercial use only - registered to ym___@princeton.edu
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+ok
+test_scales_from_observations (tests.ecdna.test_demo3.TestDemo3.test_scales_from_observations) ... 
+demo3 (fixed scales): {
+ "n_decompositions": 5,
+ "n_truth_species": 1,
+ "first_rank_with_all_orders_matched": 4,
+ "best_mean_jaccard_hap": 0.9999991463935126,
+ "best_mean_jaccard_rank": 4,
+ "top_decomposition": [
+  {
+   "truth": "ecdna1",
+   "inferred": "ec1",
+   "jaccard_hap": 0.80068203158344,
+   "jaccard_total": 0.80068203158344,
+   "junction_recall": 0.7857142857142857,
+   "junction_precision": 1.0,
+   "phased_junction_recall": 0.7857142857142857,
+   "phased_junction_precision": 1.0,
+   "order_match": false,
+   "order_match_ordering": NaN,
+   "truth_weight": 16.0,
+   "inferred_weight": 15.0,
+   "cn_rel_err": 0.0625,
+   "decomposition_rank": 1,
+   "n_species_inferred": 2,
+   "n_low_weight": 1,
+   "n_species_truth": 1
+  }
+ ],
+ "tol_bp": 10000
+}
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 14.567s
+
+OK
+
+demo3 (estimated scales): {
+ "n_decompositions": 5,
+ "n_truth_species": 1,
+ "first_rank_with_all_orders_matched": 2,
+ "best_mean_jaccard_hap": 0.9999991463935126,
+ "best_mean_jaccard_rank": 2,
+ "top_decomposition": [
+  {
+   "truth": "ecdna1",
+   "inferred": "ec1",
+   "jaccard_hap": 0.80068203158344,
+   "jaccard_total": 0.80068203158344,
+   "junction_recall": 0.7857142857142857,
+   "junction_precision": 1.0,
+   "phased_junction_recall": 0.7857142857142857,
+   "phased_junction_precision": 1.0,
+   "order_match": false,
+   "order_match_ordering": NaN,
+   "truth_weight": 16.0,
+   "inferred_weight": 16.0,
+   "cn_rel_err": 0.0,
+   "decomposition_rank": 1,
+   "n_species_inferred": 2,
+   "n_low_weight": 1,
+   "n_species_truth": 1
+  }
+ ],
+ "tol_bp": 10000
+}
+Warning: environment still referenced so free is deferred (Continue to use WLS)

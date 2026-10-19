@@ -1,0 +1,132 @@
+test_single_circle_end_to_end (tests.ecdna.test_decompose.TestCommandLine.test_single_circle_end_to_end) ... 2026-10-19 14:44:12,776 rck.ecdna INFO graph amp: 3 segments, 5 adjacencies; Gurobi threads 4
+2026-10-19 14:44:12,776 rck.ecdna.scale INFO depth per copy 15.000 (override), junction reads per copy 6.000 (override)
+Set parameter WLSAccessID
+Set parameter WLSSecret
+Set parameter LicenseID to value 2876160
+Academic license 2876160 - for non-commercial use only - registered to ym___@princeton.edu
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+2026-10-19 14:44:12,983 rck.ecdna INFO flow: optimal, objective 0.0500, 60 ecDNA edge copies, imputed used: none
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+2026-10-19 14:44:13,006 rck.ecdna INFO decomposition 1: objective 1.0006, 1 species (w=10 len=300000)
+ok
+test_alternatives_are_distinct (tests.ecdna.test_decompose.TestDecompose.test_alternatives_are_distinct) ... ok
+test_disconnected_circles_are_separate_species (tests.ecdna.test_decompose.TestDecompose.test_disconnected_circles_are_separate_species) ... ok
+test_low_weight_species_are_flagged (tests.ecdna.test_decompose.TestDecompose.test_low_weight_species_are_flagged) ... ok
+test_orderings_are_reported (tests.ecdna.test_decompose.TestDecompose.test_orderings_are_reported) ... ok
+test_repeated_circle_is_one_circle_at_double_weight (tests.ecdna.test_decompose.TestDecompose.test_repeated_circle_is_one_circle_at_double_weight)
+Regression: going round one circle twice at weight w is that circle at weight 2w. ... ok
+test_single_species_with_repeated_segment (tests.ecdna.test_decompose.TestDecompose.test_single_species_with_repeated_segment) ... ok
+test_two_species_sharing_a_segment (tests.ecdna.test_decompose.TestDecompose.test_two_species_sharing_a_segment)
+(x a) at 10 copies plus (x b) at 7. With weights 10 and 7 no single species fits ... ok
+test_fixed_scales_from_subgraph (tests.ecdna.test_demo3.TestDemo3.test_fixed_scales_from_subgraph) ... 2026-10-19 14:44:13,854 rck.ecdna INFO graph amplicon_0: 18 segments, 46 adjacencies; Gurobi threads 4
+2026-10-19 14:44:13,854 rck.ecdna.scale INFO depth per copy 15.000 (override), junction reads per copy 6.000 (override)
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+2026-10-19 14:44:13,944 rck.ecdna INFO flow: optimal, objective 9.9325, 674 ecDNA edge copies, imputed used: none
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+2026-10-19 14:44:16,678 rck.ecdna INFO evaluation: first rank with every truth species in order: 1; best mean haplotype Jaccard 1.000 (rank 1)
+2026-10-19 14:44:16,678 rck.ecdna INFO decomposition 1: objective 3.0146, 3 species (w=13 len=2342998, w=1 len=5411995 low_weight, w=1 len=467000 low_weight)
+2026-10-19 14:44:16,678 rck.ecdna INFO decomposition 2: objective 3.0146, 3 species (w=13 len=2342998, w=1 len=3524998 low_weight, w=1 len=2353997 low_weight)
+2026-10-19 14:44:16,678 rck.ecdna INFO decomposition 3: objective 3.0146, 3 species (w=13 len=2342998, w=1 len=3984997 low_weight, w=1 len=1893998 low_weight)
+ok
+test_scales_from_observations (tests.ecdna.test_demo3.TestDemo3.test_scales_from_observations) ... skipped 'set RCK_ECDNA_DEMO3_OBS to the demo3 obs directory'
+test_low_weight_species_are_not_scored_by_default (tests.ecdna.test_evaluate.TestLowWeight.test_low_weight_species_are_not_scored_by_default) ... ok
+test_finer_segmentation_is_equivalent (tests.ecdna.test_evaluate.TestMetrics.test_finer_segmentation_is_equivalent) ... ok
+test_haplotype_errors (tests.ecdna.test_evaluate.TestMetrics.test_haplotype_errors) ... ok
+test_identical (tests.ecdna.test_evaluate.TestMetrics.test_identical) ... ok
+test_multiplicity_counts_in_jaccard (tests.ecdna.test_evaluate.TestMetrics.test_multiplicity_counts_in_jaccard) ... ok
+test_rotation_and_reversal (tests.ecdna.test_evaluate.TestMetrics.test_rotation_and_reversal) ... ok
+test_tolerance (tests.ecdna.test_evaluate.TestMetrics.test_tolerance) ... ok
+test_haplotypes (tests.ecdna.test_evaluate.TestSimulatorTruth.test_haplotypes) ... ok
+test_species (tests.ecdna.test_evaluate.TestSimulatorTruth.test_species) ... ok
+test_truth_matches_itself (tests.ecdna.test_evaluate.TestSimulatorTruth.test_truth_matches_itself) ... ok
+test_evaluate_decompositions_table (tests.ecdna.test_evaluate.TestTables.test_evaluate_decompositions_table) ... ok
+test_truth_table_round_trip (tests.ecdna.test_evaluate.TestTables.test_truth_table_round_trip) ... ok
+test_explicit_request_wins (tests.ecdna.test_gurobi_env.TestGurobiEnv.test_explicit_request_wins) ... ok
+test_quiet_logger (tests.ecdna.test_gurobi_env.TestGurobiEnv.test_quiet_logger) ... ok
+test_slurm_allocation (tests.ecdna.test_gurobi_env.TestGurobiEnv.test_slurm_allocation) ... ok
+test_without_slurm (tests.ecdna.test_gurobi_env.TestGurobiEnv.test_without_slurm) ... ok
+test_crossing_labelings (tests.ecdna.test_ilp_circular.TestHaplotypeCrossing.test_crossing_labelings) ... 2026-10-19 14:44:16,764 rck.ecdna.scale INFO depth per copy 15.000 (override), junction reads per copy 6.000 (override)
+ok
+test_cheap_imputation_is_used (tests.ecdna.test_ilp_circular.TestImputedGap.test_cheap_imputation_is_used) ... 2026-10-19 14:44:16,778 rck.ecdna.scale INFO depth per copy 15.000 (override), junction reads per copy 6.000 (override)
+ok
+test_expensive_imputation_is_not_used (tests.ecdna.test_ilp_circular.TestImputedGap.test_expensive_imputation_is_not_used) ... 2026-10-19 14:44:16,791 rck.ecdna.scale INFO depth per copy 15.000 (override), junction reads per copy 6.000 (override)
+ok
+test_background_ends_only_at_terminals (tests.ecdna.test_ilp_circular.TestSingleCircle.test_background_ends_only_at_terminals) ... 2026-10-19 14:44:16,803 rck.ecdna.scale INFO depth per copy 15.000 (override), junction reads per copy 6.000 (override)
+ok
+test_enforce_is_keeps_solution (tests.ecdna.test_ilp_circular.TestSingleCircle.test_enforce_is_keeps_solution) ... 2026-10-19 14:44:16,815 rck.ecdna.scale INFO depth per copy 15.000 (override), junction reads per copy 6.000 (override)
+ok
+test_recovers_ten_copies_on_A (tests.ecdna.test_ilp_circular.TestSingleCircle.test_recovers_ten_copies_on_A) ... 2026-10-19 14:44:16,828 rck.ecdna.scale INFO depth per copy 15.000 (override), junction reads per copy 6.000 (override)
+ok
+test_gamma_from_balanced_blocks (tests.ecdna.test_scale.TestDepthScale.test_gamma_from_balanced_blocks) ... 2026-10-19 14:44:17,042 rck.ecdna.scale INFO depth per copy 15.000 (tumor_mode), junction reads per copy 6.000 (override)
+ok
+test_junction_scale_fallback (tests.ecdna.test_scale.TestDepthScale.test_junction_scale_fallback) ... 2026-10-19 14:44:17,052 rck.ecdna.scale WARNING junction reads per copy estimated from the subgraph's own reference adjacencies (21.00); pass --extremities or --junction-reads-per-copy for a better estimate
+2026-10-19 14:44:17,052 rck.ecdna.scale INFO depth per copy 15.000 (override), junction reads per copy 21.000 (subgraph_reference_median)
+ok
+test_junction_scale_from_extremities (tests.ecdna.test_scale.TestDepthScale.test_junction_scale_from_extremities) ... 2026-10-19 14:44:17,229 rck.ecdna.scale INFO depth per copy 15.000 (tumor_mode), junction reads per copy 6.000 (extremities)
+ok
+test_log_mode (tests.ecdna.test_scale.TestDepthScale.test_log_mode) ... ok
+test_log_mode_identical_values (tests.ecdna.test_scale.TestDepthScale.test_log_mode_identical_values) ... ok
+test_log_mode_narrow_spread (tests.ecdna.test_scale.TestDepthScale.test_log_mode_narrow_spread) ... ok
+test_override_and_subgraph_weight_fallback (tests.ecdna.test_scale.TestDepthScale.test_override_and_subgraph_weight_fallback) ... 2026-10-19 14:44:17,238 rck.ecdna.scale INFO depth per copy 15.000 (override), junction reads per copy 6.000 (override)
+ok
+test_ratio_mode_removes_shared_bias (tests.ecdna.test_scale.TestDepthScale.test_ratio_mode_removes_shared_bias) ... 2026-10-19 14:44:17,412 rck.ecdna.scale INFO depth per copy 15.000 (tumor_mode), junction reads per copy 6.000 (override)
+2026-10-19 14:44:17,446 rck.ecdna.scale INFO depth per copy 15.000 (ratio_mode), junction reads per copy 6.000 (override)
+ok
+test_sample_selection (tests.ecdna.test_scale.TestDepthScale.test_sample_selection) ... ok
+test_anchor_on_phantom_moved_to_true_head (tests.ecdna.test_subgraph_io.TestAmplicon0Fixture.test_anchor_on_phantom_moved_to_true_head) ... ok
+test_counts (tests.ecdna.test_subgraph_io.TestAmplicon0Fixture.test_counts) ... ok
+test_haplotype_crossings (tests.ecdna.test_subgraph_io.TestAmplicon0Fixture.test_haplotype_crossings) ... ok
+test_parallel_imputed_edges_merged (tests.ecdna.test_subgraph_io.TestAmplicon0Fixture.test_parallel_imputed_edges_merged) ... ok
+test_terminals_are_region_flanks (tests.ecdna.test_subgraph_io.TestAmplicon0Fixture.test_terminals_are_region_flanks) ... ok
+test_segment_coordinates_and_baf (tests.ecdna.test_subgraph_io.TestChain.test_segment_coordinates_and_baf) ... ok
+test_single_circle_structure (tests.ecdna.test_subgraph_io.TestChain.test_single_circle_structure) ... ok
+test_junction_labels (tests.ecdna.test_subgraph_io.TestParallelAndPhasing.test_junction_labels) ... ok
+test_parallel_imputed_merged_into_reference (tests.ecdna.test_subgraph_io.TestParallelAndPhasing.test_parallel_imputed_merged_into_reference) ... ok
+test_contraction (tests.ecdna.test_subgraph_io.TestPhantomContraction.test_contraction) ... ok
+test_contraction_disabled (tests.ecdna.test_subgraph_io.TestPhantomContraction.test_contraction_disabled) ... ok
+test_balance_checks (tests.ecdna.test_walk.TestAlternatingCircuit.test_balance_checks) ... ok
+test_canonical_is_rotation_and_reversal_invariant (tests.ecdna.test_walk.TestAlternatingCircuit.test_canonical_is_rotation_and_reversal_invariant) ... ok
+test_single_circle (tests.ecdna.test_walk.TestAlternatingCircuit.test_single_circle) ... ok
+test_tandem_duplicated_segment (tests.ecdna.test_walk.TestAlternatingCircuit.test_tandem_duplicated_segment) ... ok
+test_three_loops_have_two_orderings (tests.ecdna.test_walk.TestAlternatingCircuit.test_three_loops_have_two_orderings) ... ok
+test_paths_rank_orderings (tests.ecdna.test_walk.TestPathSupport.test_paths_rank_orderings) ... ok
+test_single_junction_paths_do_not_score (tests.ecdna.test_walk.TestPathSupport.test_single_junction_paths_do_not_score) ... ok
+
+----------------------------------------------------------------------
+Ran 59 tests in 5.000s
+
+OK (skipped=1)
+
+demo3 (fixed scales): {
+ "n_decompositions": 5,
+ "n_truth_species": 1,
+ "first_rank_with_all_orders_matched": 1,
+ "best_mean_jaccard_hap": 0.9999991463935126,
+ "best_mean_jaccard_rank": 1,
+ "top_decomposition": [
+  {
+   "truth": "ecdna1",
+   "inferred": "ec1",
+   "jaccard_hap": 0.9999991463935126,
+   "jaccard_total": 0.9999991463935126,
+   "junction_recall": 1.0,
+   "junction_precision": 1.0,
+   "phased_junction_recall": 1.0,
+   "phased_junction_precision": 1.0,
+   "order_match": true,
+   "order_match_ordering": 1,
+   "truth_weight": 16.0,
+   "inferred_weight": 13.0,
+   "cn_rel_err": 0.1875,
+   "decomposition_rank": 1,
+   "n_species_inferred": 1,
+   "n_low_weight": 2,
+   "n_species_truth": 1
+  }
+ ],
+ "tol_bp": 10000
+}

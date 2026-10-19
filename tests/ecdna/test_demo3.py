@@ -38,11 +38,13 @@ class TestDemo3(unittest.TestCase):
         self.assertGreater(sum(flow.ecdna_edges().values()), 0)
         evaluation = result["evaluation"]
         frame = pd.read_csv(os.path.join(outdir, "evaluation.tsv"), sep="\t")
-        best = frame.sort_values("jaccard_hap", ascending=False).iloc[0]
-        # the reconstructed species covers the true molecule, haplotypes included
-        self.assertGreaterEqual(best.jaccard_hap, 0.8, frame.to_string())
-        self.assertGreaterEqual(best.junction_recall, 0.9, frame.to_string())
-        self.assertLessEqual(best.cn_rel_err, 0.3, frame.to_string())
+        # judge the top-ranked decomposition only: a correct answer at a lower rank is not enough
+        top = frame[frame["decomposition_rank"] == frame["decomposition_rank"].min()].iloc[0]
+        self.assertEqual(evaluation["first_rank_with_all_orders_matched"], 1, frame.to_string())
+        self.assertGreaterEqual(top.jaccard_hap, 0.95, frame.to_string())
+        self.assertGreaterEqual(top.junction_recall, 0.9, frame.to_string())
+        self.assertTrue(bool(top.order_match), frame.to_string())
+        self.assertLessEqual(top.cn_rel_err, 0.3, frame.to_string())
         with open(os.path.join(outdir, "evaluation.json")) as handle:
             self.assertEqual(json.load(handle)["n_truth_species"], 1)
         return evaluation

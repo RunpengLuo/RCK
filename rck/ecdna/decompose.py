@@ -295,7 +295,7 @@ class CycleDecomposer:
 
         if p.mode == "pool":
             m.Params.PoolSearchMode = 2
-            m.Params.PoolSolutions = max(1, 4 * p.num_alternatives)
+            m.Params.PoolSolutions = max(20, 4 * p.num_alternatives)
             m.Params.PoolGap = p.pool_gap
             m.optimize(cb)
             if m.SolCount == 0:
@@ -306,9 +306,8 @@ class CycleDecomposer:
                 if not valid:
                     self.discarded += 1
                     continue
+                # keep every valid pool solution: decompose() re-ranks them before truncating
                 collect(float(m.PoolObjVal), species)
-                if len(solutions) >= p.num_alternatives:
-                    break
         elif p.mode == "nogood":
             best = None
             for _ in range(p.num_alternatives):
@@ -352,21 +351,38 @@ def _annotate(graph: ECGraph, species: Species, params: DecompositionParams, pat
     return species
 
 
+def _flag_low_weight(species: List[Species], params: DecompositionParams) -> None:
+    if not species:
+        return
+    threshold = params.min_species_weight
+    if threshold is None:
+        threshold = max(1, int(math.ceil(params.min_species_weight_frac * species[0].weight)))
+    for s in species:
+        s.low_weight = len(species) > 1 and s.weight < threshold
+
+
 def decompose(graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[DecompositionParams] = None,
               paths: Optional[List[ReadPath]] = None) -> List[Decomposition]:
-    """Ranked decompositions of ``flow`` into circular species, each with ranked orderings."""
+    """Ranked decompositions of ``flow`` into circular species, each with ranked orderings.
+
+    Decompositions are ranked by (residual, number of species not flagged ``low_weight``,
+    number of species, objective), then cut to ``num_alternatives``. Ranking on significant
+    species first means "one molecule plus weight-1 leftovers" beats "the molecule split in
+    two" when the solver scores them equally.
+    """
     params = params or DecompositionParams()
     decomposer = CycleDecomposer(graph, flow, params)
     raw = decomposer.solve()
-    result = []
-    for rank, (objective, species) in enumerate(raw, start=1):
+    candidates = []
+    for objective, species in raw:
         species = sorted(species, key=lambda s: (-s.weight, -sum(s.counts.values())))
-        if species:
-            threshold = params.min_species_weight
-            if threshold is None:
-                threshold = max(1, int(math.ceil(params.min_species_weight_frac * species[0].weight)))
-            for s in species:
-                s.low_weight = len(species) > 1 and s.weight < threshold
+        _flag_low_weight(species, params)
+        residual = decomposer._residual(species)
+        significant = sum(1 for s in species if not s.low_weight)
+        candidates.append((round(residual, 6), significant, len(species), round(objective, 9), objective, species))
+    candidates.sort(key=lambda c: c[:4])
+    result = []
+    for rank, (residual, _, _, _, objective, species) in enumerate(candidates[:max(1, params.num_alternatives)], start=1):
         annotated = [_annotate(graph, s, params, paths) for s in species]
         result.append(Decomposition(rank=rank, objective=objective, residual=decomposer._residual(annotated), species=annotated))
     return result

@@ -39,7 +39,9 @@ class TestDecompose(unittest.TestCase):
     def test_two_species_sharing_a_segment(self):
         """(x a) at 10 copies plus (x b) at 7. With weights 10 and 7 no single species fits
         (it would need a multiplicity above 3), but several two-species answers do, e.g.
-        {x a: 10, x b: 7} and {x a x b: 7, x a: 3}. All of them must be reported."""
+        {x a: 10, x b: 7} and {x a x b: 7, x a: 3}. Both explain the flow exactly with two species,
+        so both must be reported; the tie-break on edge traversals ranks the simpler one
+        (8 traversals against 12) first."""
         with tempfile.TemporaryDirectory() as tmp:
             ends = loops_graph(tmp, loops=("a", "b"))
             g = read_subgraph(tmp)
@@ -48,9 +50,11 @@ class TestDecompose(unittest.TestCase):
         best = decs[0]
         self.assertEqual(len(best.species), 2)
         self.assertAlmostEqual(best.residual, 0.0)
-        optimal = {tuple(sorted(s.weight for s in d.species)) for d in decs if abs(d.objective - best.objective) < 1e-6}
-        self.assertIn((7, 10), optimal)
-        self.assertIn((3, 7), optimal)
+        self.assertEqual(tuple(sorted(s.weight for s in best.species)), (7, 10))
+        # copy-number-equivalent answers: same residual and same number of species
+        equivalent = {tuple(sorted(s.weight for s in d.species)) for d in decs
+                      if abs(d.residual - best.residual) < 1e-6 and len(d.species) == len(best.species)}
+        self.assertIn((3, 7), equivalent)
 
     def test_disconnected_circles_are_separate_species(self):
         with tempfile.TemporaryDirectory() as tmp:

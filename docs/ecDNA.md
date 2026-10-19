@@ -156,7 +156,9 @@ goes round the same circle g times is reported as that circle at g times the wei
 lighter than `--min-species-weight` (default `--min-species-weight-frac` = 10% of the
 heaviest species) are kept but flagged `low_weight`: they usually absorb small unevenness in
 the flow rather than describing a molecule, and the evaluation ignores them unless
-`--include-low-weight` is passed to `rck-ecdna-eval`.
+`--include-low-weight` is passed to `rck-ecdna-eval`. Decompositions are ranked by residual, then by the number of
+species that are not `low_weight`, then by total species and objective, so one molecule plus
+small leftovers ranks above the same molecule split in two.
 Alternatives come from Gurobi's solution pool (`--alternatives-mode pool`) or from repeated
 solves with a no-good cut (`--alternatives-mode nogood`), within `--pool-gap` of the
 optimum. Every alternative is re-checked and deduplicated.
@@ -259,4 +261,4 @@ scales from the windows.
 | `test_ilp_circular.py` | yes (small) | single circle (10 copies on A plus a 1+1 background); haplotype crossings; imputed closing edge used when cheap and not when expensive; `--enforce-is` |
 | `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; end-to-end `rck-ecdna` |
 | `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
-| `test_demo3.py` | yes (full license) | `amplicon_0` against the demo3 truth: best-matching species with haplotype Jaccard ≥ 0.8, junction recall ≥ 0.9, copy-number error ≤ 30% |
+| `test_demo3.py` | yes (full license) | `amplicon_0` against the demo3 truth, rank-1 decomposition only: cycle order matches, haplotype Jaccard ≥ 0.95, junction recall ≥ 0.9, copy-number error ≤ 30% |

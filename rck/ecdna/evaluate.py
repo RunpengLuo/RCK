@@ -55,6 +55,7 @@ class Cycle:
     name: str
     weight: float
     orderings: List[List[CStep]]
+    circular: bool = True  # False for a linear walk (its last step does not join its first)
 
     @property
     def steps(self) -> List[CStep]:
@@ -73,11 +74,20 @@ def _contiguous(a: CStep, b: CStep, tol: int = 2) -> bool:
     return abs(a.start - (b.end + 1)) <= tol
 
 
-def runs(steps: Sequence[CStep], tol: int = 2) -> List[CStep]:
-    """Merge reference-contiguous consecutive steps (cyclically) into maximal runs."""
+def runs(steps: Sequence[CStep], tol: int = 2, circular: bool = True) -> List[CStep]:
+    """Merge reference-contiguous consecutive steps (cyclically for a circle) into maximal runs."""
     steps = list(steps)
     if not steps:
         return []
+    if not circular:
+        result = [steps[0]]
+        for s in steps[1:]:
+            last = result[-1]
+            if _contiguous(last, s, tol):
+                result[-1] = CStep(last.chrom, min(last.start, s.start), max(last.end, s.end), last.hap, last.strand)
+            else:
+                result.append(s)
+        return result
     n = len(steps)
     start = 0
     for i in range(n):
@@ -138,11 +148,14 @@ def jaccard(a: Sequence[CStep], b: Sequence[CStep], with_hap: bool = True) -> fl
 Breakend = Tuple[str, int, str]
 
 
-def junctions(steps: Sequence[CStep], tol: int = 2) -> List[Tuple[Breakend, Breakend, str, str]]:
-    """Non-contiguous joins of a circular walk as (exit breakend, entry breakend, hap1, hap2)."""
+def junctions(steps: Sequence[CStep], tol: int = 2, circular: bool = True) -> List[Tuple[Breakend, Breakend, str, str]]:
+    """Non-contiguous joins of a walk as (exit breakend, entry breakend, hap1, hap2); a linear
+    walk has no join from its last step back to its first."""
     result = []
     n = len(steps)
     for i, s in enumerate(steps):
+        if not circular and i == n - 1:
+            break
         t = steps[(i + 1) % n]
         if _contiguous(s, t, tol):
             continue
@@ -165,10 +178,11 @@ def _junction_match(j1, j2, tol: int, phased: bool) -> bool:
     return False
 
 
-def junction_scores(truth: Sequence[CStep], inferred: Sequence[CStep], tol: int, phased: bool) -> Tuple[float, float]:
+def junction_scores(truth: Sequence[CStep], inferred: Sequence[CStep], tol: int, phased: bool,
+                    truth_circular: bool = True, inferred_circular: bool = True) -> Tuple[float, float]:
     """(recall, precision) of distinct junctions."""
-    jt = _unique(junctions(truth), tol)
-    ji = _unique(junctions(inferred), tol)
+    jt = _unique(junctions(truth, circular=truth_circular), tol)
+    ji = _unique(junctions(inferred, circular=inferred_circular), tol)
     if not jt and not ji:
         return 1.0, 1.0
     recall = sum(any(_junction_match(t, i, tol, phased) for i in ji) for t in jt) / len(jt) if jt else 1.0
@@ -193,13 +207,17 @@ def _runs_equal(a: Sequence[CStep], b: Sequence[CStep], tol: int) -> bool:
                                     abs(x.start - y.start) <= tol and abs(x.end - y.end) <= tol for x, y in zip(a, b))
 
 
-def order_match(truth: Sequence[CStep], inferred: Sequence[CStep], tol: int) -> bool:
-    rt, ri = runs(truth), runs(inferred)
+def order_match(truth: Sequence[CStep], inferred: Sequence[CStep], tol: int,
+                truth_circular: bool = True, inferred_circular: bool = True) -> bool:
+    """Same run sequence up to reversal (and rotation, for circles); topologies must agree."""
+    if truth_circular != inferred_circular:
+        return False
+    rt, ri = runs(truth, circular=truth_circular), runs(inferred, circular=inferred_circular)
     if len(rt) != len(ri):
         return False
     candidates = [ri, [_flip(s) for s in reversed(ri)]]
     for seq in candidates:
-        for r in range(len(seq)):
+        for r in (range(len(seq)) if truth_circular else (0,)):
             if _runs_equal(rt, seq[r:] + seq[:r], tol):
                 return True
     return False
@@ -233,7 +251,8 @@ def read_inferred(decompositions_tsv: str, include_low_weight: bool = False) -> 
         group = group.sort_values("ordering_rank")
         orderings = [[_parse_step(t) for t in str(w).split(",")] for w in group["walk"]]
         entry = result[int(rank)]
-        entry["cycles"].append(Cycle(name=str(species), weight=float(group["weight"].iloc[0]), orderings=orderings))
+        circular = str(group["topology"].iloc[0]) != "linear" if "topology" in group else True
+        entry["cycles"].append(Cycle(name=str(species), weight=float(group["weight"].iloc[0]), orderings=orderings, circular=circular))
     return result
 
 
@@ -563,16 +582,20 @@ class PairScore:
     truth_weight: float = 0.0
     inferred_weight: Optional[float] = None
     cn_rel_err: Optional[float] = None
+    inferred_topology: Optional[str] = None
+    topology_match: Optional[bool] = None
 
 
 def score_pair(t: Cycle, c: Cycle, tol: int) -> PairScore:
     s = PairScore(truth=t.name, inferred=c.name, truth_weight=t.weight, inferred_weight=c.weight)
     s.jaccard_hap = jaccard(t.steps, c.steps, True)
     s.jaccard_total = jaccard(t.steps, c.steps, False)
-    s.junction_recall, s.junction_precision = junction_scores(t.steps, c.steps, tol, phased=False)
-    s.phased_junction_recall, s.phased_junction_precision = junction_scores(t.steps, c.steps, tol, phased=True)
+    s.junction_recall, s.junction_precision = junction_scores(t.steps, c.steps, tol, False, t.circular, c.circular)
+    s.phased_junction_recall, s.phased_junction_precision = junction_scores(t.steps, c.steps, tol, True, t.circular, c.circular)
+    s.inferred_topology = "circular" if c.circular else "linear"
+    s.topology_match = t.circular == c.circular
     for k, steps in enumerate(c.orderings, start=1):
-        if order_match(t.steps, steps, tol):
+        if order_match(t.steps, steps, tol, t.circular, c.circular):
             s.order_match, s.order_match_ordering = True, k
             break
     s.cn_rel_err = abs(c.weight - t.weight) / t.weight if t.weight else None

@@ -31,6 +31,7 @@ class TestSingleCircle(unittest.TestCase):
         self.assertEqual(sol.adj_ec["circ", Phasing.AA], 10)
         self.assertEqual(is_balanced(g, sol.ecdna_edges()), [])
         self.assertEqual(sol.imputed_used, [])
+        self.assertEqual(sum(sol.linear_ends.values()), 0)  # the observed junction closes the circle
 
     def test_background_ends_only_at_terminals(self):
         with temp_dir() as tmp:
@@ -107,10 +108,58 @@ class TestImputedGap(unittest.TestCase):
         self.assertEqual(sol.adj_ec["imp_close", Phasing.AA], 10)
 
     def test_expensive_imputation_is_not_used(self):
+        """Without an affordable closing edge, the amplified copies are explained as linear."""
         with temp_dir() as tmp:
             g, obs, sol = solve(self.build(tmp), imputed_penalty=1000.0)
         self.assertEqual(sol.imputed_used, [])
+        self.assertEqual(sol.adj_ec["imp_close", Phasing.AA], 0)
+        self.assertEqual(sum(sol.linear_ends.values()), 20)  # 10 copies, two ends each
+        for sid in g.segments:
+            self.assertEqual(sol.seg_ec[sid, Haplotype.A], 10, sid)
+
+    def test_strictly_circular_mode(self):
+        with temp_dir() as tmp:
+            g, obs, sol = solve(self.build(tmp), imputed_penalty=1000.0, linear_ends="none")
         self.assertEqual(sum(sol.ecdna_edges().values()), 0)
+        self.assertEqual(sol.linear_ends, {})
+
+
+@requires_gurobi
+class TestLinearEnds(unittest.TestCase):
+    """chr1: two amplified segments (12 copies) then one background segment (2 copies)."""
+
+    def build(self, tmp):
+        b = SubgraphBuilder()
+        segs = b.chain("chr1", [0, 100_000, 200_000, 300_000], [180.0, 180.0, 30.0], bafs=[1 / 12.0, 1 / 12.0, 0.5],
+                       ref_reads=[12, 72, 12, 12])
+        return b.write(tmp), segs
+
+    def test_ends_at_boundaries_and_flanks_only(self):
+        from rck.ecdna.ilp_circular import OptModelCircular
+
+        with temp_dir() as tmp:
+            directory, segs = self.build(tmp)
+            g = read_subgraph(directory)
+            obs = build_observations(g, FIXED)
+            ends = set(OptModelCircular(g, obs).linear_end_nodes())
+        self.assertIn(segs[0][0], ends)  # left flank of the region
+        self.assertIn(segs[1][1], ends)  # copy number drops from 12 to 2 here ...
+        self.assertIn(segs[2][0], ends)  # ... on both sides of the boundary
+        self.assertIn(segs[2][1], ends)  # right flank
+        self.assertNotIn(segs[0][1], ends)  # 12 -> 12: not a boundary
+        self.assertNotIn(segs[1][0], ends)
+
+    def test_linear_amplicon_has_linear_flow(self):
+        with temp_dir() as tmp:
+            directory, segs = self.build(tmp)
+            g, obs, sol = solve(directory)
+        sids = sorted(g.segments, key=lambda x: g.segments[x].start)
+        self.assertEqual(sol.seg_ec[sids[0], Haplotype.A], 10)
+        self.assertEqual(sol.seg_ec[sids[1], Haplotype.A], 10)
+        self.assertEqual(sol.seg_ec[sids[2], Haplotype.A], 0)
+        self.assertEqual(sol.linear_ends[segs[0][0], Haplotype.A], 10)
+        self.assertEqual(sol.linear_ends[segs[1][1], Haplotype.A], 10)
+        self.assertEqual(is_balanced(g, sol.ecdna_edges()), [])
 
 
 if __name__ == "__main__":

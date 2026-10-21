@@ -134,6 +134,50 @@ class TestDecompose(unittest.TestCase):
 
 
 @requires_gurobi
+class TestLinearSpecies(unittest.TestCase):
+    def run_decompose(self, g, flow, **params):
+        from rck.ecdna.decompose import DecompositionParams, decompose
+
+        return decompose(g, flow, DecompositionParams(**params))
+
+    def test_linear_walk_is_one_linear_species(self):
+        from tests.ecdna.test_walk import linear_chain_counts
+
+        with temp_dir() as tmp:
+            b = SubgraphBuilder()
+            b.chain("chr1", [0, 1000, 2000, 3000], [100.0] * 3)
+            g = read_subgraph(b.write(tmp))
+        flow = {k: 8 * v for k, v in linear_chain_counts(g).items()}
+        best = self.run_decompose(g, flow)[0]
+        self.assertEqual(len(best.species), 1)
+        self.assertEqual(best.species[0].topology, "linear")
+        self.assertEqual(best.species[0].weight, 8)
+        self.assertEqual(best.call, "linear")
+        self.assertAlmostEqual(best.circular_fraction, 0.0)
+        steps = best.species[0].orderings[0].steps
+        self.assertEqual(len(steps), 3)
+        self.assertEqual(steps[-1].join[0], "T")
+
+    def test_circle_plus_linear_piece(self):
+        """(x a) circle at 10 copies and a linear walk over b at 2: two species, called ecDNA."""
+        from rck.ecdna.phased import end_key, seg_key
+
+        with temp_dir() as tmp:
+            ends = loops_graph(tmp, loops=("a", "b"))
+            g = read_subgraph(tmp)
+        flow = loop_counts(g, ends, ["a"], weight=10)
+        b_sid = g.nodes[ends["b"][0]].segment
+        flow[seg_key(b_sid, "A")] = 2
+        flow[end_key(ends["b"][0], "A")] = 2
+        flow[end_key(ends["b"][1], "A")] = 2
+        best = self.run_decompose(g, flow)[0]
+        self.assertEqual(sorted((s.topology, s.weight) for s in best.species), [("circular", 10), ("linear", 2)])
+        self.assertEqual(best.call, "ecDNA")
+        self.assertAlmostEqual(best.circular_fraction, 20 / 22.0, places=3)
+        self.assertAlmostEqual(best.residual, 0.0)
+
+
+@requires_gurobi
 class TestCommandLine(unittest.TestCase):
     def test_single_circle_end_to_end(self):
         from rck.ecdna_run import main
@@ -157,12 +201,46 @@ class TestCommandLine(unittest.TestCase):
             with open(os.path.join(out, "aa", "amp_decomp1_cycles.txt")) as handle:
                 self.assertIn("Copy_count=10.0", handle.read())
             self.assertEqual(top.status.iloc[0], "species")
+            self.assertEqual(top.topology.iloc[0], "circular")
+            self.assertEqual(top.amplicon_call.iloc[0], "ecDNA")
+            self.assertEqual(summary["amplicon_call"], "ecDNA")
             # regression: gurobipy's logger must not flood the console at the default verbosity
             import logging
 
             self.assertGreaterEqual(logging.getLogger("gurobipy").level, logging.WARNING)
             with open(os.path.join(out, "gurobi_flow.log")) as handle:
                 self.assertIn("Optimal solution found", handle.read())
+
+
+@requires_gurobi
+class TestLinearCommandLine(unittest.TestCase):
+    def test_amplicon_without_closing_junction_is_called_linear(self):
+        from rck.ecdna_run import main
+
+        with temp_dir() as tmp:
+            b = SubgraphBuilder()
+            b.chain("chr1", [1000, 101000, 201000, 301000], [180.0] * 3, bafs=[1 / 12.0] * 3, ref_reads=[12, 72, 72, 12])
+            directory = b.write(os.path.join(tmp, "lin"))
+            out = os.path.join(tmp, "out")
+            self.assertEqual(main(["--subgraph-dir", directory, "--outdir", out, "--depth-per-copy", "15",
+                                   "--junction-reads-per-copy", "6"]), 0)
+            table = pd.read_csv(os.path.join(out, "decompositions.tsv"), sep="\t")
+            top = table[(table.decomposition_rank == 1) & (table.ordering_rank == 1)]
+            self.assertEqual(list(top.topology), ["linear"])
+            self.assertEqual(int(top.weight.iloc[0]), 10)
+            self.assertEqual(top.amplicon_call.iloc[0], "linear")
+            with open(os.path.join(out, "summary.json")) as handle:
+                summary = json.load(handle)
+            self.assertEqual(summary["amplicon_call"], "linear")
+            self.assertEqual(summary["flow"]["linear_end_copies"], 20)
+            with open(os.path.join(out, "aa", "lin_decomp1_cycles.txt")) as handle:
+                self.assertIn("Segments=0+,", handle.read())
+            # the strictly circular model finds no ecDNA here
+            out2 = os.path.join(tmp, "out2")
+            main(["--subgraph-dir", directory, "--outdir", out2, "--depth-per-copy", "15", "--junction-reads-per-copy", "6",
+                  "--linear-ends", "none"])
+            with open(os.path.join(out2, "summary.json")) as handle:
+                self.assertEqual(json.load(handle)["amplicon_call"], "none")
 
 
 @requires_gurobi

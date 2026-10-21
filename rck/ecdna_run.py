@@ -68,6 +68,12 @@ def build_parser() -> argparse.ArgumentParser:
     fl.add_argument("--soft-junction-penalty", type=float, default=1.0)
     fl.add_argument("--enforce-is", action="store_true", help="Per-haplotype extremity exclusivity (RCK infinite sites)")
     fl.add_argument("--no-background-novel", action="store_true", help="Background layer may use reference adjacencies only")
+    fl.add_argument("--linear-ends", choices=["boundaries", "all", "none"], default="boundaries",
+                    help="Where amplified copies may start or stop: copy-number boundaries and flanks, any extremity, "
+                         "or nowhere (strictly circular)")
+    fl.add_argument("--linear-end-penalty", type=float, default=0.25, help="Cost per copy per linear end")
+    fl.add_argument("--boundary-min-copies", type=float, default=2.0, help="Copy-number step that marks a boundary")
+    fl.add_argument("--boundary-frac", type=float, default=0.25, help="... or this fraction of the larger copy number")
 
     dc = parser.add_argument_group("decomposition")
     dc.add_argument("--max-species", type=int, default=4)
@@ -76,6 +82,9 @@ def build_parser() -> argparse.ArgumentParser:
     dc.add_argument("--min-species-weight", type=int, default=None,
                     help="Species lighter than this are flagged low_weight (default: --min-species-weight-frac of the heaviest)")
     dc.add_argument("--min-species-weight-frac", type=float, default=0.10)
+    dc.add_argument("--min-ecdna-copies", type=int, default=2, help="Circular species lighter than this do not make an ecDNA call")
+    dc.add_argument("--ecdna-call-fraction", type=float, default=0.8,
+                    help="Circular share of copy-number x length needed for an ecDNA call (linear below 1 - this)")
     dc.add_argument("--num-alternatives", type=int, default=10)
     dc.add_argument("--pool-gap", type=float, default=0.10)
     dc.add_argument("--alternatives-mode", choices=["pool", "nogood"], default="pool")
@@ -127,17 +136,20 @@ def run(args) -> Dict[str, object]:
     flow_params = CircularParams(imputed_penalty=args.imputed_penalty, novel_penalty=args.novel_penalty, alpha_novel=args.alpha_novel,
                                  alpha_ref=args.alpha_ref, bg_max=args.bg_max, bg_prior_weight=args.bg_prior_weight,
                                  soft_junction_penalty=args.soft_junction_penalty, enforce_is=args.enforce_is,
-                                 allow_background_novel=not args.no_background_novel, time_limit=args.time_limit,
+                                 allow_background_novel=not args.no_background_novel, linear_ends=args.linear_ends,
+                                 linear_end_penalty=args.linear_end_penalty, boundary_min_copies=args.boundary_min_copies,
+                                 boundary_frac=args.boundary_frac, time_limit=args.time_limit,
                                  threads=args.threads, mip_gap=args.mip_gap, log_file=os.path.join(args.outdir, "gurobi_flow.log"),
                                  log_to_console=args.verbose)
     sol = solve_flow(graph, obs, flow_params)
-    log.info("flow: %s, objective %.4f, %d ecDNA edge copies, imputed used: %s", sol.status, sol.objective,
-             sum(sol.ecdna_edges().values()), ",".join(sol.imputed_used) or "none")
+    log.info("flow: %s, objective %.4f, %d ecDNA edge copies, %d linear-end copies, imputed used: %s", sol.status, sol.objective,
+             sum(sol.ecdna_edges().values()), sum(sol.linear_ends.values()), ",".join(sol.imputed_used) or "none")
 
     paths = read_paths(inputs["paths"], graph) if inputs["paths"] else None
     dec_params = DecompositionParams(max_species=args.max_species, max_multiplicity=args.max_multiplicity,
                                      species_penalty=args.species_penalty, min_species_weight=args.min_species_weight,
-                                     min_species_weight_frac=args.min_species_weight_frac, num_alternatives=args.num_alternatives,
+                                     min_species_weight_frac=args.min_species_weight_frac, min_ecdna_copies=args.min_ecdna_copies,
+                                     ecdna_call_fraction=args.ecdna_call_fraction, num_alternatives=args.num_alternatives,
                                      pool_gap=args.pool_gap, mode=args.alternatives_mode, max_orderings=args.max_orderings,
                                      time_limit=args.time_limit, threads=args.threads, mip_gap=args.mip_gap,
                                      log_file=os.path.join(args.outdir, "gurobi_decompose.log"), log_to_console=args.verbose)
@@ -152,8 +164,9 @@ def run(args) -> Dict[str, object]:
     if args.truth_dir or args.truth_cycles:
         evaluation = _evaluate(args, graph, outputs)
     for d in decompositions[:3]:
-        log.info("decomposition %d: objective %.4f, %d species (%s)", d.rank, d.objective, len(d.species),
-                 ", ".join("w={w} len={l}{f}".format(w=s.weight, l=s.length_bp, f=" low_weight" if s.low_weight else "") for s in d.species))
+        log.info("decomposition %d: %s, objective %.4f, %d species (%s)", d.rank, d.call, d.objective, len(d.species),
+                 ", ".join("{t} w={w} len={l}{f}".format(t=s.topology, w=s.weight, l=s.length_bp, f=" low_weight" if s.low_weight else "")
+                           for s in d.species))
     return {"graph": graph, "observations": obs, "flow": sol, "decompositions": decompositions, "outputs": outputs, "inputs": inputs,
             "evaluation": evaluation}
 

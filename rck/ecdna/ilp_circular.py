@@ -23,6 +23,16 @@ haplotype-aware balance constraint (``define_constraints_on_nodes`` /
   amplicon should be free to stay unused.
 * Optional per-haplotype extremity exclusivity (``enforce_is``), RCK's infinite-sites
   constraint, off by default because chromothripsis-derived ecDNA violates it.
+* **Linear ends (optional).** With ``linear_ends`` set to ``boundaries`` (default) or ``all``,
+  amplified copies may also start or stop at selected extremities, at ``linear_end_penalty``
+  per copy and end. ``boundaries`` allows ends only where copy number steps between a segment
+  and its reference neighbour, at region flanks, and at segment ends without a reference join
+  (the places AmpliconArchitect and CoRAL connect to their source / sink). This lets the model
+  explain an amplicon that has no closing junction as linear instead of forcing a circle or an
+  imputed join; ``none`` restores the strictly circular model. Penalty trade-off: a circle
+  through observed junctions is always cheapest; an imputed closing edge costs
+  ``imputed_penalty`` once, a linear walk ``2 x linear_end_penalty`` per copy, so imputation
+  wins for high-copy amplicons and linear ends for low-copy ones.
 """
 
 from __future__ import annotations
@@ -36,7 +46,7 @@ import pandas as pd
 
 from rck.core.structures import Haplotype, Phasing
 from rck.ecdna.gurobi_env import close_model, default_threads
-from rck.ecdna.phased import adj_key, seg_key
+from rck.ecdna.phased import adj_key, end_key, seg_key
 from rck.ecdna.scale import Observations
 from rck.ecdna.subgraph_io import HAPLOTYPES, IMPUTED, REFERENCE, ECGraph
 
@@ -58,6 +68,11 @@ class CircularParams:
     min_seg_weight: float = 0.02
     enforce_is: bool = False
     allow_background_novel: bool = True  # chromosomal SVs may carry background flow
+    linear_ends: str = "boundaries"  # boundaries | all | none: where ecDNA-layer copies may start / stop
+    linear_end_penalty: float = 0.25  # per copy per linear end
+    bg_balance_weight: float = 0.01  # tie-break: background copies split evenly between haplotypes
+    boundary_min_copies: float = 2.0  # copy-number step that makes an extremity a boundary ...
+    boundary_frac: float = 0.25  # ... or this fraction of the larger copy number, whichever is larger
     time_limit: Optional[float] = None
     threads: Optional[int] = None
     mip_gap: float = 1e-4
@@ -76,6 +91,7 @@ class FlowSolution:
     adj_bg: Dict[Tuple[str, Phasing], int]
     terminal_bg: Dict[Tuple[str, Haplotype], int]
     imputed_used: List[str] = field(default_factory=list)
+    linear_ends: Dict[Tuple[str, Haplotype], int] = field(default_factory=dict)
 
     def ecdna_edges(self) -> Dict[Tuple[str, str, str], int]:
         """Positive ecDNA-layer flow on phased edge keys (see :mod:`rck.ecdna.phased`)."""
@@ -86,6 +102,9 @@ class FlowSolution:
         for (aid, ph), v in self.adj_ec.items():
             if v > 0:
                 result[adj_key(aid, ph)] = v
+        for (nid, h), v in self.linear_ends.items():
+            if v > 0:
+                result[end_key(nid, h)] = v
         return result
 
     def segment_table(self, graph: ECGraph, obs: Observations) -> pd.DataFrame:
@@ -111,6 +130,10 @@ class FlowSolution:
                 bg = self.adj_bg.get((aid, ph), 0)
                 rows.append({"aid": aid, "kind": a.kind, "u": a.u, "v": a.v, "phasing": str(ph), "reads": a.reads,
                              "obs_cn": obs.adjacencies.get(aid), "junction_hap": a.junction_hap, "ecdna": ec, "bg": bg})
+        for (nid, h), v in sorted(self.linear_ends.items(), key=lambda kv: (kv[0][0], str(kv[0][1]))):
+            if v > 0:
+                rows.append({"aid": "end:{n}".format(n=nid), "kind": "linear_end", "u": nid, "v": None, "phasing": str(h),
+                             "reads": None, "obs_cn": None, "junction_hap": None, "ecdna": v, "bg": 0})
         return pd.DataFrame(rows)
 
 
@@ -122,7 +145,8 @@ class OptModelCircular:
         self.obs = obs
         self.params = params or CircularParams()
         self.model = None
-        self.xe, self.xb, self.ye, self.yb, self.pv, self.t = {}, {}, {}, {}, {}, {}
+        self.xe, self.xb, self.ye, self.yb, self.pv, self.t, self.te = {}, {}, {}, {}, {}, {}, {}
+        self.end_nodes: List[str] = []
         self.ub_seg: Dict[str, int] = {}
 
     # ---- helpers ---- #
@@ -141,6 +165,35 @@ class OptModelCircular:
         if a.is_self_loop:
             m = max(m // 2, 1)
         return m
+
+    def linear_end_nodes(self) -> List[str]:
+        """Extremities where ecDNA-layer copies may start or stop (see module docstring)."""
+        p, g, obs = self.params, self.graph, self.obs
+        mode = (p.linear_ends or "none").lower()
+        if mode == "none":
+            return []
+        candidates = sorted(nid for nid, n in g.nodes.items() if n.segment is not None)
+        if mode == "all":
+            return candidates
+        if mode != "boundaries":
+            raise ValueError("linear_ends must be boundaries, all or none, not {m}".format(m=p.linear_ends))
+        result = []
+        for nid in candidates:
+            c = obs.segments[g.nodes[nid].segment].total
+            refs = [a for a in g.adjacencies_at(nid) if a.kind == REFERENCE]
+            if not refs:
+                result.append(nid)
+                continue
+            for a in refs:
+                other_sid = g.nodes[a.other_end(nid)].segment
+                if other_sid is None:  # region flank
+                    result.append(nid)
+                    break
+                oc = obs.segments[other_sid].total
+                if abs(c - oc) >= max(p.boundary_min_copies, p.boundary_frac * max(c, oc)):
+                    result.append(nid)
+                    break
+        return result
 
     def _uses_background(self, aid: str) -> bool:
         a = self.graph.adjacencies[aid]
@@ -194,6 +247,12 @@ class OptModelCircular:
             for h in HAPLOTYPES:
                 self.t[nid, h] = m.addVar(lb=0, ub=4 * p.bg_max, vtype=GRB.INTEGER, name="t[{n},{h}]".format(n=nid, h=h))
 
+        self.end_nodes = self.linear_end_nodes()
+        for nid in self.end_nodes:
+            ub = self.ub_seg[g.nodes[nid].segment]
+            for h in HAPLOTYPES:
+                self.te[nid, h] = m.addVar(lb=0, ub=ub, vtype=GRB.INTEGER, name="te[{n},{h}]".format(n=nid, h=h))
+
         self._balance(gp)
         self._objective(gp, GRB)
         if p.enforce_is:
@@ -219,7 +278,7 @@ class OptModelCircular:
                 bg = gp.quicksum(bg_terms)
                 slack = self.t.get((nid, h), 0)
                 if node.segment is not None:
-                    m.addConstr(self.xe[node.segment, h] == ec, name="ec-balance[{n},{h}]".format(n=nid, h=h))
+                    m.addConstr(self.xe[node.segment, h] == ec + self.te.get((nid, h), 0), name="ec-balance[{n},{h}]".format(n=nid, h=h))
                     m.addConstr(self.xb[node.segment, h] == bg + slack, name="bg-balance[{n},{h}]".format(n=nid, h=h))
                 else:
                     m.addConstr(ec == 0, name="ec-nosegment[{n},{h}]".format(n=nid, h=h))
@@ -249,6 +308,9 @@ class OptModelCircular:
             bg_total = gp.quicksum(self.xb[sid, h] for h in HAPLOTYPES)
             d = self._abs_dev(gp, bg_total, obs.background.get(sid, 2.0), "dbg[{s}]".format(s=sid))
             terms.append(p.bg_prior_weight * w * d)
+            if p.bg_balance_weight > 0 and so.a is not None and so.b is not None:
+                d = self._abs_dev(gp, self.xb[sid, Haplotype.A] - self.xb[sid, Haplotype.B], 0.0, "dbal[{s}]".format(s=sid))
+                terms.append(p.bg_balance_weight * d)
 
         for aid in sorted(g.adjacencies):
             a = g.adjacencies[aid]
@@ -263,6 +325,8 @@ class OptModelCircular:
                 for ph in a.allowed:
                     extra = p.soft_junction_penalty if (a.kind != IMPUTED and ph not in a.preferred) else 0.0
                     terms.append((cost + extra) * self.pv[aid, ph])
+        if self.te:
+            terms.append(p.linear_end_penalty * gp.quicksum(self.te.values()))
         m.setObjective(gp.quicksum(terms), GRB.MINIMIZE)
 
     def _infinite_sites(self, gp):
@@ -302,10 +366,11 @@ class OptModelCircular:
         adj_ec = {k: val(v) for k, v in self.ye.items()}
         adj_bg = {k: val(v) for k, v in self.yb.items()}
         terminal = {k: val(v) for k, v in self.t.items()}
+        linear_ends = {k: val(v) for k, v in self.te.items()}
         imputed = sorted({aid for (aid, ph), v in self.pv.items() if v.X > 0.5 and self.graph.adjacencies[aid].kind == IMPUTED})
         gap = m.MIPGap if m.IsMIP else 0.0
         solution = FlowSolution(status=status, objective=float(m.ObjVal), mip_gap=float(gap), seg_ec=seg_ec, seg_bg=seg_bg,
-                                adj_ec=adj_ec, adj_bg=adj_bg, terminal_bg=terminal, imputed_used=imputed)
+                                adj_ec=adj_ec, adj_bg=adj_bg, terminal_bg=terminal, imputed_used=imputed, linear_ends=linear_ends)
         self.close()
         return solution
 

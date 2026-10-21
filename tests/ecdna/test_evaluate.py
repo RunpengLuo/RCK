@@ -55,6 +55,33 @@ class TestMetrics(unittest.TestCase):
         self.assertAlmostEqual(jaccard(TRUTH, doubled), 3000 / 4000.0)
 
 
+class TestLinearInference(unittest.TestCase):
+    def test_linear_walk_never_matches_a_circle(self):
+        linear = Cycle("lin", 12.0, [TRUTH], circular=False)
+        truth = Cycle("truth1", 12.0, [TRUTH])
+        self.assertFalse(order_match(TRUTH, TRUTH, tol=0, truth_circular=True, inferred_circular=False))
+        self.assertTrue(order_match(TRUTH, TRUTH, tol=0, truth_circular=False, inferred_circular=False))
+        # the open walk lacks the join from its last step back to its first
+        recall, precision = junction_scores(TRUTH, TRUTH, tol=0, phased=True, truth_circular=True, inferred_circular=False)
+        self.assertAlmostEqual(recall, 2 / 3.0)
+        self.assertEqual(precision, 1.0)
+        self.assertEqual(jaccard(truth.steps, linear.steps), 1.0)
+
+    def test_topology_column_is_read(self):
+        rows = [{"decomposition_rank": 1, "objective": 1.0, "species": "ec1", "topology": "linear", "status": "species", "weight": 12,
+                 "ordering_rank": 1, "walk": ",".join("{c}:{s}-{e}:{h}:{st}".format(c=x.chrom, s=x.start, e=x.end, h=x.hap, st=x.strand)
+                                                      for x in TRUTH)}]
+        with temp_dir() as tmp:
+            path = os.path.join(tmp, "decompositions.tsv")
+            pd.DataFrame(rows).to_csv(path, sep="\t", index=False)
+            frame, summary = evaluate(path, [Cycle("truth1", 12.0, [TRUTH])], tol=0)
+        row = frame.iloc[0]
+        self.assertEqual(row.inferred_topology, "linear")
+        self.assertFalse(bool(row.topology_match))
+        self.assertFalse(bool(row.order_match))
+        self.assertIsNone(summary["first_rank_with_all_orders_matched"])
+
+
 class TestTables(unittest.TestCase):
     def test_truth_table_round_trip(self):
         with temp_dir() as tmp:

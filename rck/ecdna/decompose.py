@@ -1,4 +1,4 @@
-"""Decompose the ecDNA flow into the fewest circular species, with alternatives.
+"""Decompose the ecDNA flow into the fewest species (circular or linear), with alternatives.
 
 Given the ecDNA-layer flow ``F_e`` on phased edges (from :mod:`rck.ecdna.ilp_circular`), find
 up to ``K`` species slots. Slot ``k`` has an integer copy weight ``w_k`` and a small integer
@@ -8,7 +8,9 @@ multiplicity ``m_ke`` (0..``max_multiplicity``) on every edge, such that
 * each slot is balanced with alternation at every phased node
   (segment multiplicity == sum of incident adjacency multiplicities, self-loops twice);
 * each slot's support is connected (lazy cuts in a Gurobi callback), so with balance it is
-  one alternating closed walk.
+  one alternating walk;
+* each slot uses either no linear ends (a circle) or exactly two (a linear walk); linear ends
+  share one virtual node, so connectivity also keeps a linear slot to a single walk.
 
 The product ``w_k * m_ke`` is linearized exactly through the binary expansion of ``m_ke``
 (McCormick on binary x integer). Objective: ``sum_e omega_e |residual_e| + species_penalty *
@@ -17,6 +19,10 @@ The product ``w_k * m_ke`` is linearized exactly through the binary expansion of
 Alternatives come from Gurobi's solution pool (``PoolSearchMode=2``) or, with
 ``mode='nogood'``, from re-solving with a no-good cut on the slot supports. Pool solutions
 are re-checked for balance and connectivity and deduplicated by their species multisets.
+
+Each decomposition gets an amplicon call from its significant (not ``low_weight``) species:
+``ecDNA`` when circular species carry at least 80% of the copy-number x length, ``linear`` at
+most 20%, ``mixed`` in between, ``none`` without significant species.
 """
 
 from __future__ import annotations
@@ -28,7 +34,8 @@ from dataclasses import dataclass, field
 from typing import Dict, FrozenSet, List, Optional, Sequence, Tuple
 
 from rck.ecdna.gurobi_env import close_model, default_threads
-from rck.ecdna.phased import ADJ, SEG, EdgeKey, PhasedNode, endpoints, is_balanced, segment_key_at
+from rck.ecdna.phased import (ADJ, END, END_NODE, SEG, EdgeKey, PhasedNode, endpoints, is_adj_like, is_balanced, n_ends,
+                              segment_key_at)
 from rck.ecdna.subgraph_io import IMPUTED, NOVEL, ECGraph
 from rck.ecdna.walk import ReadPath, Step, alternating_circuit, enumerate_circuits, path_support, walk_length
 
@@ -43,6 +50,8 @@ class DecompositionParams:
     multiplicity_penalty: float = 1e-4  # tie-break: prefer the walk with fewer edge traversals
     min_species_weight: Optional[int] = None  # species below this weight are flagged low_weight
     min_species_weight_frac: float = 0.10  # default threshold: this fraction of the heaviest species
+    min_ecdna_copies: int = 2  # circular species lighter than this do not make an amplicon ecDNA
+    ecdna_call_fraction: float = 0.8  # circular share of copy-number x length for an "ecDNA" call
     adj_residual_weight: float = 1.0
     seg_length_cap: int = 50_000
     min_seg_weight: float = 0.05
@@ -77,6 +86,10 @@ class Species:
     low_weight: bool = False  # below the minimum species weight: likely flow residue, not a molecule
 
     @property
+    def topology(self) -> str:
+        return "linear" if n_ends(self.counts) else "circular"
+
+    @property
     def status(self) -> str:
         return "low_weight" if self.low_weight else "species"
 
@@ -91,6 +104,8 @@ class Decomposition:
     objective: float
     residual: float
     species: List[Species]
+    call: str = "none"
+    circular_fraction: Optional[float] = None
 
     @property
     def signature(self) -> FrozenSet:
@@ -158,7 +173,7 @@ class CycleDecomposer:
         self.K, self.W, self.nbits = K, W, nbits
         self.u = {k: m.addVar(vtype=GRB.BINARY, name="u[{k}]".format(k=k)) for k in range(K)}
         self.w = {k: m.addVar(lb=0, ub=W, vtype=GRB.INTEGER, name="w[{k}]".format(k=k)) for k in range(K)}
-        self.beta, self.zeta, self.y, self.mult = {}, {}, {}, {}
+        self.beta, self.zeta, self.y, self.mult, self.linear = {}, {}, {}, {}, {}
         for k in range(K):
             m.addConstr(self.w[k] <= W * self.u[k])
             m.addConstr(self.w[k] >= self.u[k])
@@ -181,16 +196,24 @@ class CycleDecomposer:
                 m.addConstr(y <= mult)
                 m.addConstr(y <= self.u[k])
             m.addConstr(gp.quicksum(self.y[k, e] for e in E) >= 2 * self.u[k])
-            # balance with alternation, per phased node
+            # a slot is a circle (no ends) or one linear walk (exactly two ends)
+            ends = [e for e in E if e[0] == END]
+            if ends:
+                lin = m.addVar(vtype=GRB.BINARY, name="linear[{k}]".format(k=k))
+                self.linear[k] = lin
+                m.addConstr(gp.quicksum(self.mult[k, e] for e in ends) == 2 * lin)
+                m.addConstr(lin <= self.u[k])
+            # balance with alternation, per phased node (linear ends sit on the adjacency side)
             nodes: Dict[PhasedNode, List[EdgeKey]] = {}
             for e in E:
-                if e[0] == ADJ:
+                if is_adj_like(e):
                     x, z = endpoints(g, e)
                     nodes.setdefault(x, []).append(e)
                     nodes.setdefault(z, []).append(e)
                 else:
                     for x in endpoints(g, e):
                         nodes.setdefault(x, [])
+            nodes.pop(END_NODE, None)  # the virtual end node has no segment to balance against
             for j, (node, adjs) in enumerate(sorted(nodes.items())):
                 sk = segment_key_at(g, node)
                 seg_expr = self.mult[k, sk] if (sk is not None and sk in self.flow) else 0
@@ -258,10 +281,10 @@ class CycleDecomposer:
                 continue
             # a walk that goes round the same circle g times is that circle at g times the weight
             g = reduce(math.gcd, counts.values())
-            if g > 1:
+            if g > 1 and not n_ends(counts):
                 counts = {e: v // g for e, v in counts.items()}
                 weight *= g
-            if is_balanced(self.graph, counts) or len(_components(self.graph, list(counts))) > 1:
+            if is_balanced(self.graph, counts) or len(_components(self.graph, list(counts))) > 1 or n_ends(counts) not in (0, 2):
                 valid = False
             species.append(Species(weight=weight, counts=counts))
         return species, valid
@@ -359,6 +382,22 @@ def _annotate(graph: ECGraph, species: Species, params: DecompositionParams, pat
     return species
 
 
+def classify(species: Sequence[Species], params: DecompositionParams) -> Tuple[str, Optional[float]]:
+    """(call, circular fraction) of a decomposition from its significant species."""
+    significant = [s for s in species if not s.low_weight]
+    circular = sum(s.weight * s.length_bp for s in significant if s.topology == "circular" and s.weight >= params.min_ecdna_copies)
+    linear = sum(s.weight * s.length_bp for s in significant if s.topology == "linear")
+    total = circular + linear
+    if total <= 0:
+        return "none", None
+    fraction = circular / float(total)
+    if fraction >= params.ecdna_call_fraction:
+        return "ecDNA", fraction
+    if fraction <= 1.0 - params.ecdna_call_fraction:
+        return "linear", fraction
+    return "mixed", fraction
+
+
 def _flag_low_weight(species: List[Species], params: DecompositionParams) -> None:
     if not species:
         return
@@ -371,7 +410,7 @@ def _flag_low_weight(species: List[Species], params: DecompositionParams) -> Non
 
 def decompose(graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[DecompositionParams] = None,
               paths: Optional[List[ReadPath]] = None) -> List[Decomposition]:
-    """Ranked decompositions of ``flow`` into circular species, each with ranked orderings.
+    """Ranked decompositions of ``flow`` into circular or linear species, each with ranked orderings.
 
     Decompositions are ranked by (residual, number of species not flagged ``low_weight``,
     number of species, objective), then cut to ``num_alternatives``. Ranking on significant
@@ -392,5 +431,7 @@ def decompose(graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[Decompo
     result = []
     for rank, (residual, _, _, _, objective, species) in enumerate(candidates[:max(1, params.num_alternatives)], start=1):
         annotated = [_annotate(graph, s, params, paths) for s in species]
-        result.append(Decomposition(rank=rank, objective=objective, residual=decomposer._residual(annotated), species=annotated))
+        call, fraction = classify(annotated, params)
+        result.append(Decomposition(rank=rank, objective=objective, residual=decomposer._residual(annotated), species=annotated,
+                                    call=call, circular_fraction=fraction))
     return result

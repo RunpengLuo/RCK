@@ -134,12 +134,32 @@ It changes the following:
 
 | | RCK | `rck-ecdna` |
 |---|---|---|
-| telomeres | allowed at reference / listed telomeres | none in the ecDNA layer; every extremity strictly balanced |
+| telomeres | allowed at reference / listed telomeres | ecDNA-layer copies may start or stop only at *linear ends* (`--linear-ends`), each copy-end costing `--linear-end-penalty`; every other extremity is strictly balanced |
 | chromosomal copies | part of the one karyotype | separate background layer that may end only at terminals, cannot use imputed edges, and is softly tied to the flank copy number |
 | novel adjacency use | at least a fraction (1 − `--run-nas-fp`) must be used | no requirement; each one used costs `--novel-penalty` |
 | missing junctions | n/a | imputed candidates, each costing `--imputed-penalty` |
 | objective | length-weighted copy-number distance | length-capped, sqrt-normalized allele-specific segment distance + junction read support (`--alpha-novel`, `--alpha-ref`) + penalties |
 | infinite sites | on | optional, `--enforce-is` (chromothripsis-derived ecDNA violates it) |
+
+#### Linear amplicons
+
+Not every focal amplification is circular. AmpliconArchitect and CoRAL also report linear
+(BFB, heavily rearranged or tandem-duplicated) amplicons and only call an amplicon ecDNA when
+cycles explain most of the amplified copy number. The ecDNA layer therefore allows a copy to
+start or stop at selected extremities, using an integer end variable per extremity haplotype:
+the balance becomes `segment flow = junction flow + ends`. `--linear-ends` picks the extremities:
+
+- `boundaries` (default): an extremity with no reference neighbour, at a region flank, or where
+  total copy number changes by at least max(`--boundary-min-copies`, `--boundary-frac` × the
+  larger side). This is where the end of a linear amplicon is visible in the depth;
+- `all`: every extremity of a segment;
+- `none`: the strictly circular model of the previous versions.
+
+Each copy-end costs `--linear-end-penalty` (0.25), so a linear walk costs 0.5 per copy. An
+imputed closing edge costs `--imputed-penalty` (2.0) once, so with ≥ 4 copies an affordable
+imputed closure still wins, while a long, otherwise unsupported gap is explained as linear.
+A tiny `bg_balance_weight` term prefers a heterozygous background (1A + 1B); without it,
+linear copies can swap haplotype at no cost.
 
 ### Cycle decomposition (`rck/ecdna/decompose.py`)
 
@@ -148,7 +168,8 @@ copy weight w and a per-edge multiplicity m between 0 and `--max-multiplicity`. 
 
 - the products w × m reproduce the flow; any residual is penalized;
 - each slot is balanced with alternation;
-- each slot is connected (enforced with lazy cuts), so it forms a single closed walk.
+- each slot is connected (enforced with lazy cuts), so it forms a single closed walk;
+- each slot uses either no linear end (a circle) or exactly two copy-ends (one linear walk).
 
 The objective minimizes the residual plus `--species-penalty` × the number of species. A tiny
 penalty on total edge traversals breaks ties in favour of the simplest walk, and a slot that
@@ -159,6 +180,11 @@ the flow rather than describing a molecule, and the evaluation ignores them unle
 `--include-low-weight` is passed to `rck-ecdna-eval`. Decompositions are ranked by residual, then by the number of
 species that are not `low_weight`, then by total species and objective, so one molecule plus
 small leftovers ranks above the same molecule split in two.
+Each species has a `topology` (`circular` or `linear`). Each decomposition gets an amplicon
+call from its significant species: the circular fraction is the copy-weighted share of
+circular species with weight ≥ `--min-ecdna-copies` (2). The call is `ecDNA` when that share is
+≥ `--ecdna-call-fraction` (0.8), `linear` when it is ≤ 1 − that fraction, `mixed` in between,
+and `none` when there are no species.
 Alternatives come from Gurobi's solution pool (`--alternatives-mode pool`) or from repeated
 solves with a no-good cut (`--alternatives-mode nogood`), within `--pool-gap` of the
 optimum. Every alternative is re-checked and deduplicated.
@@ -167,7 +193,8 @@ optimum. Every alternative is re-checked and deduplicated.
 
 For each species, Hierholzer's algorithm with alternation gives one walk, and a bounded
 depth-first search enumerates up to `--max-orderings` distinct orderings, up to rotation and
-reversal. Orderings of the same multiset have identical copy numbers. They are ranked by the
+reversal (only reversal for a linear walk, which starts at one end and finishes at the other).
+Orderings of the same multiset have identical copy numbers. They are ranked by the
 support of long-read paths (`--paths`) that span two or more junctions and appear in that
 order.
 
@@ -175,12 +202,12 @@ order.
 
 | File | Content |
 |---|---|
-| `decompositions.tsv` | one row per decomposition, species and ordering: `status` (`species` or `low_weight`), `weight` (copies per cell, bulk average), `length_bp`, `path_support`, `uses_imputed`, `junctions`, `walk` (`chrom:start-end:hap:strand`, comma-separated) and `joins` (adjacency after each step, `kind:aid:phasing`) |
+| `decompositions.tsv` | one row per decomposition, species and ordering: `amplicon_call`, `circular_fraction`, `topology`, `status` (`species` or `low_weight`), `weight` (copies per cell, bulk average), `length_bp`, `path_support`, `uses_imputed`, `junctions`, `walk` (`chrom:start-end:hap:strand`, comma-separated) and `joins` (adjacency after each step, `kind:aid:phasing`; a linear walk's last join is `end:<extremity>:<hap>`) |
 | `flow_segments.tsv` | per segment: observed total and allele copy numbers, plus inferred ecDNA and background copy numbers for A and B |
-| `flow_adjacencies.tsv` | per adjacency labeling: read support, observed copy number, ecDNA and background flow |
-| `aa/<name>_graph.txt`, `aa/<name>_decomp<k>_cycles.txt` | AmpliconArchitect-style graph and cycles (total copy number; cycle lines also carry `Haplotypes=`) |
+| `flow_adjacencies.tsv` | per adjacency labeling: read support, observed copy number, ecDNA and background flow; `linear_end` rows for copy-ends |
+| `aa/<name>_graph.txt`, `aa/<name>_decomp<k>_cycles.txt` | AmpliconArchitect-style graph and cycles (total copy number; cycle lines also carry `Haplotypes=`; linear walks start and end with AA's `0+`/`0-` source) |
 | `observations.json` | scales, how each was estimated, and every observation |
-| `summary.json` | graph normalization log, flow status, decompositions |
+| `summary.json` | graph normalization log, flow status (with `linear_end_copies`), top-level `amplicon_call` and `circular_fraction`, decompositions |
 | `gurobi_flow.log`, `gurobi_decompose.log` | solver logs |
 | `evaluation.tsv`, `evaluation.json`, `truth_cycles.tsv` | only with `--truth-dir` or `--truth-cycles` |
 
@@ -211,6 +238,10 @@ or pass `--truth-dir` (and optionally `--truth-sample`) to `rck-ecdna` itself.
 The rebuilt truth is written to `truth_cycles.tsv`. For real data, write that table yourself
 and pass it as `--truth-cycles` (columns `species order chrom start end strand hap weight`,
 0-based inclusive coordinates).
+
+**Linear inferred species.** Truth species are circular. A linear inferred walk is scored
+without its wrap-around junction and never counts as an order match; `evaluation.tsv` has
+`inferred_topology` and `topology_match` columns.
 
 **Which truth species are scored.** A run covers one amplicon subgraph, but a simulation can
 hold several species. Only truth species with at least `--min-truth-fraction` (default 0.5) of
@@ -281,10 +312,10 @@ scales from the windows.
 |---|---|---|
 | `test_subgraph_io.py` | no | synthetic chains; phantom contraction and edge relocation; parallel imputed merging; junction labelings; the `amplicon_0` fixture (18 segments; 20 reference, 14 novel and 12 imputed adjacencies; 4 terminals; crossings AB/BA) |
 | `test_scale.py` | no | depth mode from balanced blocks (rejecting LOH and CN 3 blocks); allele split; flank background; override and fallback; ratio mode cancelling shared bias; θ from extremities; sample selection |
-| `test_walk.py` | no | alternating Hierholzer; canonical form under rotation and reversal; a tandem-duplicated segment; a hub with three loops (2 orderings); balance checks; path parsing and ranking |
-| `test_evaluate.py` | no | Jaccard with multiplicity; junction scores; order match with rotation, reversal, finer segmentation and tolerance; truth table I/O; rebuilding the demo3 truth from the simulator (16 steps, 2,343,000 bp, seg4 on A and B, seg10 on B); demo4 truth from `truth/aa` (two species, per-sample weights); scoping species to a subgraph |
-| `test_ilp_circular.py` | yes (small) | single circle (10 copies on A plus a 1+1 background); haplotype crossings; imputed closing edge used when cheap and not when expensive; `--enforce-is` |
-| `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; end-to-end `rck-ecdna` |
+| `test_walk.py` | no | alternating Hierholzer; canonical form under rotation and reversal; a tandem-duplicated segment; a hub with three loops (2 orderings); balance checks; path parsing and ranking; linear walks from end to end (round trip, canonical form, one ordering, an unpaired end rejected) |
+| `test_evaluate.py` | no | Jaccard with multiplicity; junction scores; order match with rotation, reversal, finer segmentation and tolerance; a linear inferred walk never matches a circular truth (`topology_match`); truth table I/O; rebuilding the demo3 truth from the simulator (16 steps, 2,343,000 bp, seg4 on A and B, seg10 on B); demo4 truth from `truth/aa` (two species, per-sample weights); scoping species to a subgraph |
+| `test_ilp_circular.py` | yes (small) | single circle (10 copies on A plus a 1+1 background); haplotype crossings; imputed closing edge used when cheap, linear flow when expensive, no flow with `--linear-ends none`; linear ends only at boundaries and flanks; a linear amplicon; `--enforce-is` |
+| `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; a linear species; a circle plus a linear piece (called ecDNA); end-to-end `rck-ecdna` for a circle (`ecDNA`) and for an amplicon with no closing junction (`linear`, and `none` with `--linear-ends none`) |
 | `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
 | `test_demo4.py` | yes (full license) | both demo4 subgraphs: evaluation never errors, each subgraph is scored only against its own species, per-sample truth weights; accuracy is printed, not asserted (`RCK_ECDNA_DEMO4_OBS` enables estimated scales for both samples) |
 | `test_demo3.py` | yes (full license) | `amplicon_0` against the demo3 truth, rank-1 decomposition only: cycle order matches, haplotype Jaccard ≥ 0.95, junction recall ≥ 0.9, copy-number error ≤ 30% |

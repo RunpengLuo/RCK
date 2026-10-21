@@ -89,6 +89,59 @@ class TestAlternatingCircuit(unittest.TestCase):
             alternating_circuit(g, unbalanced)
 
 
+def linear_chain_counts(g):
+    """A linear walk over every segment of a chain (haplotype A), ending at both flanks."""
+    from rck.ecdna.phased import end_key
+
+    sids = sorted(g.segments, key=lambda x: g.segments[x].start)
+    counts = {seg_key(sid, "A"): 1 for sid in sids}
+    for a in g.adjacencies.values():
+        if a.kind == "reference" and g.nodes[a.u].segment is not None and g.nodes[a.v].segment is not None:
+            counts[adj_key(a.aid, "AA")] = 1
+    counts[end_key(g.segments[sids[0]].tail, "A")] = 1
+    counts[end_key(g.segments[sids[-1]].head, "A")] = 1
+    return counts
+
+
+class TestLinearWalks(unittest.TestCase):
+    def build(self, tmp):
+        b = SubgraphBuilder()
+        b.chain("chr1", [0, 1000, 2000, 3000], [100.0] * 3)
+        return read_subgraph(b.write(tmp))
+
+    def test_open_walk_from_end_to_end(self):
+        from rck.ecdna.walk import is_linear
+
+        with temp_dir() as tmp:
+            g = self.build(tmp)
+        counts = linear_chain_counts(g)
+        self.assertEqual(is_balanced(g, counts), [])
+        steps = alternating_circuit(g, counts)
+        self.assertEqual(len(steps), 3)
+        self.assertTrue(is_linear(steps))
+        self.assertEqual(steps[0].entry[0], "T")
+        self.assertEqual(steps[-1].join[0], "T")
+        self.assertEqual(walk_counts(steps), counts)
+        self.assertEqual(len({s.strand for s in steps}), 1)
+
+    def test_linear_canonical_and_enumeration(self):
+        with temp_dir() as tmp:
+            g = self.build(tmp)
+        counts = linear_chain_counts(g)
+        steps = alternating_circuit(g, counts)
+        self.assertEqual(canonical(reverse_walk(steps)), canonical(steps))
+        self.assertEqual(walk_counts(reverse_walk(steps)), counts)
+        self.assertEqual(len(enumerate_circuits(g, counts)), 1)
+
+    def test_one_end_is_not_a_walk(self):
+        with temp_dir() as tmp:
+            g = self.build(tmp)
+        counts = linear_chain_counts(g)
+        broken = {k: v for k, v in counts.items() if not (k[0] == "T" and k[1] == max(x[1] for x in counts if x[0] == "T"))}
+        with self.assertRaises(ValueError):
+            alternating_circuit(g, broken)
+
+
 class TestPathSupport(unittest.TestCase):
     def test_paths_rank_orderings(self):
         with temp_dir() as tmp:

@@ -1,0 +1,29 @@
+{
+  "n_decompositions": 0,
+  "n_truth_species": 1,
+  "n_truth_species_total": 2,
+  "truth_species": [
+    {
+      "species": "ecdna1",
+      "weight": 6.282100061658486,
+      "length_bp": 1774000,
+      "n_steps": 8,
+      "fraction_in_subgraph": 0.0,
+      "in_scope": false
+    },
+    {
+      "species": "ecdna2",
+      "weight": 6.282100061658486,
+      "length_bp": 1998000,
+      "n_steps": 4,
+      "fraction_in_subgraph": 1.0,
+      "in_scope": true
+    }
+  ],
+  "first_rank_with_all_orders_matched": null,
+  "best_mean_jaccard_hap": -1.0,
+  "best_mean_jaccard_rank": null,
+  "top_decomposition": [],
+  "tol_bp": 10000,
+  "min_truth_fraction": 0.5
+}

@@ -1,0 +1,3 @@
+truth	inferred	jaccard_hap	jaccard_total	junction_recall	junction_precision	phased_junction_recall	phased_junction_precision	order_match	order_match_ordering	truth_weight	inferred_weight	cn_rel_err	inferred_topology	topology_match	decomposition_rank	objective	n_species_inferred	n_low_weight	n_species_truth
+ecdna1	ec1	0.9999977452085682	0.9999977452085682	1.0	1.0	1.0	1.0	True	1	6.282100061658486	6.0	0.04490537541422274	circular	True	1	3.0084	3	0	1
+ecdna1	ec1	0.9999977452085682	0.9999977452085682	1.0	1.0	1.0	1.0	True	1	6.282100061658486	5.0	0.20408781284518562	circular	True	2	3.012	3	0	1

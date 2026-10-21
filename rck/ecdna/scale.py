@@ -448,8 +448,13 @@ def build_observations(graph: ECGraph, params: ScaleParams, windows_dir: Optiona
             if nb > 0 and math.isfinite(cn):
                 values.append(cn)
                 weights.append(nb)
-        flank_cn[chrom] = float(np.average(values, weights=weights)) if values else params.baseline_cn
+        flank_cn["{c}:{s}-{e}".format(c=chrom, s=start, e=end)] = float(np.average(values, weights=weights)) if values else params.baseline_cn
     for s in graph.segments.values():
-        background[s.sid] = flank_cn.get(s.chrom, params.baseline_cn)
+        value = params.baseline_cn
+        for chrom, start, end in regions:
+            if chrom == s.chrom and start <= s.start and s.end <= end:
+                value = flank_cn["{c}:{s}-{e}".format(c=chrom, s=start, e=end)]
+                break
+        background[s.sid] = value
     scale.details["background_flank_cn"] = flank_cn
     return Observations(scale=scale, segments=segments, adjacencies=adjacencies, background=background)

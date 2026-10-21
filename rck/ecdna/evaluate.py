@@ -281,21 +281,164 @@ def _read_walks(path: str) -> Dict[str, List[Tuple[int, str]]]:
     return walks
 
 
-def truth_from_simulation(run_dir: str, sample: Optional[str] = None, max_permutations: int = 50_000) -> List[Cycle]:
-    """Rebuild coordinate- and haplotype-resolved truth cycles from a simulator run directory."""
-    tdir, odir = os.path.join(run_dir, "truth"), os.path.join(run_dir, "obs")
-    segs = pd.read_csv(os.path.join(tdir, "segments.tsv"), sep="\t")
-    clones = pd.read_csv(os.path.join(tdir, "clones.tsv"), sep="\t")
-    props = pd.read_csv(os.path.join(tdir, "proportions.tsv"), sep="\t")
-    ecdna = pd.read_csv(os.path.join(tdir, "ecdna.tsv"), sep="\t")
-    adj_clone = pd.read_csv(os.path.join(tdir, "adjacency_clone.tsv"), sep="\t")
-    adjs = pd.read_csv(os.path.join(odir, "adjacency.tsv"), sep="\t")
-    walks = _read_walks(os.path.join(tdir, "walks.walk"))
+def _read_csv_opt(path: str) -> Optional[pd.DataFrame]:
+    return pd.read_csv(path, sep="\t") if os.path.exists(path) else None
 
+
+def resolve_sample(props: Optional[pd.DataFrame], sample: Optional[str]) -> Optional[str]:
+    """Map a sample name (``tumor1``, or the windows name ``sim_tumor1``) onto proportions.tsv."""
+    if props is None or "SAMPLE" not in props:
+        return sample
+    names = [str(s) for s in props["SAMPLE"].unique() if str(s) not in ("normal", ".", "nan")]
+    if sample:
+        if sample in names:
+            return sample
+        hits = [n for n in names if sample.endswith(n) or n in sample]
+        if hits:
+            return max(hits, key=len)
+        log.warning("truth sample %s not found in proportions.tsv (have %s); using %s", sample, names, names[0] if names else None)
+    return names[0] if names else None
+
+
+def species_weights(props: Optional[pd.DataFrame], ecdna: Optional[pd.DataFrame], sample: Optional[str]) -> Dict[str, float]:
+    """Copies per cell of each species in ``sample`` (bulk average), else the mean over samples."""
+    weights: Dict[str, float] = {}
+    if ecdna is not None and "PHI" in ecdna:
+        for r in ecdna.to_dict("records"):
+            weights[str(r["SPECIES"])] = float(r["PHI"])
+    if props is not None and {"KIND", "SAMPLE", "ID", "PHI"} <= set(props.columns):
+        rows = props[(props["KIND"] == "ecdna_burden") & (props["SAMPLE"].astype(str) == str(sample))]
+        for r in rows.to_dict("records"):
+            if pd.notna(r["PHI"]):
+                weights[str(r["ID"])] = float(r["PHI"])
+    return weights
+
+
+def species_junctions(adj_clone: Optional[pd.DataFrame], adjs: Optional[pd.DataFrame]) -> Dict[str, Dict[frozenset, Tuple[Tuple[str, str], str]]]:
+    """{species: {frozenset(EID pair): ((EID-1, EID-2), PHASING)}} for the ecDNA junctions."""
+    result: Dict[str, Dict[frozenset, Tuple[Tuple[str, str], str]]] = {}
+    if adj_clone is None or adjs is None:
+        return result
+    eid_pair = {str(r["AID"]): (str(r["EID-1"]), str(r["EID-2"])) for r in adjs.to_dict("records")}
+    for r in adj_clone.to_dict("records"):
+        species = str(r.get("SPECIES", "."))
+        if species in (".", "nan", ""):
+            continue
+        pair = eid_pair.get(str(r["AID"]))
+        if pair:
+            result.setdefault(species, {})[frozenset(pair)] = (pair, str(r["PHASING"]))
+    return result
+
+
+def _majority_hap(junction_phasing) -> str:
+    counts: Dict[str, int] = {}
+    for _, phasing in junction_phasing.values():
+        for h in phasing:
+            if h in ("A", "B"):
+                counts[h] = counts.get(h, 0) + 1
+    return max(sorted(counts), key=lambda h: counts[h]) if counts else "A"
+
+
+def read_aa_cycles(path: str) -> List[Tuple[List[dict], List[Tuple[int, str]]]]:
+    """AmpliconArchitect / ecSimulator cycles file -> [(segment rows, walk)].
+
+    Segment rows use the simulator's 0-based half-open coordinates (``START = start - 1``,
+    ``END = end``), the same convention as truth/segments.tsv, so step extremity names match
+    obs/adjacency.tsv. The walk is a list of (row index, strand) with 1-based indices.
+    """
+    segments: Dict[str, Tuple[str, int, int]] = {}
+    cycles = []
+    with open(path) as handle:
+        for line in handle:
+            fields = line.rstrip("\n").split("\t")
+            if fields[0] == "Segment" and len(fields) >= 5:
+                segments[fields[1]] = (fields[2], int(fields[3]) - 1, int(fields[4]))
+            elif line.startswith("Cycle="):
+                parts = dict(p.split("=", 1) for p in line.strip().split(";") if "=" in p)
+                tokens = [t.strip() for t in parts.get("Segments", "").split(",") if t.strip()]
+                cycles.append(tokens)
+    result = []
+    for tokens in cycles:
+        rows, walk, index = [], [], {}
+        for t in tokens:
+            sid, strand = t[:-1], t[-1]
+            if strand not in "+-" or sid not in segments or sid == "0":
+                raise ValueError("{p}: cycle step {t} is not a listed segment".format(p=path, t=t))
+            if sid not in index:
+                chrom, start, end = segments[sid]
+                rows.append({"#CHR": chrom, "START": start, "END": end})
+                index[sid] = len(rows)
+            walk.append((index[sid], strand))
+        if walk:
+            result.append((rows, walk))
+    return result
+
+
+def truth_from_simulation(run_dir: str, sample: Optional[str] = None, max_permutations: int = 50_000) -> List[Cycle]:
+    """Rebuild coordinate- and haplotype-resolved truth cycles from a simulator run directory.
+
+    For each species (truth/ecdna.tsv, else the files in truth/aa/), the walk with coordinates
+    comes from ``truth/aa/<species>_cycles.txt`` when it exists; otherwise it is rebuilt from
+    ``truth/walks.walk`` + ``truth/segments.tsv`` (older runs). Haplotypes come from the species'
+    junction phasings (``truth/adjacency_clone.tsv`` + ``obs/adjacency.tsv``), propagated across
+    reference joins. The weight is the species' copies per cell in ``sample``
+    (``ecdna_burden`` rows of truth/proportions.tsv), else ecdna.tsv PHI.
+    """
+    tdir, odir = os.path.join(run_dir, "truth"), os.path.join(run_dir, "obs")
+    if not os.path.isdir(tdir):
+        raise ValueError("{d} has no truth/ directory".format(d=run_dir))
+    props = _read_csv_opt(os.path.join(tdir, "proportions.tsv"))
+    ecdna = _read_csv_opt(os.path.join(tdir, "ecdna.tsv"))
+    adj_clone = _read_csv_opt(os.path.join(tdir, "adjacency_clone.tsv"))
+    adjs = _read_csv_opt(os.path.join(odir, "adjacency.tsv"))
+    sample = resolve_sample(props, sample)
+    weights = species_weights(props, ecdna, sample)
+    junctions_by_species = species_junctions(adj_clone, adjs)
+    aa_dir = os.path.join(tdir, "aa")
+
+    names: List[str] = []
+    if ecdna is not None and "SPECIES" in ecdna:
+        names = [str(n) for n in ecdna["SPECIES"]]
+    elif os.path.isdir(aa_dir):
+        names = sorted(f[:-len("_cycles.txt")] for f in os.listdir(aa_dir) if f.endswith("_cycles.txt"))
+    walks = None
+    cycles: List[Cycle] = []
+    for name in names:
+        jp = junctions_by_species.get(name, {})
+        default_hap = _majority_hap(jp)
+        weight = weights.get(name, float("nan"))
+        aa_path = os.path.join(aa_dir, "{n}_cycles.txt".format(n=name))
+        if os.path.exists(aa_path):
+            parsed = read_aa_cycles(aa_path)
+            for k, (seglist, walk) in enumerate(parsed, start=1):
+                steps = _label_haplotypes(seglist, walk, jp, default_hap)
+                cname = name if len(parsed) == 1 else "{n}.{k}".format(n=name, k=k)
+                cycles.append(Cycle(name=cname, weight=weight, orderings=[steps]))
+            continue
+        if walks is None:
+            walks = _read_walks(os.path.join(tdir, "walks.walk"))
+        if name not in walks:
+            log.warning("species %s has no circular walk in walks.walk and no truth/aa cycles; skipped", name)
+            continue
+        seglist = _segments_from_profiles(tdir, props, sample, walks[name], ecdna, name, jp, max_permutations)
+        if seglist is None:
+            raise ValueError("could not rebuild species {s}: no truth/aa/{s}_cycles.txt, and its segments could not be "
+                             "mapped onto truth/segments.tsv; pass --truth-cycles instead".format(s=name))
+        cycles.append(Cycle(name=name, weight=weight, orderings=[_label_haplotypes(seglist, walks[name], jp, default_hap)]))
+    if not cycles:
+        raise ValueError("no ecDNA species found under {d}".format(d=tdir))
+    return cycles
+
+
+def _segments_from_profiles(tdir, props, sample, walk, ecdna, name, junction_phasing, max_permutations):
+    """Older runs without truth/aa: the species' segments are the segments.tsv rows above the
+    clone-mixture background, in the interval order that makes every walk join consistent."""
+    segs = _read_csv_opt(os.path.join(tdir, "segments.tsv"))
+    clones = _read_csv_opt(os.path.join(tdir, "clones.tsv"))
+    if segs is None or clones is None or props is None:
+        return None
     clone_rows = props[props["KIND"] == "clone"]
-    samples = [s for s in clone_rows["SAMPLE"].unique() if s != "normal"]
-    sample = sample or (samples[0] if samples else "normal")
-    u = {str(r["ID"]): float(r["U"]) for r in clone_rows[clone_rows["SAMPLE"] == sample].to_dict("records")}
+    u = {str(r["ID"]): float(r["U"]) for r in clone_rows[clone_rows["SAMPLE"].astype(str) == str(sample)].to_dict("records")}
     merged = segs.merge(clones, on=["SID", "#CHR", "START", "END"], how="left")
     bg = sum(u_k * (merged["A_" + k].fillna(0) + merged["B_" + k].fillna(0)) for k, u_k in u.items() if "A_" + k in merged)
     merged["excess"] = merged["CN_A"] + merged["CN_B"] - bg
@@ -306,28 +449,13 @@ def truth_from_simulation(run_dir: str, sample: Optional[str] = None, max_permut
             intervals[-1].append(row)
         else:
             intervals.append([row])
-
-    eid_pair = {str(r["AID"]): (str(r["EID-1"]), str(r["EID-2"])) for r in adjs.to_dict("records")}
-    cycles = []
-    for rec in ecdna.to_dict("records"):
-        name = str(rec["SPECIES"])
-        if name not in walks:
-            log.warning("species %s has no circular walk in walks.walk", name)
-            continue
-        walk = walks[name]
-        n = int(rec["N_SEGMENTS"])
-        jrows = adj_clone[adj_clone["SPECIES"].astype(str) == name]
-        junction_phasing = {}
-        for r in jrows.to_dict("records"):
-            pair = eid_pair.get(str(r["AID"]))
-            if pair:
-                junction_phasing[frozenset(pair)] = (pair, str(r["PHASING"]))
-        seglist = _order_intervals(intervals, walk, n, junction_phasing, max_permutations)
-        if seglist is None:
-            raise ValueError("could not map species {s} segments onto truth/segments.tsv; provide --truth-cycles instead".format(s=name))
-        steps = _label_haplotypes(seglist, walk, junction_phasing)
-        cycles.append(Cycle(name=name, weight=float(rec["PHI"]), orderings=[steps]))
-    return cycles
+    n = None
+    if ecdna is not None and "N_SEGMENTS" in ecdna:
+        match = ecdna[ecdna["SPECIES"].astype(str) == name]
+        if len(match):
+            n = int(match["N_SEGMENTS"].iloc[0])
+    n = n or max(idx for idx, _ in walk)
+    return _order_intervals(intervals, walk, n, junction_phasing, max_permutations)
 
 
 def _step_eids(row, strand):
@@ -374,7 +502,7 @@ def _order_intervals(intervals, walk, n, junction_phasing, max_permutations):
     return None
 
 
-def _label_haplotypes(seglist, walk, junction_phasing) -> List[CStep]:
+def _label_haplotypes(seglist, walk, junction_phasing, default_hap: str = "A") -> List[CStep]:
     n = len(walk)
     parent = list(range(n))
 
@@ -385,7 +513,7 @@ def _label_haplotypes(seglist, walk, junction_phasing) -> List[CStep]:
         return x
 
     labels: Dict[int, str] = {}
-    conflicts = 0
+    conflicts = unexplained = 0
     pending = []
     for i, (exit_eid, entry_eid) in enumerate(_joins(seglist, walk)):
         j = (i + 1) % n
@@ -395,8 +523,10 @@ def _label_haplotypes(seglist, walk, junction_phasing) -> List[CStep]:
             h_exit, h_entry = (phasing[0], phasing[1]) if exit_eid == e1 else (phasing[1], phasing[0])
             pending.append((i, h_exit))
             pending.append((j, h_entry))
-        else:
+        elif _concordant(exit_eid, entry_eid):
             parent[find(i)] = find(j)
+        else:
+            unexplained += 1
     for i, h in pending:
         root = find(i)
         if root in labels and labels[root] != h:
@@ -404,10 +534,13 @@ def _label_haplotypes(seglist, walk, junction_phasing) -> List[CStep]:
         labels.setdefault(root, h)
     if conflicts:
         log.warning("%d haplotype label conflict(s) while labeling truth walk", conflicts)
+    if unexplained:
+        log.warning("%d truth walk join(s) are neither a listed junction nor a reference join; "
+                    "haplotypes there default to %s", unexplained, default_hap)
     steps = []
     for i, (idx, strand) in enumerate(walk):
         row = seglist[idx - 1]
-        steps.append(CStep(str(row["#CHR"]), int(row["START"]), int(row["END"]) - 1, labels.get(find(i), "A"), strand))
+        steps.append(CStep(str(row["#CHR"]), int(row["START"]), int(row["END"]) - 1, labels.get(find(i), default_hap), strand))
     return steps
 
 
@@ -470,37 +603,94 @@ def score_decomposition(truth: Sequence[Cycle], inferred: Sequence[Cycle], tol: 
     return result
 
 
-def evaluate(decompositions_tsv: str, truth: Sequence[Cycle], tol: int = 10_000,
-             include_low_weight: bool = False) -> Tuple[pd.DataFrame, Dict[str, object]]:
+Region = Tuple[str, int, int]
+
+
+def parse_region(text: str) -> Region:
+    chrom, span = text.rsplit(":", 1)
+    a, b = span.split("-")
+    return chrom, int(a), int(b)
+
+
+def fraction_in_regions(steps: Sequence[CStep], regions: Sequence[Region], pad: int = 0) -> float:
+    """Share of a cycle's bases (with multiplicity) that fall inside ``regions``."""
+    total = sum(s.end - s.start + 1 for s in steps)
+    if total <= 0:
+        return 0.0
+    inside = 0
+    for s in steps:
+        for chrom, a, b in regions:
+            if chrom == s.chrom:
+                lo, hi = max(s.start, a - pad), min(s.end, b + pad)
+                if hi >= lo:
+                    inside += hi - lo + 1
+    return min(inside / total, 1.0)
+
+
+def evaluate(decompositions_tsv: str, truth: Sequence[Cycle], tol: int = 10_000, include_low_weight: bool = False,
+             regions: Optional[Sequence[Region]] = None, min_truth_fraction: float = 0.5) -> Tuple[pd.DataFrame, Dict[str, object]]:
+    """Score every decomposition against the truth species that belong to this subgraph.
+
+    With ``regions`` (the subgraph's segment spans), only truth species with at least
+    ``min_truth_fraction`` of their bases inside the regions are scored; the others (species
+    built by a different amplicon subgraph) are listed in the summary as out of scope instead
+    of counting as missed.
+    """
     inferred = read_inferred(decompositions_tsv, include_low_weight=include_low_weight)
+    species_info = []
+    scored = []
+    for t in truth:
+        frac = fraction_in_regions(t.steps, regions, pad=tol) if regions else 1.0
+        in_scope = frac >= min_truth_fraction
+        species_info.append({"species": t.name, "weight": t.weight, "length_bp": sum(s.end - s.start + 1 for s in t.steps),
+                             "n_steps": len(t.steps), "fraction_in_subgraph": round(frac, 4), "in_scope": in_scope})
+        if in_scope:
+            scored.append(t)
     rows = []
     best_order_rank, best_jaccard, best_jaccard_rank = None, -1.0, None
     for rank in sorted(inferred):
         cycles = inferred[rank]["cycles"]
-        scores = score_decomposition(truth, cycles, tol)
+        scores = score_decomposition(scored, cycles, tol)
         mean_j = sum(s.jaccard_hap for s in scores) / len(scores) if scores else 0.0
-        if all(s.order_match for s in scores) and best_order_rank is None:
+        if scores and all(s.order_match for s in scores) and best_order_rank is None:
             best_order_rank = rank
-        if mean_j > best_jaccard:
+        if scores and mean_j > best_jaccard:
             best_jaccard, best_jaccard_rank = mean_j, rank
         for s in scores:
             row = asdict(s)
             row.update({"decomposition_rank": rank, "objective": inferred[rank]["objective"], "n_species_inferred": len(cycles),
-                        "n_low_weight": inferred[rank]["n_low_weight"],
-                        "n_species_truth": len(truth)})
+                        "n_low_weight": inferred[rank]["n_low_weight"], "n_species_truth": len(scored)})
             rows.append(row)
     frame = pd.DataFrame(rows)
-    top = frame[frame["decomposition_rank"] == min(inferred)] if len(frame) else frame
+    top = frame[frame["decomposition_rank"] == min(inferred)] if (len(frame) and inferred) else frame
     summary = {
         "n_decompositions": len(inferred),
-        "n_truth_species": len(truth),
+        "n_truth_species": len(scored),
+        "n_truth_species_total": len(truth),
+        "truth_species": species_info,
         "first_rank_with_all_orders_matched": best_order_rank,
-        "best_mean_jaccard_hap": best_jaccard,
+        "best_mean_jaccard_hap": best_jaccard if scored else None,
         "best_mean_jaccard_rank": best_jaccard_rank,
         "top_decomposition": top.drop(columns=["objective"]).to_dict("records") if len(top) else [],
         "tol_bp": tol,
+        "min_truth_fraction": min_truth_fraction if regions else None,
     }
+    if not scored:
+        summary["note"] = "no truth species has at least {f:.0%} of its bases in this subgraph".format(f=min_truth_fraction)
     return frame, summary
+
+
+def regions_from_summary(outdir: str) -> Optional[List[Region]]:
+    """Subgraph regions recorded by rck-ecdna in summary.json, if present."""
+    path = os.path.join(outdir, "summary.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path) as handle:
+            texts = json.load(handle)["graph"]["regions"]
+        return [parse_region(t) for t in texts]
+    except (KeyError, ValueError, TypeError):
+        return None
 
 
 def write_evaluation(outdir: str, frame: pd.DataFrame, summary: Dict[str, object]) -> Dict[str, str]:
@@ -527,6 +717,9 @@ def main(argv=None) -> int:
     parser.add_argument("--truth-sample", default=None)
     parser.add_argument("--tol-bp", type=int, default=10_000)
     parser.add_argument("--include-low-weight", action="store_true", help="Also score species flagged low_weight")
+    parser.add_argument("--min-truth-fraction", type=float, default=0.5,
+                        help="Score only truth species with at least this share of their bases inside the subgraph")
+    parser.add_argument("--all-truth-species", action="store_true", help="Score every truth species, inside the subgraph or not")
     parser.add_argument("--outdir", default=None, help="Default: the directory of --decompositions")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -534,11 +727,25 @@ def main(argv=None) -> int:
     outdir = args.outdir or os.path.dirname(os.path.abspath(args.decompositions))
     os.makedirs(outdir, exist_ok=True)
     write_truth_table(os.path.join(outdir, "truth_cycles.tsv"), truth)
-    frame, summary = evaluate(args.decompositions, truth, tol=args.tol_bp, include_low_weight=args.include_low_weight)
+    regions = None if args.all_truth_species else regions_from_summary(os.path.dirname(os.path.abspath(args.decompositions)))
+    frame, summary = evaluate(args.decompositions, truth, tol=args.tol_bp, include_low_weight=args.include_low_weight,
+                              regions=regions, min_truth_fraction=args.min_truth_fraction)
     write_evaluation(outdir, frame, summary)
-    log.info("first decomposition rank with every truth species in order: %s; best mean haplotype Jaccard %.3f (rank %s)",
-             summary["first_rank_with_all_orders_matched"], summary["best_mean_jaccard_hap"], summary["best_mean_jaccard_rank"])
+    log_summary(summary)
     return 0
+
+
+def log_summary(summary: Dict[str, object]) -> None:
+    for sp in summary.get("truth_species", []):
+        log.info("truth %s: %.0f bp, weight %.2f, %.0f%% inside the subgraph -> %s", sp["species"], sp["length_bp"], sp["weight"],
+                 100 * sp["fraction_in_subgraph"], "scored" if sp["in_scope"] else "out of scope")
+    if summary.get("note"):
+        log.warning("evaluation: %s", summary["note"])
+        return
+    best = summary.get("best_mean_jaccard_hap")
+    log.info("evaluation: first rank with every truth species in order: %s; best mean haplotype Jaccard %s (rank %s)",
+             summary["first_rank_with_all_orders_matched"], "n/a" if best is None else "{b:.3f}".format(b=best),
+             summary["best_mean_jaccard_rank"])
 
 
 if __name__ == "__main__":

@@ -198,14 +198,17 @@ class ECGraph:
             nid = self.node_alias[nid]
         return nid if nid in self.nodes else None
 
-    def regions(self) -> List[Tuple[str, int, int]]:
-        """Per-chromosome spans covered by segments, as (chrom, start, end)."""
-        spans = defaultdict(lambda: [math.inf, -math.inf])
-        for s in self.segments.values():
-            span = spans[s.chrom]
-            span[0] = min(span[0], s.start)
-            span[1] = max(span[1], s.end)
-        return [(c, int(v[0]), int(v[1])) for c, v in sorted(spans.items())]
+    def regions(self, max_gap: int = 1_000_000) -> List[Tuple[str, int, int]]:
+        """Spans covered by segments, as (chrom, start, end); segments further apart than
+        ``max_gap`` on the same chromosome start a new span."""
+        result: List[Tuple[str, int, int]] = []
+        for s in sorted(self.segments.values(), key=lambda x: (x.chrom, x.start)):
+            if result and result[-1][0] == s.chrom and s.start - result[-1][2] <= max_gap:
+                chrom, start, end = result[-1]
+                result[-1] = (chrom, start, max(end, s.end))
+            else:
+                result.append((s.chrom, s.start, s.end))
+        return result
 
     def summary(self) -> Dict[str, object]:
         kinds = defaultdict(int)

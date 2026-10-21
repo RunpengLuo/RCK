@@ -84,8 +84,11 @@ def build_parser() -> argparse.ArgumentParser:
     ev = parser.add_argument_group("evaluation (optional)")
     ev.add_argument("--truth-dir", default=None, help="Simulator run directory with truth/ and obs/ (amplicon-allele-analysis)")
     ev.add_argument("--truth-cycles", default=None, help="Explicit truth table: species order chrom start end strand hap weight")
-    ev.add_argument("--truth-sample", default=None, help="Tumor sample in truth/proportions.tsv (default: first tumor)")
+    ev.add_argument("--truth-sample", default=None, help="Sample in truth/proportions.tsv for the truth copy numbers (default: --sample, else the first tumor)")
     ev.add_argument("--eval-tol-bp", type=int, default=10_000, help="Coordinate tolerance for junction and order matching")
+    ev.add_argument("--min-truth-fraction", type=float, default=0.5,
+                    help="Score only truth species with at least this share of their bases inside this subgraph")
+    ev.add_argument("--all-truth-species", action="store_true", help="Score every truth species, inside this subgraph or not")
 
     gu = parser.add_argument_group("Gurobi")
     gu.add_argument("--threads", type=int, default=None, help="Default: SLURM_CPUS_PER_TASK, else the CPUs this process may use")
@@ -147,19 +150,39 @@ def run(args) -> Dict[str, object]:
                                "paths_loaded": 0 if paths is None else len(paths)})
     evaluation = None
     if args.truth_dir or args.truth_cycles:
-        from rck.ecdna.evaluate import evaluate, load_truth, write_evaluation, write_truth_table
-
-        truth = load_truth(args.truth_dir, args.truth_cycles, args.truth_sample)
-        write_truth_table(os.path.join(args.outdir, "truth_cycles.tsv"), truth)
-        frame, evaluation = evaluate(outputs["decompositions"], truth, tol=args.eval_tol_bp)
-        outputs.update({"evaluation_" + k: v for k, v in write_evaluation(args.outdir, frame, evaluation).items()})
-        log.info("evaluation: first rank with every truth species in order: %s; best mean haplotype Jaccard %.3f (rank %s)",
-                 evaluation["first_rank_with_all_orders_matched"], evaluation["best_mean_jaccard_hap"], evaluation["best_mean_jaccard_rank"])
+        evaluation = _evaluate(args, graph, outputs)
     for d in decompositions[:3]:
         log.info("decomposition %d: objective %.4f, %d species (%s)", d.rank, d.objective, len(d.species),
                  ", ".join("w={w} len={l}{f}".format(w=s.weight, l=s.length_bp, f=" low_weight" if s.low_weight else "") for s in d.species))
     return {"graph": graph, "observations": obs, "flow": sol, "decompositions": decompositions, "outputs": outputs, "inputs": inputs,
             "evaluation": evaluation}
+
+
+def _evaluate(args, graph, outputs) -> Dict[str, object]:
+    """Score the run against truth. A problem with the truth files is logged and recorded in
+    evaluation.json instead of failing a run whose reconstruction already succeeded."""
+    import json
+    import traceback
+
+    from rck.ecdna.evaluate import evaluate, load_truth, log_summary, write_evaluation, write_truth_table
+
+    try:
+        truth = load_truth(args.truth_dir, args.truth_cycles, args.truth_sample or args.sample)
+        write_truth_table(os.path.join(args.outdir, "truth_cycles.tsv"), truth)
+        regions = None if args.all_truth_species else graph.regions()
+        frame, evaluation = evaluate(outputs["decompositions"], truth, tol=args.eval_tol_bp, regions=regions,
+                                     min_truth_fraction=args.min_truth_fraction)
+        outputs.update({"evaluation_" + k: v for k, v in write_evaluation(args.outdir, frame, evaluation).items()})
+        log_summary(evaluation)
+        return evaluation
+    except Exception as error:  # noqa: BLE001 - report, do not lose the reconstruction
+        log.error("evaluation failed: %s", error)
+        evaluation = {"error": str(error), "traceback": traceback.format_exc()}
+        path = os.path.join(args.outdir, "evaluation.json")
+        with open(path, "w") as handle:
+            json.dump(evaluation, handle, indent=2)
+        outputs["evaluation_summary"] = path
+        return evaluation
 
 
 def main(argv: Optional[List[str]] = None) -> int:

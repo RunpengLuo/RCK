@@ -3,7 +3,8 @@ import unittest
 
 import pandas as pd
 
-from rck.ecdna.evaluate import (CStep, Cycle, evaluate, jaccard, junction_scores, order_match, read_truth_table, runs,
+from rck.ecdna.evaluate import (CStep, Cycle, evaluate, fraction_in_regions, jaccard, junction_scores, order_match,
+                                read_aa_cycles, read_truth_table, runs,
                                 truth_from_simulation, write_truth_table)
 from tests.ecdna.helpers import DATA_DIR, temp_dir
 
@@ -135,6 +136,95 @@ class TestSimulatorTruth(unittest.TestCase):
         self.assertTrue(order_match(c.steps, rotate(c.steps, 5), tol=0))
         # seg1 / seg2 and seg12 / seg13 are joined by reference joins, so 16 steps form 14 runs
         self.assertEqual(len(runs(c.steps)), 14)
+
+
+DEMO4_TRUTH = os.path.join(DATA_DIR, "demo4_truth")
+
+
+def walk_text(steps):
+    return ",".join("{c}:{s}-{e}:{h}:{st}".format(c=x.chrom, s=x.start, e=x.end, h=x.hap, st=x.strand) for x in steps)
+
+
+class TestSimulatorTruthAA(unittest.TestCase):
+    """demo4_clone3_ecdna: two species from truth/aa cycles; ecdna1 lost 3 of its 11 segments to a deletion."""
+
+    def test_two_species_with_per_sample_weights(self):
+        t1 = {c.name: c for c in truth_from_simulation(DEMO4_TRUTH, sample="tumor1")}
+        t2 = {c.name: c for c in truth_from_simulation(DEMO4_TRUTH, sample="sim_tumor2")}  # windows-style name
+        self.assertEqual(sorted(t1), ["ecdna1", "ecdna2"])
+        self.assertAlmostEqual(t1["ecdna1"].weight, 6.2821, places=3)
+        self.assertAlmostEqual(t2["ecdna1"].weight, 7.4376, places=3)
+        e1, e2 = t1["ecdna1"], t1["ecdna2"]
+        self.assertEqual(len(e1.steps), 8)
+        self.assertEqual(sum(s.end - s.start + 1 for s in e1.steps), 1_774_000)
+        self.assertEqual({s.hap for s in e1.steps}, {"B"})
+        self.assertEqual(len(e2.steps), 4)
+        self.assertEqual(sum(s.end - s.start + 1 for s in e2.steps), 1_998_000)
+        self.assertEqual({s.hap for s in e2.steps}, {"A"})
+        # step coordinates are 0-based inclusive, matching obs/adjacency.tsv extremity names
+        first = e2.steps[0]
+        self.assertEqual((first.chrom, first.start, first.end, first.strand), ("chr16", 25455000, 25637999, "+"))
+
+    def test_read_aa_cycles(self):
+        parsed = read_aa_cycles(os.path.join(DEMO4_TRUTH, "truth", "aa", "ecdna1_cycles.txt"))
+        self.assertEqual(len(parsed), 1)
+        rows, walk = parsed[0]
+        self.assertEqual(len(walk), 8)
+        self.assertEqual(len(rows), 8)  # only the segments the cycle uses
+
+    def test_missing_truth_dir_is_a_clear_error(self):
+        with temp_dir() as tmp:
+            with self.assertRaises(ValueError):
+                truth_from_simulation(tmp)
+
+
+class TestScope(unittest.TestCase):
+    """Each demo4 subgraph should be scored only against the species it contains."""
+
+    @classmethod
+    def setUpClass(cls):
+        from rck.ecdna.subgraph_io import read_subgraph
+
+        cls.truth = {c.name: c for c in truth_from_simulation(DEMO4_TRUTH, sample="tumor1")}
+        cls.regions = {a: read_subgraph(os.path.join(DATA_DIR, "demo4", a)).regions() for a in ("amplicon_0", "amplicon_1")}
+
+    def test_fractions(self):
+        r0, r1 = self.regions["amplicon_0"], self.regions["amplicon_1"]
+        self.assertGreater(fraction_in_regions(self.truth["ecdna1"].steps, r0, pad=10_000), 0.95)
+        self.assertLess(fraction_in_regions(self.truth["ecdna2"].steps, r0, pad=10_000), 0.5)
+        self.assertGreater(fraction_in_regions(self.truth["ecdna2"].steps, r1, pad=10_000), 0.95)
+        self.assertLess(fraction_in_regions(self.truth["ecdna1"].steps, r1, pad=10_000), 0.05)
+
+    def test_out_of_scope_species_are_not_counted_as_missed(self):
+        e1 = self.truth["ecdna1"]
+        rows = [{"decomposition_rank": 1, "objective": 1.0, "species": "ec1", "status": "species", "weight": 6,
+                 "ordering_rank": 1, "walk": walk_text(e1.steps)}]
+        with temp_dir() as tmp:
+            path = os.path.join(tmp, "decompositions.tsv")
+            pd.DataFrame(rows).to_csv(path, sep="\t", index=False)
+            frame, summary = evaluate(path, list(self.truth.values()), regions=self.regions["amplicon_0"])
+            _, unscoped = evaluate(path, list(self.truth.values()))
+        self.assertEqual(summary["n_truth_species"], 1)
+        self.assertEqual(summary["n_truth_species_total"], 2)
+        self.assertEqual(summary["first_rank_with_all_orders_matched"], 1)
+        self.assertEqual(list(frame["truth"]), ["ecdna1"])
+        scope = {sp["species"]: sp["in_scope"] for sp in summary["truth_species"]}
+        self.assertEqual(scope, {"ecdna1": True, "ecdna2": False})
+        # without regions both species are scored, so the missing ecdna2 blocks a full match
+        self.assertEqual(unscoped["n_truth_species"], 2)
+        self.assertIsNone(unscoped["first_rank_with_all_orders_matched"])
+
+    def test_no_species_in_scope(self):
+        rows = [{"decomposition_rank": 1, "objective": 1.0, "species": "ec1", "status": "species", "weight": 6,
+                 "ordering_rank": 1, "walk": walk_text(self.truth["ecdna1"].steps)}]
+        with temp_dir() as tmp:
+            path = os.path.join(tmp, "decompositions.tsv")
+            pd.DataFrame(rows).to_csv(path, sep="\t", index=False)
+            frame, summary = evaluate(path, list(self.truth.values()), regions=[("chr1", 1, 1000)])
+        self.assertEqual(summary["n_truth_species"], 0)
+        self.assertIsNone(summary["first_rank_with_all_orders_matched"])
+        self.assertIn("note", summary)
+        self.assertEqual(len(frame), 0)
 
 
 if __name__ == "__main__":

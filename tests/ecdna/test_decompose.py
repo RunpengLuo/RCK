@@ -165,5 +165,21 @@ class TestCommandLine(unittest.TestCase):
                 self.assertIn("Optimal solution found", handle.read())
 
 
+@requires_gurobi
+class TestEvaluationNeverFailsTheRun(unittest.TestCase):
+    def test_bad_truth_dir_is_reported_not_raised(self):
+        from rck.ecdna_run import main
+
+        with temp_dir() as tmp:
+            directory, _ = single_circle(os.path.join(tmp, "amp"))
+            out = os.path.join(tmp, "out")
+            code = main(["--subgraph-dir", directory, "--outdir", out, "--depth-per-copy", "15", "--junction-reads-per-copy", "6",
+                         "--truth-dir", os.path.join(tmp, "does_not_exist")])
+            self.assertEqual(code, 0)
+            self.assertTrue(os.path.exists(os.path.join(out, "decompositions.tsv")))
+            with open(os.path.join(out, "evaluation.json")) as handle:
+                self.assertIn("error", json.load(handle))
+
+
 if __name__ == "__main__":
     unittest.main()

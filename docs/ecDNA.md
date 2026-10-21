@@ -191,20 +191,36 @@ rck-ecdna-eval --decompositions rck_ecdna_out/demo3/amplicon_0/decompositions.ts
                --truth-dir simulations/runs/demo3_clone1_ecdna
 ```
 
-`truth/walks.walk` lists species-local segment ids, with no coordinates or haplotypes. The
-evaluator rebuilds both:
+or pass `--truth-dir` (and optionally `--truth-sample`) to `rck-ecdna` itself.
 
-- the species' segments are the rows of `truth/segments.tsv` whose copy number is above the
-  clone-mixture background;
-- the interval order is the one that makes every join of the walk a reference join or a
-  junction of that species (`truth/adjacency_clone.tsv` + `obs/adjacency.tsv`);
-- haplotypes come from the junction `PHASING`.
+**How truth is read from a simulator run (`--truth-dir`).** For each species listed in
+`truth/ecdna.tsv`:
 
-The rebuilt truth is written to `truth_cycles.tsv`. For real data, or a simulation it cannot
-parse, write that table yourself and pass it as `--truth-cycles`.
+1. **Walk and coordinates:** taken from `truth/aa/<species>_cycles.txt` when it exists (all
+   current simulator runs). This works whatever the species went through (deletions, shared
+   chromosomes, several species). Older runs without `truth/aa/` fall back to rebuilding the
+   walk from `truth/walks.walk` + `truth/segments.tsv`.
+2. **Haplotypes:** from the species' junction `PHASING` (`truth/adjacency_clone.tsv` +
+   `obs/adjacency.tsv`), carried across reference joins. Steps no junction labels take the
+   species' majority haplotype.
+3. **Copy number:** the species' copies per cell in the evaluated sample (`ecdna_burden` rows
+   of `truth/proportions.tsv`). The sample is `--truth-sample`, else `--sample`
+   (`sim_tumor1` maps to `tumor1`), else the first tumor. Without proportions it falls back to
+   `ecdna.tsv` `PHI`.
 
-Truth and inferred cycles are both compared after merging reference-contiguous steps into
-runs, so segmentation differences do not count against the inference. The metrics are:
+The rebuilt truth is written to `truth_cycles.tsv`. For real data, write that table yourself
+and pass it as `--truth-cycles` (columns `species order chrom start end strand hap weight`,
+0-based inclusive coordinates).
+
+**Which truth species are scored.** A run covers one amplicon subgraph, but a simulation can
+hold several species. Only truth species with at least `--min-truth-fraction` (default 0.5) of
+their bases inside the subgraph's regions are scored. The others are listed in
+`evaluation.json` under `truth_species` with `in_scope: false` and their
+`fraction_in_subgraph`, and do not count as missed. `--all-truth-species` scores every species.
+Subgraph regions split wherever segments on one chromosome are more than 1 Mb apart.
+
+**Metrics.** Truth and inferred cycles are compared after merging reference-contiguous steps
+into runs, so segmentation differences do not count against the inference:
 
 - base-pair Jaccard, with and without haplotype;
 - junction recall and precision, unphased and phased;
@@ -213,6 +229,9 @@ runs, so segmentation differences do not count against the inference. The metric
 
 All coordinates are compared within `--eval-tol-bp` (default 10 kb; imputed breakpoints sit
 on a 10 kb grid).
+
+**Failures.** If the truth files cannot be read, `rck-ecdna` still finishes: the
+reconstruction outputs are written, and `evaluation.json` records the error and traceback.
 
 ## 7. Running on Princeton ionic
 
@@ -263,8 +282,9 @@ scales from the windows.
 | `test_subgraph_io.py` | no | synthetic chains; phantom contraction and edge relocation; parallel imputed merging; junction labelings; the `amplicon_0` fixture (18 segments; 20 reference, 14 novel and 12 imputed adjacencies; 4 terminals; crossings AB/BA) |
 | `test_scale.py` | no | depth mode from balanced blocks (rejecting LOH and CN 3 blocks); allele split; flank background; override and fallback; ratio mode cancelling shared bias; θ from extremities; sample selection |
 | `test_walk.py` | no | alternating Hierholzer; canonical form under rotation and reversal; a tandem-duplicated segment; a hub with three loops (2 orderings); balance checks; path parsing and ranking |
-| `test_evaluate.py` | no | Jaccard with multiplicity; junction scores; order match with rotation, reversal, finer segmentation and tolerance; truth table I/O; rebuilding the demo3 truth from the simulator (16 steps, 2,343,000 bp, seg4 on A and B, seg10 on B) |
+| `test_evaluate.py` | no | Jaccard with multiplicity; junction scores; order match with rotation, reversal, finer segmentation and tolerance; truth table I/O; rebuilding the demo3 truth from the simulator (16 steps, 2,343,000 bp, seg4 on A and B, seg10 on B); demo4 truth from `truth/aa` (two species, per-sample weights); scoping species to a subgraph |
 | `test_ilp_circular.py` | yes (small) | single circle (10 copies on A plus a 1+1 background); haplotype crossings; imputed closing edge used when cheap and not when expensive; `--enforce-is` |
 | `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; end-to-end `rck-ecdna` |
 | `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
+| `test_demo4.py` | yes (full license) | both demo4 subgraphs: evaluation never errors, each subgraph is scored only against its own species, per-sample truth weights; accuracy is printed, not asserted (`RCK_ECDNA_DEMO4_OBS` enables estimated scales for both samples) |
 | `test_demo3.py` | yes (full license) | `amplicon_0` against the demo3 truth, rank-1 decomposition only: cycle order matches, haplotype Jaccard ≥ 0.95, junction recall ≥ 0.9, copy-number error ≤ 30% |

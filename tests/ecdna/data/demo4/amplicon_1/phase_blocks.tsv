@@ -1,0 +1,7 @@
+phase_block	votes_same	votes_flip	orientation
+chr16:25	2	0	1
+chr4:144	0	1	-1
+chr4:145	1	0	1
+chr5:10	1	0	1
+chr5:9	0	1	-1
+chr6:50	0	2	-1

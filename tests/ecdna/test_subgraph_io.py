@@ -163,5 +163,17 @@ class TestAmplicon0Fixture(unittest.TestCase):
         self.assertEqual({a.u, a.v}, {"imputed_ext_chr4_1_-", "chr4:6344999+_+"})
 
 
+class TestRegions(unittest.TestCase):
+    def test_distant_segments_on_one_chromosome_are_separate_regions(self):
+        g = read_subgraph(os.path.join(DATA_DIR, "demo4", "amplicon_0"))
+        chr16 = [r for r in g.regions() if r[0] == "chr16"]
+        self.assertEqual(len(chr16), 2)  # 25.4 Mb and 46.7 Mb, not one 21 Mb span
+        self.assertTrue(all(e - s < 1_000_000 for _, s, e in chr16))
+
+    def test_demo3_regions(self):
+        g = read_subgraph(os.path.join(DATA_DIR, "amplicon_0"))
+        self.assertEqual([r[0] for r in g.regions()], ["chr4", "chr6"])
+
+
 if __name__ == "__main__":
     unittest.main()

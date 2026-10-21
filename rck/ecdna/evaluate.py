@@ -56,6 +56,7 @@ class Cycle:
     weight: float
     orderings: List[List[CStep]]
     circular: bool = True  # False for a linear walk (its last step does not join its first)
+    weight_int: Optional[float] = None  # inferred species: integer weight before the copy-number refit
 
     @property
     def steps(self) -> List[CStep]:
@@ -252,7 +253,11 @@ def read_inferred(decompositions_tsv: str, include_low_weight: bool = False) -> 
         orderings = [[_parse_step(t) for t in str(w).split(",")] for w in group["walk"]]
         entry = result[int(rank)]
         circular = str(group["topology"].iloc[0]) != "linear" if "topology" in group else True
-        entry["cycles"].append(Cycle(name=str(species), weight=float(group["weight"].iloc[0]), orderings=orderings, circular=circular))
+        weight_int = None
+        if "weight_int" in group and pd.notna(group["weight_int"].iloc[0]):
+            weight_int = float(group["weight_int"].iloc[0])
+        entry["cycles"].append(Cycle(name=str(species), weight=float(group["weight"].iloc[0]), orderings=orderings, circular=circular,
+                                     weight_int=weight_int))
     return result
 
 
@@ -582,6 +587,8 @@ class PairScore:
     truth_weight: float = 0.0
     inferred_weight: Optional[float] = None
     cn_rel_err: Optional[float] = None
+    inferred_weight_int: Optional[float] = None
+    cn_rel_err_int: Optional[float] = None  # the same error with the integer weight (before the refit)
     inferred_topology: Optional[str] = None
     topology_match: Optional[bool] = None
 
@@ -599,6 +606,9 @@ def score_pair(t: Cycle, c: Cycle, tol: int) -> PairScore:
             s.order_match, s.order_match_ordering = True, k
             break
     s.cn_rel_err = abs(c.weight - t.weight) / t.weight if t.weight else None
+    if c.weight_int is not None:
+        s.inferred_weight_int = c.weight_int
+        s.cn_rel_err_int = abs(c.weight_int - t.weight) / t.weight if t.weight else None
     return s
 
 

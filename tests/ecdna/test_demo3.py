@@ -54,6 +54,20 @@ class TestDemo3(unittest.TestCase):
             evaluation = self.check(result, tmp)
         print("\ndemo3 (fixed scales):", json.dumps(evaluation, indent=1, default=str))
 
+    def test_long_reads_keep_the_structure(self):
+        """The demo3 long-read paths constrain the decomposition; the answer and its ordering stay right."""
+        with temp_dir() as tmp:
+            result = run(tmp, ["--depth-per-copy", "15", "--junction-reads-per-copy", "6",
+                               "--paths", os.path.join(TRUTH, "obs", "path.tsv")])
+            evaluation = self.check(result, tmp)
+            best = result["decompositions"][0]
+            self.assertGreater(best.reads_total, 0)
+            self.assertGreaterEqual(best.reads_explained, 0.9)
+            self.assertIsNotNone(best.species[0].weight_int)
+        print("\ndemo3 (long reads): reads explained {r:.2f} of {t:.0f}; weight {w} (integer {wi})".format(
+            r=best.reads_explained, t=best.reads_total, w=best.species[0].weight, wi=best.species[0].weight_int))
+        print(json.dumps(evaluation["top_decomposition"], indent=1, default=str))
+
     @unittest.skipUnless(OBS and os.path.isdir(OBS or ""), "set RCK_ECDNA_DEMO3_OBS to the demo3 obs directory")
     def test_scales_from_observations(self):
         with temp_dir() as tmp:

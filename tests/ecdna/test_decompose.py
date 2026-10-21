@@ -133,6 +133,88 @@ class TestDecompose(unittest.TestCase):
         self.assertEqual(len(best.species[0].orderings), 2)
 
 
+def merged_read(ends, support=30.0, pid="r1"):
+    """A read through a>x then x>b: only the merged circle (x a x b) contains both junctions."""
+    from rck.ecdna.walk import ReadPath
+
+    return ReadPath(pid=pid, support=support, junctions=[(ends["a"][1], ends["x"][0]), (ends["x"][1], ends["b"][0])])
+
+
+class TestReadConstraints(unittest.TestCase):
+    def test_mapping_merging_and_filters(self):
+        from rck.ecdna.decompose import read_constraints
+        from rck.ecdna.walk import ReadPath
+
+        with temp_dir() as tmp:
+            ends = loops_graph(tmp, loops=("a", "b", "c"))
+            g = read_subgraph(tmp)
+        flow = add(loop_counts(g, ends, ["a"], weight=10), loop_counts(g, ends, ["b"], weight=7))
+        forward = merged_read(ends, 30.0, "fwd")
+        backward = ReadPath(pid="rev", support=5.0, junctions=[(b, a) for a, b in reversed(forward.junctions)])
+        single = ReadPath(pid="one", support=50.0, junctions=[(ends["x"][1], ends["a"][0])])
+        off_flow = ReadPath(pid="c", support=9.0, junctions=[(ends["c"][1], ends["x"][0]), (ends["x"][1], ends["a"][0])])
+        weak = ReadPath(pid="weak", support=1.0, junctions=forward.junctions)
+        reads, skipped = read_constraints(g, sorted(flow), [forward, backward, single, off_flow, weak], min_support=2.0)
+        self.assertEqual(len(reads), 1)  # forward and its reverse are one junction sequence; single, weak dropped
+        self.assertEqual(reads[0].support, 35.0)
+        self.assertEqual(sorted(reads[0].pids), ["fwd", "rev"])
+        self.assertEqual([[e[1] for e in grp] for grp in reads[0].groups], [["a>x"], ["x>b"]])
+        self.assertEqual(skipped, 1)  # c>x carries no flow
+
+
+@requires_gurobi
+class TestReadsInDecomposition(unittest.TestCase):
+    """(x a) 10 + (x b) 7 has two exact two-species answers; a read through a>x>b picks the merged one."""
+
+    def setUp(self):
+        self.tmp = temp_dir()
+        directory = self.tmp.__enter__()
+        self.ends = loops_graph(directory, loops=("a", "b"))
+        self.g = read_subgraph(directory)
+        self.flow = add(loop_counts(self.g, self.ends, ["a"], weight=10), loop_counts(self.g, self.ends, ["b"], weight=7))
+
+    def tearDown(self):
+        self.tmp.__exit__(None, None, None)
+
+    def run_decompose(self, paths, **params):
+        from rck.ecdna.decompose import DecompositionParams, decompose
+
+        return decompose(self.g, self.flow, DecompositionParams(num_alternatives=10, **params), paths=paths)
+
+    @staticmethod
+    def weights(d):
+        return tuple(sorted(s.weight for s in d.species))
+
+    def test_without_reads_the_simpler_answer_wins(self):
+        self.assertEqual(self.weights(self.run_decompose(None)[0]), (7, 10))
+
+    def test_read_selects_the_merged_circle(self):
+        best = self.run_decompose([merged_read(self.ends)])[0]
+        self.assertEqual(self.weights(best), (3, 7))
+        merged = [s for s in best.species if s.weight == 7][0]
+        self.assertEqual(sum(merged.counts.values()), 8)  # x twice, a, b and four junctions
+        self.assertAlmostEqual(best.residual, 0.0)
+        self.assertEqual(best.reads_total, 30.0)
+        self.assertEqual(best.reads_explained, 1.0)
+        self.assertEqual(merged.orderings[0].paths_matched, 1)
+
+    def test_required_fraction_without_reward(self):
+        best = self.run_decompose([merged_read(self.ends)], path_weight=0.0, path_fraction=0.9)[0]
+        self.assertEqual(self.weights(best), (3, 7))
+
+    def test_reads_never_add_a_species(self):
+        """The read reward is capped at path_weight (< species_penalty): a single circle stays single."""
+        flow = loop_counts(self.g, self.ends, ["a", "b"], weight=10)
+        from rck.ecdna.decompose import DecompositionParams, decompose
+        from rck.ecdna.walk import ReadPath
+
+        loop_a = ReadPath(pid="aa", support=40.0, junctions=[(self.ends["x"][1], self.ends["a"][0]), (self.ends["a"][1], self.ends["x"][0]),
+                                                           (self.ends["x"][1], self.ends["a"][0])])
+        best = decompose(self.g, flow, DecompositionParams(), paths=[loop_a])[0]
+        self.assertEqual(len(best.species), 1)
+        self.assertEqual(best.reads_explained, 0.0)  # x a x a is not a sub-walk of x a x b
+
+
 @requires_gurobi
 class TestLinearSpecies(unittest.TestCase):
     def run_decompose(self, g, flow, **params):

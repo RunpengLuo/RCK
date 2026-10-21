@@ -24,6 +24,7 @@ from rck.ecdna.decompose import DecompositionParams, decompose
 from rck.ecdna.gurobi_env import default_threads, quiet_gurobi_logger
 from rck.ecdna.ilp_circular import CircularParams, solve_flow
 from rck.ecdna.output import write_all
+from rck.ecdna.refit import RefitParams, refit_decompositions
 from rck.ecdna.scale import ScaleParams, build_observations
 from rck.ecdna.subgraph_io import read_subgraph
 from rck.ecdna.walk import read_paths
@@ -90,6 +91,19 @@ def build_parser() -> argparse.ArgumentParser:
     dc.add_argument("--alternatives-mode", choices=["pool", "nogood"], default="pool")
     dc.add_argument("--max-orderings", type=int, default=20, help="Alternative orderings enumerated per species")
 
+    lr = parser.add_argument_group("Long reads in the decomposition (--paths)")
+    lr.add_argument("--path-weight", type=float, default=0.5,
+                    help="Cost of leaving all multi-junction read support unexplained, scaled by the unexplained share; 0 = reads only rank orderings")
+    lr.add_argument("--path-fraction", type=float, default=0.0,
+                    help="Required explained share of that support (CoRAL uses 0.9); dropped with a warning if infeasible")
+    lr.add_argument("--min-path-support", type=float, default=1.0, help="Reads behind a path before it constrains the decomposition")
+    lr.add_argument("--min-path-junctions", type=int, default=2, help="Junctions a path must span to constrain the decomposition")
+
+    rf = parser.add_argument_group("Copy-number refit")
+    rf.add_argument("--no-refit", action="store_true", help="Report the integer weights of the structure search")
+    rf.add_argument("--refit-min-copies", type=float, default=0.5,
+                    help="Species refitted below this many copies are dropped as unsupported")
+
     ev = parser.add_argument_group("evaluation (optional)")
     ev.add_argument("--truth-dir", default=None, help="Simulator run directory with truth/ and obs/ (amplicon-allele-analysis)")
     ev.add_argument("--truth-cycles", default=None, help="Explicit truth table: species order chrom start end strand hap weight")
@@ -151,12 +165,16 @@ def run(args) -> Dict[str, object]:
                                      min_species_weight_frac=args.min_species_weight_frac, min_ecdna_copies=args.min_ecdna_copies,
                                      ecdna_call_fraction=args.ecdna_call_fraction, num_alternatives=args.num_alternatives,
                                      pool_gap=args.pool_gap, mode=args.alternatives_mode, max_orderings=args.max_orderings,
+                                     path_weight=args.path_weight, path_fraction=args.path_fraction,
+                                     min_path_support=args.min_path_support, min_path_junctions=args.min_path_junctions,
                                      time_limit=args.time_limit, threads=args.threads, mip_gap=args.mip_gap,
                                      log_file=os.path.join(args.outdir, "gurobi_decompose.log"), log_to_console=args.verbose)
     decompositions = decompose(graph, sol.ecdna_edges(), dec_params, paths=paths)
     if decompositions and decompositions[0].residual > 0:
         log.warning("best decomposition leaves residual %.3f; consider raising --max-species or --max-multiplicity",
                     decompositions[0].residual)
+    refit_decompositions(decompositions, graph, obs, sol, flow_params, dec_params,
+                         RefitParams(enabled=not args.no_refit, min_copies=args.refit_min_copies))
     outputs = write_all(args.outdir, graph, obs, sol, decompositions,
                         extra={"inputs": inputs, "runtime_s": round(time.time() - started, 2),
                                "paths_loaded": 0 if paths is None else len(paths)})
@@ -164,9 +182,11 @@ def run(args) -> Dict[str, object]:
     if args.truth_dir or args.truth_cycles:
         evaluation = _evaluate(args, graph, outputs)
     for d in decompositions[:3]:
-        log.info("decomposition %d: %s, objective %.4f, %d species (%s)", d.rank, d.call, d.objective, len(d.species),
-                 ", ".join("{t} w={w} len={l}{f}".format(t=s.topology, w=s.weight, l=s.length_bp, f=" low_weight" if s.low_weight else "")
-                           for s in d.species))
+        log.info("decomposition %d: %s, objective %.4f, %d species (%s)%s%s", d.rank, d.call, d.objective, len(d.species),
+                 ", ".join("{t} w={w:g} (int {wi}) len={l}{f}".format(t=s.topology, w=s.weight, wi=s.weight_int, l=s.length_bp,
+                                                                     f=" low_weight" if s.low_weight else "") for s in d.species),
+                 "; pruned " + ", ".join("w={w:g}".format(w=p["refit_weight"]) for p in d.pruned) if d.pruned else "",
+                 "; reads explained {r:.0%} of {t:.0f}".format(r=d.reads_explained, t=d.reads_total) if d.reads_total else "")
     return {"graph": graph, "observations": obs, "flow": sol, "decompositions": decompositions, "outputs": outputs, "inputs": inputs,
             "evaluation": evaluation}
 

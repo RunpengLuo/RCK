@@ -329,18 +329,34 @@ def _contains(seq: List[Tuple[str, str]], pattern: List[Tuple[str, str]], cyclic
     return False
 
 
+class _WalkJunctions:
+    def __init__(self, graph: ECGraph, steps: Sequence[Step]):
+        self.seq = _junction_sequence(graph, steps)
+        self.rev = [(b, a) for a, b in reversed(self.seq)]
+        self.cyclic = not is_linear(steps)
+        self.nodes = {x for pair in self.seq for x in pair}
+
+    def applicable(self, p: ReadPath) -> bool:
+        return all(x in self.nodes and y in self.nodes for x, y in p.junctions)
+
+    def contains(self, p: ReadPath) -> bool:
+        return _contains(self.seq, p.junctions, self.cyclic) or _contains(self.rev, p.junctions, self.cyclic)
+
+
+def path_matches(graph: ECGraph, steps: Sequence[Step], path: ReadPath) -> bool:
+    """True if the read's junctions appear consecutively, in order, along the walk (either direction)."""
+    return _WalkJunctions(graph, steps).contains(path)
+
+
 def path_support(graph: ECGraph, steps: Sequence[Step], paths: Iterable[ReadPath]) -> Tuple[float, int, int]:
     """(support of matched multi-junction paths, matched paths, applicable paths)."""
-    seq = _junction_sequence(graph, steps)
-    rev = [(b, a) for a, b in reversed(seq)]
-    cyclic = not is_linear(steps)
-    nodes = {x for pair in seq for x in pair}
+    walk = _WalkJunctions(graph, steps)
     score, matched, applicable = 0.0, 0, 0
     for p in paths:
-        if not all(x in nodes and y in nodes for x, y in p.junctions):
+        if not walk.applicable(p):
             continue
         applicable += 1
-        if _contains(seq, p.junctions, cyclic) or _contains(rev, p.junctions, cyclic):
+        if walk.contains(p):
             matched += 1
             if len(p.junctions) >= 2:
                 score += p.support

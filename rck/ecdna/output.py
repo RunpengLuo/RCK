@@ -15,7 +15,8 @@ from rck.ecdna.subgraph_io import HAPLOTYPES, REFERENCE, ECGraph
 from rck.ecdna.walk import describe_join, describe_step
 
 DECOMPOSITION_COLUMNS = ["decomposition_rank", "objective", "residual", "n_species", "amplicon_call", "circular_fraction",
-                         "species", "topology", "status", "weight", "length_bp",
+                         "reads_explained", "data_objective",
+                         "species", "topology", "status", "weight", "weight_int", "length_bp",
                          "ordering_rank", "n_orderings", "path_support", "paths_matched", "paths_applicable",
                          "n_steps", "uses_imputed", "junctions", "walk", "joins"]
 
@@ -23,7 +24,10 @@ DECOMPOSITION_COLUMNS = ["decomposition_rank", "objective", "residual", "n_speci
 def decomposition_table(graph: ECGraph, decompositions: List[Decomposition]) -> pd.DataFrame:
     """One row per (decomposition, species, ordering).
 
-    ``topology`` is ``circular`` or ``linear``; ``amplicon_call`` (ecDNA / mixed / linear / none)
+    ``weight`` is the species' copies per cell after the refit against the observations
+    (fractional; :mod:`rck.ecdna.refit`) and ``weight_int`` the integer weight of the structure
+    search. ``reads_explained`` is the share of multi-junction long-read support found, in order,
+    in the decomposition's top orderings. ``topology`` is ``circular`` or ``linear``; ``amplicon_call`` (ecDNA / mixed / linear / none)
     and ``circular_fraction`` describe the whole decomposition. ``status`` is ``species`` or ``low_weight`` (below the minimum species weight; usually flow
     residue rather than a molecule). ``walk`` lists the steps as ``chrom:start-end:hap:strand``; ``joins`` lists, for each step,
     the adjacency taken after it as ``kind:aid:phasing`` (the last one closes the circle).
@@ -35,7 +39,9 @@ def decomposition_table(graph: ECGraph, decompositions: List[Decomposition]) -> 
                 rows.append({
                     "decomposition_rank": d.rank, "objective": d.objective, "residual": d.residual, "n_species": len(d.species),
                     "amplicon_call": d.call, "circular_fraction": d.circular_fraction,
-                    "species": "ec{i}".format(i=i), "topology": sp.topology, "status": sp.status, "weight": sp.weight, "length_bp": sp.length_bp, "ordering_rank": j,
+                    "reads_explained": d.reads_explained if d.reads_total else None, "data_objective": d.data_objective,
+                    "species": "ec{i}".format(i=i), "topology": sp.topology, "status": sp.status, "weight": sp.weight,
+                    "weight_int": sp.weight_int, "length_bp": sp.length_bp, "ordering_rank": j,
                     "n_orderings": len(sp.orderings), "path_support": o.path_score, "paths_matched": o.paths_matched,
                     "paths_applicable": o.paths_applicable, "n_steps": len(o.steps), "uses_imputed": ",".join(sp.imputed) or ".",
                     "junctions": ",".join(sp.junctions) or ".",
@@ -130,7 +136,9 @@ def write_all(outdir: str, graph: ECGraph, obs: Observations, sol: FlowSolution,
         "circular_fraction": decompositions[0].circular_fraction if decompositions else None,
         "decompositions": [
             {"rank": d.rank, "objective": d.objective, "residual": d.residual, "call": d.call, "circular_fraction": d.circular_fraction,
-             "species": [{"weight": s.weight, "topology": s.topology, "status": s.status, "length_bp": s.length_bp, "n_orderings": len(s.orderings),
+             "reads_total": d.reads_total, "reads_explained": d.reads_explained,
+             "data_objective": d.data_objective, "data_objective_int": d.data_objective_int, "pruned": d.pruned,
+             "species": [{"weight": s.weight, "weight_int": s.weight_int, "topology": s.topology, "status": s.status, "length_bp": s.length_bp, "n_orderings": len(s.orderings),
                           "imputed": s.imputed, "junctions": s.junctions} for s in d.species]}
             for d in decompositions
         ],

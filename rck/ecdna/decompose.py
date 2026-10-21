@@ -23,6 +23,20 @@ are re-checked for balance and connectivity and deduplicated by their species mu
 Each decomposition gets an amplicon call from its significant (not ``low_weight``) species:
 ``ecDNA`` when circular species carry at least 80% of the copy-number x length, ``linear`` at
 most 20%, ``mixed`` in between, ``none`` without significant species.
+
+**Long reads (CoRAL-style).** Every long-read path that spans at least ``min_path_junctions``
+junctions (and has ``min_path_support`` reads) whose junctions all carry ecDNA flow becomes a
+read constraint. For read ``p`` and slot ``k`` a binary ``z_kp`` equals 1 exactly when slot
+``k`` uses every junction of ``p`` (any labeling), and ``x_p = OR_k z_kp`` marks the read as
+explained. Unexplained reads cost ``path_weight`` x their share of the read support (so at most
+``path_weight`` in total), and ``path_fraction`` optionally requires that share of the support
+to be explained (CoRAL uses 0.9). ``z`` and ``x`` are fully determined by the slot supports, so
+they do not multiply the solution pool. Containing every junction is necessary but not
+sufficient for a read to fit a walk; after solving, each read is checked against the actual
+orderings (:func:`rck.ecdna.walk.path_matches`) and the explained share is reported.
+
+Species weights here are integers (the structure search). :mod:`rck.ecdna.refit` then refits
+them as fractional copy numbers against the observations.
 """
 
 from __future__ import annotations
@@ -30,14 +44,14 @@ from __future__ import annotations
 import logging
 import math
 from functools import reduce
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Dict, FrozenSet, List, Optional, Sequence, Tuple
 
 from rck.ecdna.gurobi_env import close_model, default_threads
 from rck.ecdna.phased import (ADJ, END, END_NODE, SEG, EdgeKey, PhasedNode, endpoints, is_adj_like, is_balanced, n_ends,
                               segment_key_at)
-from rck.ecdna.subgraph_io import IMPUTED, NOVEL, ECGraph
-from rck.ecdna.walk import ReadPath, Step, alternating_circuit, enumerate_circuits, path_support, walk_length
+from rck.ecdna.subgraph_io import IMPUTED, NOVEL, REFERENCE, ECGraph
+from rck.ecdna.walk import ReadPath, Step, alternating_circuit, enumerate_circuits, path_matches, path_support, walk_length
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +73,10 @@ class DecompositionParams:
     pool_gap: float = 0.10
     mode: str = "pool"  # pool | nogood
     max_orderings: int = 20
+    path_weight: float = 0.5  # cost of leaving all multi-junction read support unexplained (scaled by share)
+    path_fraction: float = 0.0  # required explained share of that support (CoRAL: 0.9); 0 = off
+    min_path_support: float = 1.0  # reads behind a path before it constrains the decomposition
+    min_path_junctions: int = 2  # single-junction paths are already counted by the junction reads
     max_expansions: int = 200_000
     time_limit: Optional[float] = None
     threads: Optional[int] = None
@@ -77,13 +95,14 @@ class Ordering:
 
 @dataclass
 class Species:
-    weight: int
+    weight: float  # copies per cell: integer from the structure search, fractional after refit
     counts: Dict[EdgeKey, int]
     orderings: List[Ordering] = field(default_factory=list)
     length_bp: int = 0
     imputed: List[str] = field(default_factory=list)
     junctions: List[str] = field(default_factory=list)
     low_weight: bool = False  # below the minimum species weight: likely flow residue, not a molecule
+    weight_int: Optional[int] = None  # integer weight from the structure search
 
     @property
     def topology(self) -> str:
@@ -94,8 +113,8 @@ class Species:
         return "low_weight" if self.low_weight else "species"
 
     @property
-    def signature(self) -> Tuple[int, FrozenSet]:
-        return self.weight, frozenset(self.counts.items())
+    def signature(self) -> Tuple[float, FrozenSet]:
+        return (self.weight if self.weight_int is None else self.weight_int), frozenset(self.counts.items())
 
 
 @dataclass
@@ -106,10 +125,57 @@ class Decomposition:
     species: List[Species]
     call: str = "none"
     circular_fraction: Optional[float] = None
+    reads_total: float = 0.0  # support of the read constraints (multi-junction reads on the flow)
+    reads_explained: float = 0.0  # share of it found, in order, in some species' top ordering
+    data_objective: Optional[float] = None  # observation misfit after the weight refit
+    data_objective_int: Optional[float] = None  # the same with the integer weights
+    pruned: List[Dict[str, object]] = field(default_factory=list)  # species the refit dropped
 
     @property
     def signature(self) -> FrozenSet:
         return frozenset(s.signature for s in self.species)
+
+
+@dataclass
+class ReadConstraint:
+    path: ReadPath  # representative read (orientation as first seen)
+    support: float  # reads behind this junction sequence (merged over identical paths)
+    groups: List[Tuple[EdgeKey, ...]]  # per distinct junction: the phased adjacency edges that can carry it
+    pids: List[str] = field(default_factory=list)
+
+
+def read_constraints(graph: ECGraph, edges: Sequence[EdgeKey], paths: Optional[Sequence[ReadPath]],
+                     min_support: float = 1.0, min_junctions: int = 2) -> Tuple[List[ReadConstraint], int]:
+    """Read constraints for the decomposition, and the number of reads left out because a junction has no flow."""
+    by_pair: Dict[FrozenSet[str], List[EdgeKey]] = {}
+    for e in edges:
+        if e[0] == ADJ and graph.adjacencies[e[1]].kind != REFERENCE:
+            a = graph.adjacencies[e[1]]
+            by_pair.setdefault(frozenset((a.u, a.v)), []).append(e)
+    merged: Dict[Tuple, ReadConstraint] = {}
+    skipped = 0
+    for p in paths or []:
+        if len(p.junctions) < min_junctions or p.support < min_support:
+            continue
+        groups: List[Tuple[EdgeKey, ...]] = []
+        for x, y in p.junctions:
+            group = tuple(sorted(by_pair.get(frozenset((x, y)), [])))
+            if not group:
+                groups = []
+                break
+            if group not in groups:
+                groups.append(group)
+        if not groups:
+            skipped += 1
+            continue
+        forward = tuple(p.junctions)
+        key = min(forward, tuple((b, a) for a, b in reversed(p.junctions)))
+        if key in merged:
+            merged[key].support += p.support
+            merged[key].pids.append(p.pid)
+        else:
+            merged[key] = ReadConstraint(path=p, support=p.support, groups=groups, pids=[p.pid])
+    return sorted(merged.values(), key=lambda r: (-r.support, r.pids[0])), skipped
 
 
 def _components(graph: ECGraph, keys: Sequence[EdgeKey]) -> List[List[EdgeKey]]:
@@ -134,7 +200,8 @@ def _components(graph: ECGraph, keys: Sequence[EdgeKey]) -> List[List[EdgeKey]]:
 
 
 class CycleDecomposer:
-    def __init__(self, graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[DecompositionParams] = None):
+    def __init__(self, graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[DecompositionParams] = None,
+                 paths: Optional[Sequence[ReadPath]] = None):
         self.graph = graph
         self.flow = {k: int(v) for k, v in flow.items() if v > 0}
         self.params = params or DecompositionParams()
@@ -142,6 +209,10 @@ class CycleDecomposer:
         self.index = {e: i for i, e in enumerate(self.edges)}
         self.model = None
         self.discarded = 0
+        p = self.params
+        self.reads, self.reads_skipped = read_constraints(graph, self.edges, paths, p.min_path_support, p.min_path_junctions)
+        if not (p.path_weight > 0 or p.path_fraction > 0):
+            self.reads = []
 
     def _omega(self, key: EdgeKey) -> float:
         p = self.params
@@ -232,11 +303,53 @@ class CycleDecomposer:
             self.res[e] = r
             terms.append(self._omega(e) * r)
         terms.append(p.species_penalty * gp.quicksum(self.u.values()))
+        terms.extend(self._read_terms(gp, GRB))
         if p.multiplicity_penalty:
             terms.append(p.multiplicity_penalty * gp.quicksum(self.mult[k, e] for k in range(K) for e in E))
         m.setObjective(gp.quicksum(terms), GRB.MINIMIZE)
         m.update()
         return m
+
+    def _read_terms(self, gp, GRB) -> list:
+        """Read constraints (see module docstring); returns the objective terms."""
+        p, m = self.params, self.model
+        self.o, self.z, self.x = {}, {}, {}
+        if not self.reads:
+            return []
+        total = sum(r.support for r in self.reads)
+        for k in range(self.K):
+            for ri, r in enumerate(self.reads):
+                ors = []
+                for group in r.groups:
+                    if (k, group) not in self.o:
+                        if len(group) == 1:
+                            self.o[k, group] = self.y[k, group[0]]
+                        else:  # several labelings of the junction: OR of their supports
+                            o = m.addVar(vtype=GRB.BINARY, name="o[{k},{r},{n}]".format(k=k, r=ri, n=len(self.o)))
+                            for e in group:
+                                m.addConstr(o >= self.y[k, e])
+                            m.addConstr(o <= gp.quicksum(self.y[k, e] for e in group))
+                            self.o[k, group] = o
+                    ors.append(self.o[k, group])
+                z = m.addVar(vtype=GRB.BINARY, name="z[{k},{r}]".format(k=k, r=ri))
+                for o in ors:
+                    m.addConstr(z <= o)
+                m.addConstr(z >= gp.quicksum(ors) - (len(ors) - 1))
+                self.z[k, ri] = z
+        for ri in range(len(self.reads)):
+            x = m.addVar(vtype=GRB.BINARY, name="x[{r}]".format(r=ri))
+            zs = [self.z[k, ri] for k in range(self.K)]
+            for z in zs:
+                m.addConstr(x >= z)
+            m.addConstr(x <= gp.quicksum(zs))
+            self.x[ri] = x
+        explained = gp.quicksum(r.support * self.x[ri] for ri, r in enumerate(self.reads))
+        if p.path_fraction > 0:
+            m.addConstr(explained >= p.path_fraction * total, name="path_fraction")
+        if p.path_weight > 0:
+            # cost of the unexplained share; kept non-negative so the pool's relative gap is unaffected
+            return [p.path_weight * (1 - explained / total)]
+        return []
 
     def _callback(self):
         import gurobipy as gp
@@ -286,7 +399,7 @@ class CycleDecomposer:
                 weight *= g
             if is_balanced(self.graph, counts) or len(_components(self.graph, list(counts))) > 1 or n_ends(counts) not in (0, 2):
                 valid = False
-            species.append(Species(weight=weight, counts=counts))
+            species.append(Species(weight=weight, counts=counts, weight_int=weight))
         return species, valid
 
     def _residual(self, species: List[Species]) -> float:
@@ -402,8 +515,8 @@ def _flag_low_weight(species: List[Species], params: DecompositionParams) -> Non
     if not species:
         return
     threshold = params.min_species_weight
-    if threshold is None:
-        threshold = max(1, int(math.ceil(params.min_species_weight_frac * species[0].weight)))
+    if threshold is None:  # for integer weights this is the same as ceil(frac x heaviest)
+        threshold = max(1.0, params.min_species_weight_frac * max(s.weight for s in species))
     for s in species:
         s.low_weight = len(species) > 1 and s.weight < threshold
 
@@ -418,8 +531,20 @@ def decompose(graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[Decompo
     two" when the solver scores them equally.
     """
     params = params or DecompositionParams()
-    decomposer = CycleDecomposer(graph, flow, params)
-    raw = decomposer.solve()
+    decomposer = CycleDecomposer(graph, flow, params, paths)
+    if decomposer.reads:
+        log.info("read constraints: %d junction sequences (%.0f reads); %d paths off the flow",
+                 len(decomposer.reads), sum(r.support for r in decomposer.reads), decomposer.reads_skipped)
+    try:
+        raw = decomposer.solve()
+    except RuntimeError:
+        if not (params.path_fraction > 0 and decomposer.reads):
+            raise
+        log.warning("no decomposition explains %.0f%% of the read support; solving without --path-fraction",
+                    100 * params.path_fraction)
+        params = replace(params, path_fraction=0.0)
+        decomposer = CycleDecomposer(graph, flow, params, paths)
+        raw = decomposer.solve()
     candidates = []
     for objective, species in raw:
         species = sorted(species, key=lambda s: (-s.weight, -sum(s.counts.values())))
@@ -432,6 +557,16 @@ def decompose(graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[Decompo
     for rank, (residual, _, _, _, objective, species) in enumerate(candidates[:max(1, params.num_alternatives)], start=1):
         annotated = [_annotate(graph, s, params, paths) for s in species]
         call, fraction = classify(annotated, params)
+        total, explained = explained_reads(graph, annotated, decomposer.reads)
         result.append(Decomposition(rank=rank, objective=objective, residual=decomposer._residual(annotated), species=annotated,
-                                    call=call, circular_fraction=fraction))
+                                    call=call, circular_fraction=fraction, reads_total=total, reads_explained=explained))
     return result
+
+
+def explained_reads(graph: ECGraph, species: Sequence[Species], reads: Sequence[ReadConstraint]) -> Tuple[float, float]:
+    """(read support, share found in order in some species' top ordering)."""
+    total = sum(r.support for r in reads)
+    if total <= 0:
+        return 0.0, 0.0
+    hit = sum(r.support for r in reads if any(path_matches(graph, s.orderings[0].steps, r.path) for s in species if s.orderings))
+    return total, hit / total

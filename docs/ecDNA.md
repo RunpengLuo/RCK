@@ -189,6 +189,42 @@ Alternatives come from Gurobi's solution pool (`--alternatives-mode pool`) or fr
 solves with a no-good cut (`--alternatives-mode nogood`), within `--pool-gap` of the
 optimum. Every alternative is re-checked and deduplicated.
 
+#### Long reads in the decomposition
+
+With `--paths`, every long-read path that spans at least `--min-path-junctions` (2) junctions,
+has at least `--min-path-support` reads, and whose junctions all carry ecDNA flow becomes a
+read constraint (identical paths, in either direction, are merged and their reads summed).
+For read p and slot k, a binary z<sub>kp</sub> is 1 exactly when slot k uses every junction of
+p, and x<sub>p</sub> = OR<sub>k</sub> z<sub>kp</sub> marks p as explained. Two ways to use them, as in CoRAL:
+
+- **reward** (default): unexplained reads cost `--path-weight` (0.5) × their share of the read
+  support. The total is capped at 0.5, below one species (`--species-penalty` 1.0), so reads
+  choose between decompositions that fit the flow equally well (e.g. two circles sharing a
+  segment against one merged circle) but never add a species on their own;
+- **requirement**: `--path-fraction 0.9` requires that share of the support to be explained
+  (CoRAL's default). If no decomposition can, the run logs a warning and solves without it.
+
+z and x are fully determined by the slot supports, so they do not multiply the solution pool.
+Containing every junction is necessary, not sufficient: after solving, each read is checked
+against the actual orderings, and `reads_explained` reports the share of support found in
+order in some species' top ordering.
+
+#### Fractional copy numbers and uneven flow (`rck/ecdna/refit.py`)
+
+The structure search uses integer weights and reproduces the integer flow. That flow is
+fitted edge by edge to noisy observations, so it can be uneven (15 copies on most edges of a
+molecule, 28 on one segment). Matching it exactly then needs leftover species, and an integer
+leftover can take copies from the real molecule (demo4 tumor2: 6 + 1 against a true 7.44).
+
+After the decomposition, every decomposition keeps its structures and its copy numbers are
+refitted as real numbers, directly against the observations, by a small linear program. It
+uses the flow MILP's own data terms (allele-specific segment copy numbers and junction reads,
+same weights), with the background layer held at the flow solution. A species refitted below
+`--refit-min-copies` (0.5) is not supported by the data: the lightest one is dropped and the
+fit repeated. The ranking is unchanged (it is made on the integer solution); `low_weight`
+flags and the amplicon call are recomputed from the new weights. `--no-refit` reports the
+integer weights. The LP is solved with scipy (HiGHS), so it needs no Gurobi licence.
+
 ### Walks (`rck/ecdna/walk.py`)
 
 For each species, Hierholzer's algorithm with alternation gives one walk, and a bounded
@@ -202,16 +238,19 @@ order.
 
 | File | Content |
 |---|---|
-| `decompositions.tsv` | one row per decomposition, species and ordering: `amplicon_call`, `circular_fraction`, `topology`, `status` (`species` or `low_weight`), `weight` (copies per cell, bulk average), `length_bp`, `path_support`, `uses_imputed`, `junctions`, `walk` (`chrom:start-end:hap:strand`, comma-separated) and `joins` (adjacency after each step, `kind:aid:phasing`; a linear walk's last join is `end:<extremity>:<hap>`) |
+| `decompositions.tsv` | one row per decomposition, species and ordering: `amplicon_call`, `circular_fraction`, `reads_explained`, `data_objective` (observation misfit after the refit), `topology`, `status` (`species` or `low_weight`), `weight` (copies per cell, bulk average, fractional after the refit), `weight_int` (integer weight of the structure search), `length_bp`, `path_support`, `uses_imputed`, `junctions`, `walk` (`chrom:start-end:hap:strand`, comma-separated) and `joins` (adjacency after each step, `kind:aid:phasing`; a linear walk's last join is `end:<extremity>:<hap>`) |
 | `flow_segments.tsv` | per segment: observed total and allele copy numbers, plus inferred ecDNA and background copy numbers for A and B |
 | `flow_adjacencies.tsv` | per adjacency labeling: read support, observed copy number, ecDNA and background flow; `linear_end` rows for copy-ends |
 | `aa/<name>_graph.txt`, `aa/<name>_decomp<k>_cycles.txt` | AmpliconArchitect-style graph and cycles (total copy number; cycle lines also carry `Haplotypes=`; linear walks start and end with AA's `0+`/`0-` source) |
 | `observations.json` | scales, how each was estimated, and every observation |
-| `summary.json` | graph normalization log, flow status (with `linear_end_copies`), top-level `amplicon_call` and `circular_fraction`, decompositions |
+| `summary.json` | graph normalization log, flow status (with `linear_end_copies`), top-level `amplicon_call` and `circular_fraction`, decompositions (with `reads_total`, `reads_explained`, `data_objective` and `data_objective_int`, and `pruned`: species the refit dropped) |
 | `gurobi_flow.log`, `gurobi_decompose.log` | solver logs |
 | `evaluation.tsv`, `evaluation.json`, `truth_cycles.tsv` | only with `--truth-dir` or `--truth-cycles` |
 
 ## 6. Evaluation
+
+`evaluation.tsv` reports `cn_rel_err` for the refitted weight and `cn_rel_err_int` for the
+integer weight, so the effect of the refit is visible per species.
 
 ```bash
 rck-ecdna-eval --decompositions rck_ecdna_out/demo3/amplicon_0/decompositions.tsv \
@@ -315,7 +354,8 @@ scales from the windows.
 | `test_walk.py` | no | alternating Hierholzer; canonical form under rotation and reversal; a tandem-duplicated segment; a hub with three loops (2 orderings); balance checks; path parsing and ranking; linear walks from end to end (round trip, canonical form, one ordering, an unpaired end rejected) |
 | `test_evaluate.py` | no | Jaccard with multiplicity; junction scores; order match with rotation, reversal, finer segmentation and tolerance; a linear inferred walk never matches a circular truth (`topology_match`); truth table I/O; rebuilding the demo3 truth from the simulator (16 steps, 2,343,000 bp, seg4 on A and B, seg10 on B); demo4 truth from `truth/aa` (two species, per-sample weights); scoping species to a subgraph |
 | `test_ilp_circular.py` | yes (small) | single circle (10 copies on A plus a 1+1 background); haplotype crossings; imputed closing edge used when cheap, linear flow when expensive, no flow with `--linear-ends none`; linear ends only at boundaries and flanks; a linear amplicon; `--enforce-is` |
-| `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; a linear species; a circle plus a linear piece (called ecDNA); end-to-end `rck-ecdna` for a circle (`ecDNA`) and for an amplicon with no closing junction (`linear`, and `none` with `--linear-ends none`) |
+| `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; a linear species; a circle plus a linear piece (called ecDNA); end-to-end `rck-ecdna` for a circle (`ecDNA`) and for an amplicon with no closing junction (`linear`, and `none` with `--linear-ends none`); read constraints (merging a read and its reverse, dropping single-junction, weak and off-flow reads); a read through a>x>b choosing the merged circle (reward and `--path-fraction`); a read never adding a species, and the order post-check |
+| `test_refit.py` | LP: no; CLI: yes (small) | a fractional weight (10.4); an unsupported leftover dropped; a supported one kept; the `--refit-min-copies` threshold; the last species never dropped; observation rows use the flow background; end-to-end fractional copy number (10.4, integer 10) and `--no-refit` |
 | `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
 | `test_demo4.py` | yes (full license) | both demo4 subgraphs: evaluation never errors, each subgraph is scored only against its own species, per-sample truth weights; accuracy is printed, not asserted (`RCK_ECDNA_DEMO4_OBS` enables estimated scales for both samples) |
-| `test_demo3.py` | yes (full license) | `amplicon_0` against the demo3 truth, rank-1 decomposition only: cycle order matches, haplotype Jaccard ≥ 0.95, junction recall ≥ 0.9, copy-number error ≤ 30% |
+| `test_demo3.py` | yes (full license) | `amplicon_0` against the demo3 truth, rank-1 decomposition only: cycle order matches, haplotype Jaccard ≥ 0.95, junction recall ≥ 0.9, copy-number error ≤ 30%; the same with the fixture's long-read paths in the decomposition (≥ 90% of read support explained) |

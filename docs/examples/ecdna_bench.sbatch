@@ -17,10 +17,6 @@ NAME=$(basename $CFG .yaml)
 RUN=$SIM/runs/bench/$NAME
 SUB=$SIM/subgraphs/bench/$NAME
 RES=~/RCK/results/bench/$NAME
-cd $SIM
-python src/simulation.py -c $CFG -g $REF/hg38.sizes -b $REF/hg38.regions.bed -o $RUN --no-plots
-python subgraph_construct.py --sim-dir $RUN --out-dir $SUB --no-plot
-python verify_subgraph.py --run-dir $RUN --out-dir $SUB
 cd ~/RCK
 for A in $SUB/amplicon_*/; do
   for S in sim_normal sim_tumor1 sim_tumor2; do

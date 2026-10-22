@@ -69,7 +69,11 @@ def tally_logs(pattern):
     failed_logs = 0
     for path in sorted(glob.glob(pattern)):
         text = open(path, errors="replace").read()
-        found = re.findall(r"^\w*(?:Error|Exception)\b.*$", text, flags=re.M)
+        # final traceback lines, including module-qualified ones (pandas.errors.EmptyDataError,
+        # gurobipy._exception.GurobiError), Slurm kills, and the script's own "RCK failed" lines
+        found = re.findall(r"^(?:[\w.]*(?:Error|Exception)\b.*|.*(?:oom-kill|Killed|DUE TO TIME LIMIT).*)$", text, flags=re.M)
+        found = [re.sub(r"/\S*/bench/[^/\s]+/", "<scenario>/", line) for line in found]
+        found += ["RCK failed (run count)"] * len(re.findall(r"^RCK failed:", text, flags=re.M))
         if found:
             failed_logs += 1
         for line in found:

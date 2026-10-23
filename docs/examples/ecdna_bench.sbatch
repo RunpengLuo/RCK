@@ -1,5 +1,3 @@
-mkdir -p ~/RCK/logs
-cat >| ~/RCK/docs/examples/ecdna_bench.sbatch <<'EOF'
 #!/bin/bash
 #SBATCH --job-name=ecbench
 #SBATCH --array=0-32%2
@@ -55,4 +53,3 @@ for A in "${AMPS[@]}"; do
   done
 done
 echo "== $NAME done"
-EOF

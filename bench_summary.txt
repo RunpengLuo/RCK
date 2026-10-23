@@ -1,0 +1,414 @@
+scenario	sample	amplicon	call	rank	species	note
+baseline_s1	sim_normal	amplicon_0	none	NA		inferred 
+baseline_s1	sim_normal	amplicon_1	none	NA		inferred 
+baseline_s1	sim_normal	amplicon_2	none	NA		inferred 
+baseline_s1	sim_normal	amplicon_3	none	NA		inferred 
+baseline_s1	sim_normal	amplicon_4	none	NA		inferred 
+baseline_s1	sim_tumor1	amplicon_0	none	NA		inferred 
+baseline_s1	sim_tumor1	amplicon_1	none	NA		inferred 
+baseline_s1	sim_tumor1	amplicon_2	ecDNA	1	ecdna1:1.0:Y:9.51(10)/19.42	inferred c:9.51,l:1.85
+baseline_s1	sim_tumor1	amplicon_3	none	NA		inferred c:0.69
+baseline_s1	sim_tumor1	amplicon_4	none	NA		inferred 
+baseline_s1	sim_tumor2	amplicon_0	none	NA		inferred 
+baseline_s1	sim_tumor2	amplicon_1	none	NA		inferred 
+baseline_s1	sim_tumor2	amplicon_2	ecDNA	1	ecdna1:1.0:Y:4.78(5)/8.33	inferred c:4.78
+baseline_s1	sim_tumor2	amplicon_3	none	NA		inferred 
+baseline_s1	sim_tumor2	amplicon_4	none	NA		inferred 
+baseline_s2	sim_normal	amplicon_0	none	NA		inferred 
+baseline_s2	sim_normal	amplicon_1	none	NA		inferred 
+baseline_s2	sim_normal	amplicon_2	none	NA		inferred 
+baseline_s2	sim_normal	amplicon_3	none	NA		inferred 
+baseline_s2	sim_normal	amplicon_4	none	NA		inferred 
+baseline_s2	sim_tumor1	amplicon_0	ecDNA	1	ecdna1:1.0:Y:12.06(12)/20.22	inferred c:12.06
+baseline_s2	sim_tumor1	amplicon_1	ecDNA	NA		inferred c:17.68,c:16.31
+baseline_s2	sim_tumor1	amplicon_2	none	NA		inferred 
+baseline_s2	sim_tumor1	amplicon_3	none	NA		inferred c:0.6
+baseline_s2	sim_tumor1	amplicon_4	none	NA		inferred 
+baseline_s2	sim_tumor2	amplicon_0	ecDNA	1	ecdna1:1.0:Y:11.29(11)/20.01	inferred c:11.29
+baseline_s2	sim_tumor2	amplicon_1	ecDNA	NA		inferred c:10.76,c:10.08
+baseline_s2	sim_tumor2	amplicon_2	none	NA		inferred 
+baseline_s2	sim_tumor2	amplicon_3	none	NA		inferred c:0.71
+baseline_s2	sim_tumor2	amplicon_4	none	NA		inferred 
+baseline_s3	sim_normal	amplicon_0	none	NA		inferred 
+baseline_s3	sim_normal	amplicon_1	none	NA		inferred 
+baseline_s3	sim_normal	amplicon_2	none	NA		inferred c:0.59
+baseline_s3	sim_normal	amplicon_3	none	NA		inferred c:0.59
+baseline_s3	sim_normal	amplicon_4	none	NA		inferred 
+baseline_s3	sim_normal	amplicon_5	none	NA		inferred 
+baseline_s3	sim_normal	amplicon_6	none	NA		inferred 
+baseline_s3	sim_tumor1	amplicon_0	none	NA		inferred c:0.58
+baseline_s3	sim_tumor1	amplicon_1	none	NA		inferred 
+baseline_s3	sim_tumor1	amplicon_2	ecDNA	1	ecdna1:1.0:Y:9.98(10)/18.65	inferred c:9.98
+baseline_s3	sim_tumor1	amplicon_3	linear	NA		inferred l:8.08
+baseline_s3	sim_tumor1	amplicon_4	none	NA		inferred 
+baseline_s3	sim_tumor1	amplicon_5	none	NA		inferred 
+baseline_s3	sim_tumor1	amplicon_6	ecDNA	NA		inferred c:11.39,c:10.16
+baseline_s3	sim_tumor2	amplicon_0	none	NA		inferred c:0.65
+baseline_s3	sim_tumor2	amplicon_1	none	NA		inferred 
+baseline_s3	sim_tumor2	amplicon_2	ecDNA	1	ecdna1:1.0:Y:6.97(7)/10.48	inferred c:6.97
+baseline_s3	sim_tumor2	amplicon_3	linear	NA		inferred l:3.2,l:2.91
+baseline_s3	sim_tumor2	amplicon_4	none	NA		inferred 
+baseline_s3	sim_tumor2	amplicon_5	none	NA		inferred 
+baseline_s3	sim_tumor2	amplicon_6	linear	NA		inferred l:7.2
+chromothripsis_s1	sim_normal	amplicon_0	none	NA		inferred 
+chromothripsis_s1	sim_normal	amplicon_1	none	NA		inferred 
+chromothripsis_s1	sim_normal	amplicon_2	none	NA		inferred 
+chromothripsis_s1	sim_normal	amplicon_3	none	NA		inferred 
+chromothripsis_s1	sim_normal	amplicon_4	none	NA		inferred 
+chromothripsis_s1	sim_tumor1	amplicon_0	linear	NA	ecdna1:0.45:N:9.2(7)/19.42	inferred l:9.48,l:9.2
+chromothripsis_s1	sim_tumor1	amplicon_1	none	NA		inferred 
+chromothripsis_s1	sim_tumor1	amplicon_2	none	NA		inferred c:1.45
+chromothripsis_s1	sim_tumor1	amplicon_3	ecDNA	NA		inferred c:12.3
+chromothripsis_s1	sim_tumor1	amplicon_4	none	NA		inferred c:1.45
+chromothripsis_s1	sim_tumor2	amplicon_0	linear	NA	ecdna1:0.68:N:3.25(4)/8.33	inferred l:3.36,l:3.25,l:1.44,l:1.17
+chromothripsis_s1	sim_tumor2	amplicon_1	none	NA		inferred 
+chromothripsis_s1	sim_tumor2	amplicon_2	none	NA		inferred c:1.34
+chromothripsis_s1	sim_tumor2	amplicon_3	ecDNA	NA		inferred c:7.99
+chromothripsis_s1	sim_tumor2	amplicon_4	none	NA		inferred c:1.34
+chromothripsis_s2	sim_normal	amplicon_0	none	NA		inferred 
+chromothripsis_s2	sim_normal	amplicon_1	none	NA		inferred c:1.13
+chromothripsis_s2	sim_normal	amplicon_2	none	NA		inferred 
+chromothripsis_s2	sim_normal	amplicon_3	none	NA		inferred 
+chromothripsis_s2	sim_tumor1	amplicon_0	linear	NA	ecdna1:0.55:N:10.26(10)/20.22	inferred l:10.26,l:8.99,l:3.77,c:1.4
+chromothripsis_s2	sim_tumor1	amplicon_1	ecDNA	NA		inferred c:34.73,c:30.83,c:17.37
+chromothripsis_s2	sim_tumor1	amplicon_2	linear	NA		inferred l:0.65
+chromothripsis_s2	sim_tumor1	amplicon_3	linear	NA		inferred l:11.72,l:10.25
+chromothripsis_s2	sim_tumor2	amplicon_0	linear	NA	ecdna1:0.55:N:12.67(12)/20.01	inferred l:12.67,l:6.64,l:2.86
+chromothripsis_s2	sim_tumor2	amplicon_1	ecDNA	NA		inferred c:24.03,c:22.56,c:12.72
+chromothripsis_s2	sim_tumor2	amplicon_2	none	NA		inferred c:0.86
+chromothripsis_s2	sim_tumor2	amplicon_3	linear	NA		inferred l:12.16,l:8.1,l:3.74
+chromothripsis_s3	sim_normal	amplicon_0	none	NA	ecdna1:0.78:N:0.88(1)/18.65	inferred c:0.88
+chromothripsis_s3	sim_normal	amplicon_1	none	NA		inferred 
+chromothripsis_s3	sim_normal	amplicon_2	none	NA		inferred c:0.83
+chromothripsis_s3	sim_normal	amplicon_3	none	NA		inferred 
+chromothripsis_s3	sim_normal	amplicon_4	none	NA		inferred 
+chromothripsis_s3	sim_normal	amplicon_5	none	NA		inferred 
+chromothripsis_s3	sim_normal	amplicon_6	none	NA		inferred 
+chromothripsis_s3	sim_tumor1	amplicon_0	ecDNA	1	ecdna1:1.0:Y:10.38(10)/18.65	inferred c:10.38
+chromothripsis_s3	sim_tumor1	amplicon_1	none	NA		inferred c:0.63
+chromothripsis_s3	sim_tumor1	amplicon_2	none	NA		inferred c:1.14
+chromothripsis_s3	sim_tumor1	amplicon_3	none	NA		inferred 
+chromothripsis_s3	sim_tumor1	amplicon_4	none	NA		inferred 
+chromothripsis_s3	sim_tumor1	amplicon_5	linear	NA		inferred l:0.97
+chromothripsis_s3	sim_tumor1	amplicon_6	ecDNA	NA		inferred c:26.92,c:10.94,c:10.35
+chromothripsis_s3	sim_tumor2	amplicon_0	ecDNA	1	ecdna1:1.0:Y:6.21(6)/10.48	inferred c:6.21
+chromothripsis_s3	sim_tumor2	amplicon_1	none	NA		inferred c:0.52
+chromothripsis_s3	sim_tumor2	amplicon_2	none	NA		inferred c:1.04
+chromothripsis_s3	sim_tumor2	amplicon_3	none	NA		inferred 
+chromothripsis_s3	sim_tumor2	amplicon_4	none	NA		inferred 
+chromothripsis_s3	sim_tumor2	amplicon_5	linear	NA		inferred l:1.0
+chromothripsis_s3	sim_tumor2	amplicon_6	ecDNA	NA		inferred c:13.26,c:6.19,c:5.91
+foldback_s1	sim_normal	amplicon_0	none	NA		inferred 
+foldback_s1	sim_normal	amplicon_1	none	NA		inferred 
+foldback_s1	sim_normal	amplicon_2	none	NA		inferred 
+foldback_s1	sim_normal	amplicon_3	none	NA		inferred 
+foldback_s1	sim_normal	amplicon_4	none	NA		inferred 
+foldback_s1	sim_normal	amplicon_5	none	NA		inferred 
+foldback_s1	sim_normal	amplicon_6	none	NA		inferred 
+foldback_s1	sim_tumor1	amplicon_0	none	NA		inferred 
+foldback_s1	sim_tumor1	amplicon_1	none	NA		inferred 
+foldback_s1	sim_tumor1	amplicon_2	ecDNA	NA	ecdna1:0.61:N:9.99(9)/19.42	inferred c:26.57,c:9.99,c:3.07
+foldback_s1	sim_tumor1	amplicon_3	none	NA		inferred 
+foldback_s1	sim_tumor1	amplicon_4	none	NA		inferred 
+foldback_s1	sim_tumor1	amplicon_5	none	NA		inferred 
+foldback_s1	sim_tumor1	amplicon_6	none	NA		inferred 
+foldback_s1	sim_tumor2	amplicon_0	none	NA		inferred 
+foldback_s1	sim_tumor2	amplicon_1	none	NA		inferred 
+foldback_s1	sim_tumor2	amplicon_2	ecDNA	NA	ecdna1:0.61:N:5.08(5)/8.33	inferred c:15.41,c:11.79,c:5.08
+foldback_s1	sim_tumor2	amplicon_3	none	NA		inferred 
+foldback_s1	sim_tumor2	amplicon_4	none	NA		inferred 
+foldback_s1	sim_tumor2	amplicon_5	none	NA		inferred 
+foldback_s1	sim_tumor2	amplicon_6	none	NA		inferred 
+foldback_s2	sim_normal	amplicon_0	none	NA		inferred 
+foldback_s2	sim_normal	amplicon_1	none	NA		inferred 
+foldback_s2	sim_normal	amplicon_2	none	NA		inferred 
+foldback_s2	sim_tumor1	amplicon_0	ecDNA	NA	ecdna1:0.54:N:11.47(11)/20.22	inferred c:11.47,c:7.17,c:6.91,c:1.32
+foldback_s2	sim_tumor1	amplicon_1	linear	NA		inferred l:0.62
+foldback_s2	sim_tumor1	amplicon_2	none	NA		inferred 
+foldback_s2	sim_tumor2	amplicon_0	ecDNA	NA	ecdna1:0.45:N:10.1(10)/20.01	inferred c:10.6,c:10.1,c:5.17,c:4.42
+foldback_s2	sim_tumor2	amplicon_1	none	NA		inferred 
+foldback_s2	sim_tumor2	amplicon_2	none	NA		inferred 
+foldback_s3	sim_normal	amplicon_0	none	NA		inferred 
+foldback_s3	sim_normal	amplicon_1	none	NA		inferred 
+foldback_s3	sim_normal	amplicon_2	none	NA		inferred 
+foldback_s3	sim_normal	amplicon_3	none	NA		inferred 
+foldback_s3	sim_normal	amplicon_4	none	NA		inferred 
+foldback_s3	sim_normal	amplicon_5	none	NA		inferred 
+foldback_s3	sim_tumor1	amplicon_0	ecDNA	NA	ecdna1:0.55:N:10.19(10)/18.65	inferred c:10.27,c:10.19
+foldback_s3	sim_tumor1	amplicon_1	none	NA		inferred 
+foldback_s3	sim_tumor1	amplicon_2	none	NA		inferred 
+foldback_s3	sim_tumor1	amplicon_3	none	NA		inferred c:0.9
+foldback_s3	sim_tumor1	amplicon_4	linear	NA		inferred l:0.99
+foldback_s3	sim_tumor1	amplicon_5	none	NA		inferred 
+foldback_s3	sim_tumor2	amplicon_0	ecDNA	NA	ecdna1:0.45:N:6.53(6)/10.48	inferred c:6.9,c:6.53,c:5.98
+foldback_s3	sim_tumor2	amplicon_1	none	NA		inferred 
+foldback_s3	sim_tumor2	amplicon_2	none	NA		inferred 
+foldback_s3	sim_tumor2	amplicon_3	none	NA		inferred c:0.81
+foldback_s3	sim_tumor2	amplicon_4	linear	NA		inferred l:1.0
+foldback_s3	sim_tumor2	amplicon_5	none	NA		inferred 
+highcn_s1	sim_normal	amplicon_0	none	NA		inferred 
+highcn_s1	sim_normal	amplicon_1	none	NA		inferred 
+highcn_s1	sim_normal	amplicon_2	none	NA		inferred 
+highcn_s1	sim_tumor1	amplicon_0	ecDNA	1	ecdna1:1.0:Y:17.12(19)/38.83	inferred c:17.12,l:4.88
+highcn_s1	sim_tumor1	amplicon_1	none	NA		inferred 
+highcn_s1	sim_tumor1	amplicon_2	none	NA		inferred 
+highcn_s1	sim_tumor2	amplicon_0	ecDNA	1	ecdna1:1.0:Y:8.9(9)/16.66	inferred c:8.9
+highcn_s1	sim_tumor2	amplicon_1	none	NA		inferred 
+highcn_s1	sim_tumor2	amplicon_2	none	NA		inferred 
+highcn_s2	sim_normal	amplicon_0	none	NA		inferred 
+highcn_s2	sim_normal	amplicon_1	linear	NA		inferred l:1.27
+highcn_s2	sim_normal	amplicon_2	none	NA		inferred 
+highcn_s2	sim_tumor1	amplicon_0	ecDNA	1	ecdna1:1.0:Y:25.91(26)/40.45	inferred c:25.91
+highcn_s2	sim_tumor1	amplicon_1	ecDNA	NA		inferred c:32.98
+highcn_s2	sim_tumor1	amplicon_2	linear	NA		inferred l:0.71
+highcn_s2	sim_tumor2	amplicon_0	ecDNA	1	ecdna1:1.0:Y:23.73(24)/40.02	inferred c:23.73
+highcn_s2	sim_tumor2	amplicon_1	ecDNA	NA		inferred c:20.62
+highcn_s2	sim_tumor2	amplicon_2	none	NA		inferred 
+highcn_s3	sim_normal	amplicon_0	none	NA		inferred 
+highcn_s3	sim_normal	amplicon_1	none	NA		inferred 
+highcn_s3	sim_normal	amplicon_2	none	NA		inferred c:0.84
+highcn_s3	sim_normal	amplicon_3	none	NA		inferred 
+highcn_s3	sim_normal	amplicon_4	none	NA		inferred 
+highcn_s3	sim_tumor1	amplicon_0	none	NA		inferred 
+highcn_s3	sim_tumor1	amplicon_1	none	NA		inferred 
+highcn_s3	sim_tumor1	amplicon_2	ecDNA	NA		inferred c:17.41
+highcn_s3	sim_tumor1	amplicon_3	ecDNA	1	ecdna1:1.0:Y:21.0(21)/37.3	inferred c:21.0
+highcn_s3	sim_tumor1	amplicon_4	none	NA		inferred 
+highcn_s3	sim_tumor2	amplicon_0	none	NA		inferred 
+highcn_s3	sim_tumor2	amplicon_1	none	NA		inferred 
+highcn_s3	sim_tumor2	amplicon_2	ecDNA	NA		inferred c:11.57
+highcn_s3	sim_tumor2	amplicon_3	ecDNA	1	ecdna1:1.0:Y:11.52(11)/20.97	inferred c:11.52
+highcn_s3	sim_tumor2	amplicon_4	none	NA		inferred 
+lowcn_s1	sim_normal	amplicon_0	none	NA		inferred 
+lowcn_s1	sim_normal	amplicon_1	none	NA		inferred 
+lowcn_s1	sim_normal	amplicon_2	none	1	ecdna1:1.0:Y:0.51(1)/3.88	inferred c:0.51
+lowcn_s1	sim_normal	amplicon_3	none	NA		inferred 
+lowcn_s1	sim_normal	amplicon_4	none	NA		inferred 
+lowcn_s1	sim_tumor1	amplicon_0	none	NA		inferred 
+lowcn_s1	sim_tumor1	amplicon_1	none	NA		inferred 
+lowcn_s1	sim_tumor1	amplicon_2	ecDNA	1	ecdna1:1.0:Y:2.18(2)/3.88	inferred c:2.18
+lowcn_s1	sim_tumor1	amplicon_3	none	NA		inferred 
+lowcn_s1	sim_tumor1	amplicon_4	none	NA		inferred c:1.3
+lowcn_s1	sim_tumor2	amplicon_0	none	NA		inferred 
+lowcn_s1	sim_tumor2	amplicon_1	none	NA		inferred 
+lowcn_s1	sim_tumor2	amplicon_2	none	1	ecdna1:1.0:Y:1.69(2)/1.67	inferred c:1.69
+lowcn_s1	sim_tumor2	amplicon_3	none	NA		inferred 
+lowcn_s1	sim_tumor2	amplicon_4	none	NA		inferred c:1.36
+lowcn_s2	sim_normal	amplicon_0	none	1	ecdna1:1.0:Y:0.67(1)/4.04	inferred c:0.67
+lowcn_s2	sim_normal	amplicon_1	none	NA		inferred 
+lowcn_s2	sim_normal	amplicon_2	none	NA		inferred 
+lowcn_s2	sim_tumor1	amplicon_0	ecDNA	1	ecdna1:1.0:Y:2.49(3)/4.04	inferred c:2.49
+lowcn_s2	sim_tumor1	amplicon_1	linear	NA		inferred l:0.82
+lowcn_s2	sim_tumor1	amplicon_2	none	NA		inferred 
+lowcn_s2	sim_tumor2	amplicon_0	ecDNA	1	ecdna1:1.0:Y:2.26(2)/4.0	inferred c:2.26
+lowcn_s2	sim_tumor2	amplicon_1	none	NA		inferred 
+lowcn_s2	sim_tumor2	amplicon_2	none	NA		inferred 
+lowcn_s3	sim_normal	amplicon_0	none	NA		inferred 
+lowcn_s3	sim_normal	amplicon_1	none	NA		inferred c:0.7
+lowcn_s3	sim_normal	amplicon_2	none	NA		inferred 
+lowcn_s3	sim_normal	amplicon_3	none	NA		inferred c:0.67
+lowcn_s3	sim_normal	amplicon_4	none	NA		inferred 
+lowcn_s3	sim_normal	amplicon_5	none	NA		inferred 
+lowcn_s3	sim_normal	amplicon_6	none	NA		inferred 
+lowcn_s3	sim_normal	amplicon_7	none	NA		inferred 
+lowcn_s3	sim_tumor1	amplicon_0	none	NA		inferred 
+lowcn_s3	sim_tumor1	amplicon_1	none	NA		inferred c:0.85
+lowcn_s3	sim_tumor1	amplicon_2	none	NA		inferred 
+lowcn_s3	sim_tumor1	amplicon_3	none	NA		inferred c:1.16
+lowcn_s3	sim_tumor1	amplicon_4	none	NA		inferred 
+lowcn_s3	sim_tumor1	amplicon_5	none	NA		inferred 
+lowcn_s3	sim_tumor1	amplicon_6	none	NA		inferred 
+lowcn_s3	sim_tumor1	amplicon_7	none	NA		inferred 
+lowcn_s3	sim_tumor2	amplicon_0	none	NA		inferred 
+lowcn_s3	sim_tumor2	amplicon_1	none	NA		inferred c:0.81
+lowcn_s3	sim_tumor2	amplicon_2	none	NA		inferred 
+lowcn_s3	sim_tumor2	amplicon_3	none	1	ecdna1:1.0:Y:1.66(2)/2.1	inferred c:1.66
+lowcn_s3	sim_tumor2	amplicon_4	none	NA		inferred 
+lowcn_s3	sim_tumor2	amplicon_5	none	NA		inferred 
+lowcn_s3	sim_tumor2	amplicon_6	none	NA		inferred 
+lowcn_s3	sim_tumor2	amplicon_7	none	NA		inferred 
+lowcov_s1	sim_normal	amplicon_0	none	NA		inferred 
+lowcov_s1	sim_normal	amplicon_1	none	NA		inferred 
+lowcov_s1	sim_normal	amplicon_2	none	NA		inferred 
+lowcov_s1	sim_normal	amplicon_3	none	NA		inferred 
+lowcov_s1	sim_normal	amplicon_4	none	NA		inferred 
+lowcov_s1	sim_tumor1	amplicon_0	none	NA		inferred 
+lowcov_s1	sim_tumor1	amplicon_1	ecDNA	1	ecdna1:1.0:Y:9.96(10)/19.42	inferred c:9.96,l:1.73
+lowcov_s1	sim_tumor1	amplicon_2	linear	NA	ecdna1:0.65:N:1.25(1)/19.42	inferred l:8.98,l:1.25
+lowcov_s1	sim_tumor1	amplicon_3	none	NA		inferred 
+lowcov_s1	sim_tumor1	amplicon_4	none	NA		inferred 
+lowcov_s1	sim_tumor2	amplicon_0	none	NA		inferred 
+lowcov_s1	sim_tumor2	amplicon_1	ecDNA	1	ecdna1:1.0:Y:5.07(5)/8.33	inferred c:5.07,l:1.11
+lowcov_s1	sim_tumor2	amplicon_2	linear	NA	ecdna1:0.44:N:6.18(5)/8.33	inferred l:6.18
+lowcov_s1	sim_tumor2	amplicon_3	none	NA		inferred 
+lowcov_s1	sim_tumor2	amplicon_4	none	NA		inferred 
+lowcov_s2	sim_normal	amplicon_0	none	NA		inferred 
+lowcov_s2	sim_normal	amplicon_1	none	NA		inferred 
+lowcov_s2	sim_normal	amplicon_2	none	NA		inferred 
+lowcov_s2	sim_normal	amplicon_3	none	NA		inferred 
+lowcov_s2	sim_tumor1	amplicon_0	ecDNA	1	ecdna1:1.0:Y:12.2(12)/20.22	inferred c:12.2
+lowcov_s2	sim_tumor1	amplicon_1	linear	NA		inferred l:10.75,l:1.37
+lowcov_s2	sim_tumor1	amplicon_2	none	NA		inferred c:0.94
+lowcov_s2	sim_tumor1	amplicon_3	none	NA		inferred 
+lowcov_s2	sim_tumor2	amplicon_0	ecDNA	1	ecdna1:1.0:Y:11.11(11)/20.01	inferred c:11.11
+lowcov_s2	sim_tumor2	amplicon_1	linear	NA		inferred l:9.2,l:1.7
+lowcov_s2	sim_tumor2	amplicon_2	none	NA		inferred c:0.7
+lowcov_s2	sim_tumor2	amplicon_3	none	NA		inferred 
+lowcov_s3	sim_normal	amplicon_0	none	NA		inferred 
+lowcov_s3	sim_normal	amplicon_1	none	NA		inferred 
+lowcov_s3	sim_normal	amplicon_2	none	NA		inferred 
+lowcov_s3	sim_normal	amplicon_3	none	NA		inferred 
+lowcov_s3	sim_normal	amplicon_4	none	NA		inferred 
+lowcov_s3	sim_normal	amplicon_5	none	NA		inferred 
+lowcov_s3	sim_tumor1	amplicon_0	none	NA		inferred c:0.9
+lowcov_s3	sim_tumor1	amplicon_1	linear	NA		inferred l:7.07,l:2.15,c:1.08
+lowcov_s3	sim_tumor1	amplicon_2	ecDNA	1	ecdna1:1.0:Y:10.03(10)/18.65	inferred c:10.03
+lowcov_s3	sim_tumor1	amplicon_3	none	NA		inferred 
+lowcov_s3	sim_tumor1	amplicon_4	ecDNA	NA		inferred c:12.88
+lowcov_s3	sim_tumor1	amplicon_5	none	NA		inferred 
+lowcov_s3	sim_tumor2	amplicon_0	none	NA		inferred c:0.85
+lowcov_s3	sim_tumor2	amplicon_1	linear	NA		inferred l:4.48,c:1.12,l:1.1
+lowcov_s3	sim_tumor2	amplicon_2	ecDNA	1	ecdna1:1.0:Y:6.01(6)/10.48	inferred c:6.01
+lowcov_s3	sim_tumor2	amplicon_3	none	NA		inferred 
+lowcov_s3	sim_tumor2	amplicon_4	linear	NA		inferred l:6.81
+lowcov_s3	sim_tumor2	amplicon_5	none	NA		inferred 
+negative_s1	sim_normal	amplicon_0	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s1	sim_normal	amplicon_1	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s1	sim_normal	amplicon_2	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s1	sim_normal	amplicon_3	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s1	sim_tumor1	amplicon_0	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s1	sim_tumor1	amplicon_1	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s1	sim_tumor1	amplicon_2	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s1	sim_tumor1	amplicon_3	linear/EVAL_ERROR	NA		No columns to parse from file
+negative_s1	sim_tumor2	amplicon_0	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s1	sim_tumor2	amplicon_1	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s1	sim_tumor2	amplicon_2	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s1	sim_tumor2	amplicon_3	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_normal	amplicon_0	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_normal	amplicon_1	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_normal	amplicon_2	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_normal	amplicon_3	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_normal	amplicon_4	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_tumor1	amplicon_0	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_tumor1	amplicon_1	linear/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_tumor1	amplicon_2	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_tumor1	amplicon_3	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_tumor1	amplicon_4	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_tumor2	amplicon_0	ecDNA/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_tumor2	amplicon_1	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_tumor2	amplicon_2	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_tumor2	amplicon_3	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s2	sim_tumor2	amplicon_4	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_normal	amplicon_0	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_normal	amplicon_1	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_normal	amplicon_2	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_normal	amplicon_3	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_normal	amplicon_4	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_tumor1	amplicon_0	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_tumor1	amplicon_1	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_tumor1	amplicon_2	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_tumor1	amplicon_3	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_tumor1	amplicon_4	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_tumor2	amplicon_0	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_tumor2	amplicon_1	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_tumor2	amplicon_2	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_tumor2	amplicon_3	none/EVAL_ERROR	NA		No columns to parse from file
+negative_s3	sim_tumor2	amplicon_4	none/EVAL_ERROR	NA		No columns to parse from file
+phasing_s1	sim_normal	amplicon_0	none	NA		inferred 
+phasing_s1	sim_normal	amplicon_1	none	NA		inferred 
+phasing_s1	sim_normal	amplicon_2	none	NA		inferred 
+phasing_s1	sim_tumor1	amplicon_0	none	NA		inferred 
+phasing_s1	sim_tumor1	amplicon_1	ecDNA	1	ecdna1:1.0:Y:9.22(10)/19.42	inferred c:9.22,l:2.11
+phasing_s1	sim_tumor1	amplicon_2	none	NA		inferred c:0.5
+phasing_s1	sim_tumor2	amplicon_0	none	NA		inferred 
+phasing_s1	sim_tumor2	amplicon_1	ecDNA	1	ecdna1:1.0:Y:5.22(5)/8.33	inferred c:5.22
+phasing_s1	sim_tumor2	amplicon_2	none	NA		inferred 
+phasing_s2	sim_normal	amplicon_0	none	NA		inferred 
+phasing_s2	sim_normal	amplicon_1	none	NA		inferred 
+phasing_s2	sim_normal	amplicon_2	none	NA		inferred 
+phasing_s2	sim_normal	amplicon_3	none	NA		inferred 
+phasing_s2	sim_normal	amplicon_4	none	NA		inferred 
+phasing_s2	sim_tumor1	amplicon_0	ecDNA	1	ecdna1:1.0:Y:11.93(12)/20.22	inferred c:11.93
+phasing_s2	sim_tumor1	amplicon_1	ecDNA	NA		inferred c:17.79,c:16.31
+phasing_s2	sim_tumor1	amplicon_2	none	NA		inferred c:0.43
+phasing_s2	sim_tumor1	amplicon_3	none	NA		inferred c:0.82
+phasing_s2	sim_tumor1	amplicon_4	none	NA		inferred 
+phasing_s2	sim_tumor2	amplicon_0	ecDNA	1	ecdna1:1.0:Y:11.05(11)/20.01	inferred c:11.05,l:1.61
+phasing_s2	sim_tumor2	amplicon_1	ecDNA	NA		inferred c:11.05,c:10.17
+phasing_s2	sim_tumor2	amplicon_2	none	NA		inferred c:0.5
+phasing_s2	sim_tumor2	amplicon_3	none	NA		inferred 
+phasing_s2	sim_tumor2	amplicon_4	none	NA		inferred 
+phasing_s3	sim_normal	amplicon_0	none	NA		inferred 
+phasing_s3	sim_normal	amplicon_1	none	NA		inferred c:0.56
+phasing_s3	sim_normal	amplicon_2	none	NA		inferred 
+phasing_s3	sim_normal	amplicon_3	none	NA		inferred 
+phasing_s3	sim_normal	amplicon_4	none	NA		inferred 
+phasing_s3	sim_normal	amplicon_5	none	NA		inferred 
+phasing_s3	sim_normal	amplicon_6	none	NA		inferred 
+phasing_s3	sim_tumor1	amplicon_0	none	NA		inferred c:0.26
+phasing_s3	sim_tumor1	amplicon_1	linear	NA		inferred l:8.09
+phasing_s3	sim_tumor1	amplicon_2	ecDNA	NA		inferred c:10.73,c:9.69
+phasing_s3	sim_tumor1	amplicon_3	ecDNA	1	ecdna1:1.0:Y:9.78(10)/18.65	inferred c:9.78
+phasing_s3	sim_tumor1	amplicon_4	none	NA		inferred c:0.67
+phasing_s3	sim_tumor1	amplicon_5	none	NA		inferred c:0.67
+phasing_s3	sim_tumor1	amplicon_6	none	NA		inferred 
+phasing_s3	sim_tumor2	amplicon_0	none	NA		inferred 
+phasing_s3	sim_tumor2	amplicon_1	linear	NA		inferred l:5.61
+phasing_s3	sim_tumor2	amplicon_2	linear	NA		inferred l:4.68
+phasing_s3	sim_tumor2	amplicon_3	ecDNA	1	ecdna1:1.0:Y:5.61(6)/10.48	inferred c:5.61
+phasing_s3	sim_tumor2	amplicon_4	none	NA		inferred c:0.74
+phasing_s3	sim_tumor2	amplicon_5	none	NA		inferred c:0.74
+phasing_s3	sim_tumor2	amplicon_6	none	NA		inferred 
+subclonal_s1	sim_normal	amplicon_0	none	1	ecdna1:1.0:Y:0.82(1)/24.11	inferred c:0.82
+subclonal_s1	sim_normal	amplicon_1	none	NA		inferred 
+subclonal_s1	sim_normal	amplicon_2	none	NA		inferred 
+subclonal_s1	sim_normal	amplicon_3	none	NA		inferred 
+subclonal_s1	sim_tumor1	amplicon_0	ecDNA	1	ecdna1:1.0:Y:13.9(14)/24.11	inferred c:13.9
+subclonal_s1	sim_tumor1	amplicon_1	none	NA		inferred 
+subclonal_s1	sim_tumor1	amplicon_2	none	NA		inferred 
+subclonal_s1	sim_tumor1	amplicon_3	none	NA		inferred c:0.5
+subclonal_s1	sim_tumor2	amplicon_0	ecDNA	1	ecdna1:1.0:Y:3.32(3)/3.57	inferred c:3.32
+subclonal_s1	sim_tumor2	amplicon_1	none	NA		inferred 
+subclonal_s1	sim_tumor2	amplicon_2	none	NA		inferred 
+subclonal_s1	sim_tumor2	amplicon_3	none	NA		inferred c:0.41
+subclonal_s2	sim_normal	amplicon_0	none	NA		inferred 
+subclonal_s2	sim_normal	amplicon_1	none	NA		inferred 
+subclonal_s2	sim_normal	amplicon_2	none	NA		inferred 
+subclonal_s2	sim_normal	amplicon_3	none	NA		inferred 
+subclonal_s2	sim_normal	amplicon_4	none	NA		inferred 
+subclonal_s2	sim_tumor1	amplicon_0	none	NA		inferred 
+subclonal_s2	sim_tumor1	amplicon_1	ecDNA	1	ecdna1:1.0:Y:14.86(15)/24.29	inferred c:14.86
+subclonal_s2	sim_tumor1	amplicon_2	none	NA		inferred 
+subclonal_s2	sim_tumor1	amplicon_3	linear	NA		inferred l:0.76
+subclonal_s2	sim_tumor1	amplicon_4	none	NA		inferred 
+subclonal_s2	sim_tumor2	amplicon_0	none	NA		inferred 
+subclonal_s2	sim_tumor2	amplicon_1	ecDNA	1	ecdna1:1.0:Y:16.4(16)/26.32	inferred c:16.4
+subclonal_s2	sim_tumor2	amplicon_2	none	NA		inferred 
+subclonal_s2	sim_tumor2	amplicon_3	none	NA		inferred c:0.74
+subclonal_s2	sim_tumor2	amplicon_4	none	NA		inferred 
+subclonal_s3	sim_normal	amplicon_0	none	NA		inferred 
+subclonal_s3	sim_normal	amplicon_1	none	NA		inferred 
+subclonal_s3	sim_normal	amplicon_2	none	NA		inferred 
+subclonal_s3	sim_normal	amplicon_3	none	NA		inferred 
+subclonal_s3	sim_normal	amplicon_4	none	NA		inferred 
+subclonal_s3	sim_normal	amplicon_5	none	NA		inferred 
+subclonal_s3	sim_normal	amplicon_6	none	NA		inferred 
+subclonal_s3	sim_tumor1	amplicon_0	linear	NA		inferred l:1.12
+subclonal_s3	sim_tumor1	amplicon_1	none	NA		inferred 
+subclonal_s3	sim_tumor1	amplicon_2	mixed	1	ecdna1:1.0:Y:9.54(11)/22.63	inferred c:9.54,l:3.68
+subclonal_s3	sim_tumor1	amplicon_3	linear	NA		inferred l:6.6,l:1.94
+subclonal_s3	sim_tumor1	amplicon_4	none	NA		inferred 
+subclonal_s3	sim_tumor1	amplicon_5	none	NA		inferred 
+subclonal_s3	sim_tumor1	amplicon_6	none	NA		inferred 
+subclonal_s3	sim_tumor2	amplicon_0	none	NA		inferred 
+subclonal_s3	sim_tumor2	amplicon_1	none	NA		inferred 
+subclonal_s3	sim_tumor2	amplicon_2	ecDNA	1	ecdna1:1.0:Y:5.95(6)/9.73	inferred c:5.95
+subclonal_s3	sim_tumor2	amplicon_3	linear	NA		inferred l:4.31
+subclonal_s3	sim_tumor2	amplicon_4	none	NA		inferred 
+subclonal_s3	sim_tumor2	amplicon_5	none	NA		inferred 
+subclonal_s3	sim_tumor2	amplicon_6	none	NA		inferred 
+
+408 runs in 27 scenarios; calls: none 276, ecDNA 57, none/EVAL_ERROR 39, linear 32, linear/EVAL_ERROR 2, ecDNA/EVAL_ERROR 1, mixed 1
+
+logs with errors: 11
+   14  gurobipy._exception.GurobiError: Too many sessions, 5 active sessions for a baseline of 2

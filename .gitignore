@@ -109,3 +109,7 @@ venv.bak/
 test_data/
 
 **/dev_tmp*
+
+# OS and editor files
+**/.DS_Store
+.vscode/settings.json

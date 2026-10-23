@@ -13,11 +13,13 @@ subgraph (nodes.tsv, edges.tsv) ──► normalized DIAG ──► copy-number 
             minimum-species cycle decomposition + alternatives
                                                        │
          alternating Euler walks + alternative orderings ranked by long-read paths
+                                                       │
+       recovery matrix against the truth (optional) + one figure page per species
 ```
 
 Code lives in `rck/ecdna/`; the command-line entry points are `rck/ecdna_run.py`
-(`rck-ecdna`) and `rck/ecdna/evaluate.py` (`rck-ecdna-eval`). RCK's own pipeline
-(`rck`, `rck/core/*`) is unchanged.
+(`rck-ecdna`), `rck/ecdna/evaluate.py` (`rck-ecdna-eval`) and `rck/ecdna/plot.py`
+(`rck-ecdna-plot`). RCK's own pipeline (`rck`, `rck/core/*`) is unchanged.
 
 ## 1. Install
 
@@ -29,6 +31,16 @@ cd RCK
 pip install -e .          # installs rck, rck-ecdna, rck-ecdna-eval
 pip install gurobipy      # or: conda install -c gurobi gurobi
 ```
+
+The figures (section 5) also need `matplotlib` and `cnplot`, the copy-number plotting package
+in amplicon-allele-analysis `third_party/cnplot` (Python 3.10 or newer). Both are optional:
+without them the run finishes and logs that the plots were skipped.
+
+```bash
+pip install -e /path/to/amplicon-allele-analysis/third_party/cnplot   # also installs matplotlib and seaborn
+```
+
+Instead of installing cnplot you can point `--cnplot-path` (or `$CNPLOT_PATH`) at that checkout.
 
 `pip install gurobipy` ships a size-limited license (2,000 variables and 2,000 constraints).
 It is enough for the unit tests but not for the demo3 decomposition, which needs your
@@ -290,7 +302,41 @@ order.
 | `observations.json` | scales, how each was estimated, and every observation |
 | `summary.json` | graph normalization log, flow status (with `linear_end_copies`), top-level `amplicon_call` and `circular_fraction`, decompositions (with `reads_total`, `reads_explained`, `data_objective` and `data_objective_int`, and `pruned`: species the refit dropped) |
 | `gurobi_flow.log`, `gurobi_decompose.log` | solver logs |
-| `evaluation.tsv`, `evaluation.json`, `truth_cycles.tsv` | only with `--truth-dir` or `--truth-cycles` |
+| `evaluation.tsv`, `evaluation.json`, `truth_cycles.tsv`, `recovery_matrix.tsv` | only with `--truth-dir` or `--truth-cycles` (section 6) |
+| `plots/<name>_ecdna.pdf`, `plots/<name>_rank<r>_<species>.png`, `plots/<name>_recovery_matrix.png` | figures: one page per inferred species, then the recovery matrix (below) |
+
+### Figures (`rck/ecdna/plot.py`)
+
+At the end of a run, `rck-ecdna` draws one page for each species of the top decomposition. Species
+flagged `low_weight` are left out unless you pass `--plot-low-weight`, and `--plot-ranks N` also
+draws the next N − 1 alternatives. Every track shares one cnplot `GenomeAxis` that covers only
+the segments the species and its matched truth species use, padded by 5% (at least 5 kb), with the
+gaps between them collapsed. The tracks are:
+
+- **topology**: one row per step of the top ordering, numbered. Each step is a block at its
+  reference position, blue for haplotype A and orange for B, with an arrow for the strand.
+  Connectors follow the traversal order and are dotted for an imputed join and for the join that
+  closes the circle. This is CoRAL's cycles figure, the same track amplicon-allele-analysis draws
+  for simulated truth (`simulations/src/plots.py`), so the two can be compared side by side;
+- **truth**: the matched truth species drawn the same way, when the run was evaluated;
+- **junctions**: one arc per non-reference join of the walk, coloured by the haplotype it joins.
+  Grey marks a haplotype crossing (AB / BA) and a dotted arc an imputed junction;
+- **CN-A / CN-B**: allele-specific copy number, B mirrored under A. Points are the observations,
+  drawn with cnplot `plot_scatter_1d` along each segment. The step line is the inferred ecDNA +
+  background copy number. Shaded blocks are this species' own copies (weight × the number of
+  times its walk uses the segment).
+
+Beside the tracks, the walk is drawn as a ring: clockwise from the top in traversal order, one arc
+per step coloured by haplotype, with a tick at every novel junction (dotted for an imputed one). A
+linear species is drawn as an open ring. Arc lengths are to scale, except that every step gets at
+least 1.5% of the ring, which the page notes when it applies. The title gives the decomposition's
+call, the species' weight (refitted and integer), its length and, when the run was evaluated, the
+matched truth species and its scores. After an evaluation, the last page is a heatmap of the
+recovery matrix.
+
+`rck-ecdna-plot --outdir <run>` redraws an existing output folder (`--plot-ranks`,
+`--plot-low-weight`, `--cnplot-path`, `--no-png`), and `--no-plots` turns the figures off.
+A plotting error is logged as a warning and never fails the run.
 
 ## 6. Evaluation
 
@@ -345,6 +391,33 @@ into runs, so segmentation differences do not count against the inference:
 All coordinates are compared within `--eval-tol-bp` (default 10 kb; imputed breakpoints sit
 on a 10 kb grid).
 
+### Recovery matrix (`recovery_matrix.tsv`)
+
+`recovery_matrix.tsv` has one row per truth species and shows how well the run recovered it. The
+scores describe the rank-1 decomposition, which is RCK's answer; the `best_*` columns describe the
+best alternative. Each truth species is matched one to one to an inferred species by haplotype
+Jaccard, as in `evaluation.tsv`. The table is also stored under `recovery_matrix` in
+`evaluation.json`, with its in-scope mean as `mean_composite`.
+
+| Column | Meaning |
+|---|---|
+| `truth`, `in_scope`, `fraction_in_subgraph` | truth species and whether it is scored in this subgraph (out-of-scope rows have no scores) |
+| `truth_length_bp`, `truth_n_junctions`, `truth_weight` | its size, its distinct junctions and its copies per cell |
+| `inferred`, `inferred_topology`, `inferred_weight` | the matched rank-1 species (empty when it was missed) |
+| `segment_recall`, `segment_precision`, `segment_jaccard` | bases covered by both (with multiplicity, haplotype ignored) over the truth bases, over the inferred bases, and over their union |
+| `haplotype_jaccard` | the same Jaccard with haplotypes |
+| `junction_recall`, `junction_precision`, `junction_f1` | distinct junctions, unphased |
+| `phased_junction_recall`, `phased_junction_precision`, `phased_junction_f1` | distinct junctions with both haplotypes right |
+| `phasing_accuracy` | of the bases both cover, the share on the right haplotype |
+| `phasing_accuracy_swap_invariant` | the same, with A/B as given or swapped, whichever is better (for real data, where the phase labels need not match the truth's) |
+| `order_match`, `topology_match` | as in `evaluation.tsv` |
+| `cn_rel_err` | \|weight − truth weight\| / truth weight |
+| `composite` | equal-weight mean of `segment_jaccard`, `junction_f1`, `phasing_accuracy`, `order_match` (0 or 1) and max(0, 1 − `cn_rel_err`); 0 for a missed species |
+| `best_rank`, `best_inferred`, `best_composite` | the decomposition (and species) with the highest composite for this truth species, over every reported alternative: an upper bound on what the ranking could have picked |
+
+`evaluation.tsv` carries the same per-pair scores (`segment_*`, `junction_f1`,
+`phased_junction_f1`, `phasing_accuracy*`, `composite`) for every decomposition.
+
 **Failures.** If the truth files cannot be read, `rck-ecdna` still finishes: the
 reconstruction outputs are written, and `evaluation.json` records the error and traceback.
 
@@ -364,6 +437,7 @@ ionic schedules jobs with Slurm. `docs/examples/ecdna_ionic.sbatch` is a templat
   conda activate rck-ecdna
   pip install gurobipy
   pip install -e /path/to/RCK
+  pip install -e /path/to/amplicon-allele-analysis/third_party/cnplot   # optional: figures
   ```
 
 ## 8. Tests
@@ -402,6 +476,8 @@ scales from the windows.
 | `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; a linear species; a circle plus a linear piece (called ecDNA); end-to-end `rck-ecdna` for a circle (`ecDNA`) and for an amplicon with no closing junction (`linear`, and `none` with `--linear-ends none`); read constraints (merging a read and its reverse, dropping single-junction, weak and off-flow reads); a read through a>x>b choosing the merged circle (reward and `--path-fraction`); a read never adding a species, and the order post-check |
 | `test_refit.py` | LP: no; CLI: yes (small) | a fractional weight (10.4); an unsupported leftover dropped; a supported one kept; the `--refit-min-copies` threshold; the last species never dropped; observation rows use the flow background; end-to-end fractional copy number (10.4, integer 10) and `--no-refit` |
 | `test_subgraph_inputs.py` | observations: no; run: yes (small) | scales, segment and junction copy numbers and flank background read from `scale.json`, `CN_*` columns and `cn_profile.tsv`; CN columns win over the scale; `--depth-per-copy` recomputes from `WEIGHT`; `--inputs auto/subgraph/windows`; a full run from the subgraph folder alone |
+| `test_recovery.py` | no | segment recall and precision, junction F1, phasing accuracy (one haplotype wrong; every haplotype swapped, which only the swap-invariant score forgives), the composite and its copy-number term; the recovery matrix: a missed species scores 0, `best_rank` finds a better alternative, out-of-scope rows are listed but not scored or averaged, the TSV columns, strict JSON, and a run with no decompositions |
+| `test_plot.py` | no (figures: matplotlib and cnplot) | axis regions padded and merged; figures skipped when cnplot cannot be imported; a circular species with truth and recovery-matrix pages and their PNGs; a linear species without truth |
 | `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
 | `test_demo4.py` | yes (full license) | both demo4 subgraphs: evaluation never errors, each subgraph is scored only against its own species, per-sample truth weights; accuracy is printed, not asserted (`RCK_ECDNA_DEMO4_OBS` enables estimated scales for both samples) |
 | `test_demo3.py` | yes (full license) | `amplicon_0` against the demo3 truth, rank-1 decomposition only: cycle order matches, haplotype Jaccard ≥ 0.95, junction recall ≥ 0.9, copy-number error ≤ 30%; the same with the fixture's long-read paths in the decomposition (≥ 90% of read support explained) |

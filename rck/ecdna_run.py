@@ -120,6 +120,14 @@ def build_parser() -> argparse.ArgumentParser:
                     help="Score only truth species with at least this share of their bases inside this subgraph")
     ev.add_argument("--all-truth-species", action="store_true", help="Score every truth species, inside this subgraph or not")
 
+    pl = parser.add_argument_group("figures (need matplotlib and cnplot)")
+    pl.add_argument("--no-plots", action="store_true", help="Do not draw plots/<name>_ecdna.pdf")
+    pl.add_argument("--plot-ranks", type=int, default=1, help="Draw the species of this many top decompositions")
+    pl.add_argument("--plot-low-weight", action="store_true", help="Also draw species flagged low_weight")
+    pl.add_argument("--cnplot-path", default=None,
+                    help="cnplot checkout (amplicon-allele-analysis third_party/cnplot) when cnplot is not installed; "
+                         "default $CNPLOT_PATH")
+
     gu = parser.add_argument_group("Gurobi")
     gu.add_argument("--threads", type=int, default=None, help="Default: SLURM_CPUS_PER_TASK, else the CPUs this process may use")
     gu.add_argument("--time-limit", type=float, default=None, help="Seconds, per MILP")
@@ -213,6 +221,8 @@ def run(args) -> Dict[str, object]:
     evaluation = None
     if args.truth_dir or args.truth_cycles:
         evaluation = _evaluate(args, graph, outputs)
+    if not getattr(args, "no_plots", False):
+        _plot(args, outputs)
     for d in decompositions[:3]:
         log.info("decomposition %d: %s, objective %.4f, %d species (%s)%s%s", d.rank, d.call, d.objective, len(d.species),
                  ", ".join("{t} w={w:g} (int {wi}) len={l}{f}".format(t=s.topology, w=s.weight, wi=s.weight_int, l=s.length_bp,
@@ -248,6 +258,19 @@ def _evaluate(args, graph, outputs) -> Dict[str, object]:
             json.dump(evaluation, handle, indent=2)
         outputs["evaluation_summary"] = path
         return evaluation
+
+
+def _plot(args, outputs) -> None:
+    """Draw the species pages and the recovery matrix. Plotting never fails a finished run."""
+    from rck.ecdna.plot import plot_run
+
+    try:
+        written = plot_run(args.outdir, ranks=getattr(args, "plot_ranks", 1), include_low_weight=getattr(args, "plot_low_weight", False),
+                           cnplot_path=getattr(args, "cnplot_path", None))
+        if written:
+            outputs["plots"] = written["pdf"]
+    except Exception as error:  # noqa: BLE001 - a figure problem must not lose the reconstruction
+        log.warning("plots failed: %s", error, exc_info=log.isEnabledFor(logging.DEBUG))
 
 
 def main(argv: Optional[List[str]] = None) -> int:

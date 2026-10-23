@@ -23,6 +23,7 @@ setup(
             "rck = rck.rck_run:main",
             "rck-ecdna = rck.ecdna_run:main",
             "rck-ecdna-eval = rck.ecdna.evaluate:main",
+            "rck-ecdna-plot = rck.ecdna.plot:main",
             "rck-scnt-x2rck = rck.utils.scn.rck_scnt_x2rck:main",
             "rck-scnt-process = rck.utils.scn.rck_scnt_process:main",
             "rck-scnt-rck2x = rck.utils.scn.rck_scnt_rck2x:main",

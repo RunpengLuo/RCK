@@ -63,21 +63,48 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
   `CN_*` edge columns, `cn_profile.tsv` and `paths.tsv` written by amplicon-allele-analysis
   `subgraph_construct.py`, so no windows, extremities or HATCHet input is needed.
   `--baseline-cn` defaults to the subgraph's cell ploidy.
+- **Recovery matrix** (`recovery_matrix.tsv`, and `recovery_matrix` / `mean_composite` in
+  `evaluation.json`): one row per truth species.
+  - Scores against the rank-1 decomposition:
+    - segment recall, precision and Jaccard;
+    - haplotype Jaccard;
+    - junction recall, precision and F1, unphased and phased;
+    - phasing accuracy, as given and A/B swap-invariant;
+    - order and topology match;
+    - copy-number error;
+    - an equal-weight `composite` in [0, 1].
+  - `best_rank`, `best_inferred` and `best_composite`: the best alternative decomposition.
+  - Out-of-scope species are listed but not scored. A missed species scores 0.
+  - `evaluation.tsv` gains the new per-pair columns.
+- **Figures** (`rck.ecdna.plot`, `rck-ecdna-plot`): at the end of a run, `plots/<name>_ecdna.pdf`
+  and one PNG per page.
+  - One page per species of the top decomposition. On a cnplot `GenomeAxis` (amplicon-allele-analysis
+    `third_party/cnplot`) restricted to the species' segments, it shows:
+    - the haplotype-coloured topology (CoRAL-style);
+    - the matched truth species;
+    - the junction arcs;
+    - A/B copy number: observed points, the inferred line and this species' share.
+  - Beside the tracks, a ring diagram of the walk.
+  - A recovery-matrix heatmap page after an evaluation.
+  - Options: `--no-plots`, `--plot-ranks`, `--plot-low-weight` and `--cnplot-path` / `$CNPLOT_PATH`.
+  - matplotlib and cnplot are optional. Without them, or on a plotting error, the run logs a
+    warning and still succeeds.
 - `bg_balance_weight`: a small tie-break toward a heterozygous background.
 - Tests under `tests/ecdna/`, with fixtures from demo3 and demo4: subgraph reading, scale,
-  flow, decomposition, walks, refit, subgraph inputs, evaluation, Gurobi environment, and
-  end-to-end demo3 and demo4.
+  flow, decomposition, walks, refit, subgraph inputs, evaluation, recovery matrix
+  (`test_recovery.py`), figures (`test_plot.py`), Gurobi environment, and end-to-end demo3 and
+  demo4.
 - Documentation:
-  - `docs/ecDNA.md`: install, inputs, model, outputs, evaluation, ionic, tests and
-    subgraph-only mode;
+  - `docs/ecDNA.md`: install, inputs, model, outputs, figures, evaluation and the recovery
+    matrix, ionic, tests and subgraph-only mode;
   - a link from `README.md`.
 - Princeton ionic examples in `docs/examples/`:
   - `ecdna_ionic.sbatch` and `ecdna_demo3_tests.sbatch`;
   - `ecdna_bench.sbatch`: a benchmark array, with at most 2 concurrent tasks for the academic
     Gurobi licence;
   - `collect_bench.py`: summarizes the benchmark and tallies log errors.
-- `setup.py`: the `rck.ecdna` package and the `rck-ecdna` and `rck-ecdna-eval` console
-  scripts.
+- `setup.py`: the `rck.ecdna` package and the `rck-ecdna`, `rck-ecdna-eval` and
+  `rck-ecdna-plot` console scripts.
 - Result and log files:
   - `results/plan2/`: demo3, and demo4 normal, tumor1 and tumor2;
   - `bench_summary.txt`, `test_run.log` and `test_demo3.log`.
@@ -100,6 +127,8 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
   ranks above the molecule split in two.
 - Gurobi models are disposed after solving, and test temp folders work on a full `/tmp` and
   on NFS.
+- `evaluation.json` is strict JSON: missing scores in `top_decomposition` are `null`, where they
+  were previously `NaN`.
 - `--truth-dir` evaluation works for any simulated run and subgraph: several species,
   deleted segments and per-sample copy numbers.
 

@@ -22,7 +22,14 @@ runs, so a different segmentation of the same molecule scores as identical:
 * junction recall / precision (unphased and phased) within ``tol_bp``;
 * ``order_match`` - same cyclic run sequence up to rotation and reversal (coordinates within
   ``tol_bp``), checked against every reported ordering;
-* ``cn_rel_err`` - |weight - truth weight| / truth weight.
+* ``cn_rel_err`` - |weight - truth weight| / truth weight;
+* ``phasing_accuracy`` - share of the bases both cycles cover that also carry the same
+  haplotype (``phasing_accuracy_swap_invariant`` takes the better of A/B as given or swapped);
+* ``composite`` - one recovery score in [0, 1], the mean of ``jaccard_total``, ``junction_f1``,
+  ``phasing_accuracy``, ``order_match`` and max(0, 1 - ``cn_rel_err``); a missed species scores 0.
+
+``recovery_matrix.tsv`` has one row per truth species: these scores for the rank-1
+decomposition, plus the best composite over every reported decomposition.
 """
 
 from __future__ import annotations
@@ -578,10 +585,16 @@ class PairScore:
     inferred: Optional[str]
     jaccard_hap: float = 0.0
     jaccard_total: float = 0.0
+    segment_recall: float = 0.0  # covered truth bases / truth bases (with multiplicity, haplotype ignored)
+    segment_precision: float = 0.0  # covered inferred bases / inferred bases
     junction_recall: float = 0.0
     junction_precision: float = 0.0
+    junction_f1: float = 0.0
     phased_junction_recall: float = 0.0
     phased_junction_precision: float = 0.0
+    phased_junction_f1: float = 0.0
+    phasing_accuracy: float = 0.0  # of the bases both cover, the share on the same haplotype
+    phasing_accuracy_swap_invariant: float = 0.0  # the same, A/B as given or swapped, whichever is better
     order_match: bool = False
     order_match_ordering: Optional[int] = None
     truth_weight: float = 0.0
@@ -591,6 +604,25 @@ class PairScore:
     cn_rel_err_int: Optional[float] = None  # the same error with the integer weight (before the refit)
     inferred_topology: Optional[str] = None
     topology_match: Optional[bool] = None
+    composite: float = 0.0
+
+
+def _f1(recall: float, precision: float) -> float:
+    return 2 * recall * precision / (recall + precision) if recall + precision > 0 else 0.0
+
+
+def _swap_hap(steps: Sequence[CStep]) -> List[CStep]:
+    other = {"A": "B", "B": "A"}
+    return [CStep(s.chrom, s.start, s.end, other.get(s.hap, s.hap), s.strand) for s in steps]
+
+
+def composite_score(s: PairScore) -> float:
+    """Equal-weight mean of the COMPOSITE_TERMS; cn_accuracy is max(0, 1 - cn_rel_err)."""
+    if s.inferred is None:
+        return 0.0
+    cn_accuracy = max(0.0, 1.0 - s.cn_rel_err) if s.cn_rel_err is not None else 0.0
+    terms = [s.jaccard_total, s.junction_f1, s.phasing_accuracy, float(s.order_match), cn_accuracy]
+    return sum(terms) / len(terms)
 
 
 def score_pair(t: Cycle, c: Cycle, tol: int) -> PairScore:
@@ -599,6 +631,16 @@ def score_pair(t: Cycle, c: Cycle, tol: int) -> PairScore:
     s.jaccard_total = jaccard(t.steps, c.steps, False)
     s.junction_recall, s.junction_precision = junction_scores(t.steps, c.steps, tol, False, t.circular, c.circular)
     s.phased_junction_recall, s.phased_junction_precision = junction_scores(t.steps, c.steps, tol, True, t.circular, c.circular)
+    s.junction_f1 = _f1(s.junction_recall, s.junction_precision)
+    s.phased_junction_f1 = _f1(s.phased_junction_recall, s.phased_junction_precision)
+    covered, total_t, total_c = _overlap_bp(t.steps, c.steps, False)
+    s.segment_recall = covered / total_t if total_t else 0.0
+    s.segment_precision = covered / total_c if total_c else 0.0
+    if covered:
+        same = _overlap_bp(t.steps, c.steps, True)[0]
+        swapped = _overlap_bp(t.steps, _swap_hap(c.steps), True)[0]
+        s.phasing_accuracy = same / covered
+        s.phasing_accuracy_swap_invariant = max(same, swapped) / covered
     s.inferred_topology = "circular" if c.circular else "linear"
     s.topology_match = t.circular == c.circular
     for k, steps in enumerate(c.orderings, start=1):
@@ -609,6 +651,7 @@ def score_pair(t: Cycle, c: Cycle, tol: int) -> PairScore:
     if c.weight_int is not None:
         s.inferred_weight_int = c.weight_int
         s.cn_rel_err_int = abs(c.weight_int - t.weight) / t.weight if t.weight else None
+    s.composite = composite_score(s)
     return s
 
 
@@ -676,7 +719,8 @@ def evaluate(decompositions_tsv: str, truth: Sequence[Cycle], tol: int = 10_000,
         frac = fraction_in_regions(t.steps, regions, pad=tol) if regions else 1.0
         in_scope = frac >= min_truth_fraction
         species_info.append({"species": t.name, "weight": t.weight, "length_bp": sum(s.end - s.start + 1 for s in t.steps),
-                             "n_steps": len(t.steps), "fraction_in_subgraph": round(frac, 4), "in_scope": in_scope})
+                             "n_steps": len(t.steps), "n_junctions": len(_unique(junctions(t.steps, circular=t.circular), tol)),
+                             "fraction_in_subgraph": round(frac, 4), "in_scope": in_scope})
         if in_scope:
             scored.append(t)
     rows = []
@@ -704,13 +748,66 @@ def evaluate(decompositions_tsv: str, truth: Sequence[Cycle], tol: int = 10_000,
         "first_rank_with_all_orders_matched": best_order_rank,
         "best_mean_jaccard_hap": best_jaccard if scored else None,
         "best_mean_jaccard_rank": best_jaccard_rank,
-        "top_decomposition": top.drop(columns=["objective"]).to_dict("records") if len(top) else [],
+        "top_decomposition": _json_records(top.drop(columns=["objective"])) if len(top) else [],
         "tol_bp": tol,
         "min_truth_fraction": min_truth_fraction if regions else None,
     }
+    matrix = recovery_matrix(frame, species_info, min(inferred) if inferred else None)
+    scored_rows = matrix[matrix["in_scope"]]
+    summary["mean_composite"] = float(scored_rows["composite"].mean()) if len(scored_rows) else None
+    summary["recovery_matrix"] = _json_records(matrix)
     if not scored:
         summary["note"] = "no truth species has at least {f:.0%} of its bases in this subgraph".format(f=min_truth_fraction)
     return frame, summary
+
+
+def _json_records(frame: pd.DataFrame) -> List[Dict[str, object]]:
+    """Rows as plain Python values (no NaN, no numpy scalars), so evaluation.json stays strict JSON."""
+    records = []
+    for record in frame.to_dict("records"):
+        records.append({k: (None if pd.api.types.is_scalar(v) and pd.isna(v) else (v.item() if hasattr(v, "item") else v))
+                        for k, v in record.items()})
+    return records
+
+
+RECOVERY_COLUMNS = ["truth", "in_scope", "fraction_in_subgraph", "truth_length_bp", "truth_n_junctions", "truth_weight",
+                    "inferred", "inferred_topology", "inferred_weight",
+                    "segment_recall", "segment_precision", "segment_jaccard", "haplotype_jaccard",
+                    "junction_recall", "junction_precision", "junction_f1",
+                    "phased_junction_recall", "phased_junction_precision", "phased_junction_f1",
+                    "phasing_accuracy", "phasing_accuracy_swap_invariant", "order_match", "topology_match", "cn_rel_err",
+                    "composite", "best_rank", "best_inferred", "best_composite"]
+
+_RENAMED = {"jaccard_total": "segment_jaccard", "jaccard_hap": "haplotype_jaccard"}
+
+
+def recovery_matrix(frame: pd.DataFrame, species_info: Sequence[Dict[str, object]], top_rank: Optional[int]) -> pd.DataFrame:
+    """One row per truth species: its scores against the rank-1 (``top_rank``) decomposition, and the
+    decomposition rank whose matched species scores the highest composite (an upper bound over the
+    alternatives). Out-of-scope species are listed with ``in_scope`` False and no scores."""
+    rows = []
+    for info in species_info:
+        row = {"truth": info["species"], "in_scope": bool(info["in_scope"]), "fraction_in_subgraph": info["fraction_in_subgraph"],
+               "truth_length_bp": info["length_bp"], "truth_n_junctions": info["n_junctions"], "truth_weight": info["weight"]}
+        mine = frame[frame["truth"] == info["species"]] if len(frame) else frame
+        if info["in_scope"]:
+            top = mine[mine["decomposition_rank"] == top_rank] if len(mine) else mine
+            if len(top):
+                record = top.iloc[0].to_dict()
+                for column in RECOVERY_COLUMNS:
+                    source = next((k for k, v in _RENAMED.items() if v == column), column)
+                    if column not in row and source in record:
+                        row[column] = record[source]
+            else:
+                row["composite"] = 0.0
+            if len(mine):
+                best = mine.sort_values(["composite", "decomposition_rank"], ascending=[False, True]).iloc[0]
+                row.update({"best_rank": int(best["decomposition_rank"]), "best_inferred": best["inferred"],
+                            "best_composite": float(best["composite"])})
+        rows.append(row)
+    matrix = pd.DataFrame(rows, columns=RECOVERY_COLUMNS)
+    matrix["best_rank"] = matrix["best_rank"].astype("Int64")
+    return matrix
 
 
 def regions_from_summary(outdir: str) -> Optional[List[Region]]:
@@ -727,8 +824,12 @@ def regions_from_summary(outdir: str) -> Optional[List[Region]]:
 
 
 def write_evaluation(outdir: str, frame: pd.DataFrame, summary: Dict[str, object]) -> Dict[str, str]:
-    paths = {"table": os.path.join(outdir, "evaluation.tsv"), "summary": os.path.join(outdir, "evaluation.json")}
+    paths = {"table": os.path.join(outdir, "evaluation.tsv"), "summary": os.path.join(outdir, "evaluation.json"),
+             "recovery_matrix": os.path.join(outdir, "recovery_matrix.tsv")}
     frame.to_csv(paths["table"], sep="\t", index=False)
+    matrix = pd.DataFrame(summary.get("recovery_matrix", []), columns=RECOVERY_COLUMNS)
+    matrix["best_rank"] = matrix["best_rank"].astype("Int64")
+    matrix.to_csv(paths["recovery_matrix"], sep="\t", index=False)
     with open(paths["summary"], "w") as handle:
         json.dump(summary, handle, indent=2, default=str)
     return paths
@@ -775,6 +876,11 @@ def log_summary(summary: Dict[str, object]) -> None:
     if summary.get("note"):
         log.warning("evaluation: %s", summary["note"])
         return
+    for row in summary.get("recovery_matrix", []):
+        if row["in_scope"]:
+            log.info("recovery %s: composite %.3f with %s (best %s at rank %s)", row["truth"], row["composite"] or 0.0,
+                     row.get("inferred") or "nothing", "n/a" if row.get("best_composite") is None else "{b:.3f}".format(b=row["best_composite"]),
+                     row.get("best_rank"))
     best = summary.get("best_mean_jaccard_hap")
     log.info("evaluation: first rank with every truth species in order: %s; best mean haplotype Jaccard %s (rank %s)",
              summary["first_rank_with_all_orders_matched"], "n/a" if best is None else "{b:.3f}".format(b=best),

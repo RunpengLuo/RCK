@@ -18,8 +18,14 @@ RUN=$SIM/runs/bench/$NAME
 SUB=$SIM/subgraphs/bench/$NAME
 RES=~/RCK/results/bench/$NAME
 cd ~/RCK
-for A in $SUB/amplicon_*/; do
+for A in $SUB/amplicon_*/ $SUB/union*/; do
   for S in sim_normal sim_tumor1 sim_tumor2; do
-    python -m rck.ecdna_run --subgraph-dir $A --obs-dir $RUN/obs --sample $S --outdir $RES/$S/$(basename $A) --truth-dir $RUN --time-limit 1800
+    OUTD=$RES/$S/$(basename $A)
+    [ -s $OUTD/summary.json ] && continue          # already done
+    for TRY in 1 2 3 4 5; do
+      python -m rck.ecdna_run --subgraph-dir $A --obs-dir $RUN/obs --sample $S --outdir $OUTD --truth-dir $RUN --time-limit 1800 && break
+      echo "attempt $TRY failed: $NAME $S $(basename $A); retrying in 60 s"; sleep 60
+    done
+    [ -s $OUTD/summary.json ] || echo "RCK failed: $NAME $S $(basename $A)"
   done
 done

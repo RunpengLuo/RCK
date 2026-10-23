@@ -98,6 +98,9 @@ class Segment:
     n_snps: int = 0
     seg_hap: Optional[str] = None
     absorbed_bp: int = 0
+    cn_total: Optional[float] = None  # cell-averaged copy number written by subgraph_construct.py (CN_TOTAL)
+    cn_a: Optional[float] = None  # ... and its allele split (CN_A / CN_B)
+    cn_b: Optional[float] = None
 
     @property
     def length(self) -> int:
@@ -347,7 +350,8 @@ def build_graph(nodes_df: pd.DataFrame, edges_df: pd.DataFrame, phantom_max_bp: 
             baf = _num(row.get("BAF"))
             n_snps = int(_num(row.get("n_snps"), 0) or 0)
             segments[sid] = Segment(sid=sid, chrom=nodes[a].chrom, start=nodes[a].pos, end=nodes[b].pos, tail=a, head=b,
-                                    depth=weight, baf=baf if n_snps > 0 else None, n_snps=n_snps, seg_hap=_str(row.get("seg_hap")))
+                                    depth=weight, baf=baf if n_snps > 0 else None, n_snps=n_snps, seg_hap=_str(row.get("seg_hap")),
+                                    cn_total=_num(row.get("CN_TOTAL")), cn_a=_num(row.get("CN_A")), cn_b=_num(row.get("CN_B")))
         elif etype == "extremity":
             counter["r"] += 1
             imputed_ext = n1.startswith("imputed_ext") or n2.startswith("imputed_ext")

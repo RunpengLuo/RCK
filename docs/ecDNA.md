@@ -51,11 +51,56 @@ rck-ecdna \
 `--truth-dir` on real data. To skip the scale estimation, pass
 `--depth-per-copy 15 --junction-reads-per-copy 6` (the demo3 values).
 
+### Run from the subgraph folder only
+
+Subgraphs built by amplicon-allele-analysis `simulations/subgraph_construct.py` (current
+`yubi_dev`) carry everything RCK needs, computed from the observations without truth
+(`simulations/rck_inputs.py`):
+
+| File in the subgraph folder | Content |
+|---|---|
+| `scale.json` | depth per copy and junction reads per copy, the purity / tumor ploidy solution they come from, every ploidy class considered, the sample, and the sample the junction reads come from |
+| `edges.tsv` columns `CN_TOTAL`, `CN_A`, `CN_B` | cell-averaged segment copy number and its allele split |
+| `edges.tsv` column `CN` | junction copy number (`#REF` or `#NOV` / junction reads per copy) |
+| `cn_profile.tsv` | copy number in 100 kb bins along each chromosome of the subgraph, for the region flanks (background layer) |
+| `paths.tsv` | long-read paths whose extremities are all in the subgraph |
+
+```bash
+python -m rck.ecdna_run --subgraph-dir subgraphs/demo4/amplicon_0 --outdir rck_out/amplicon_0 \
+    --truth-dir simulations/runs/demo4_clone3_ecdna        # optional, for scoring only
+```
+
+`--inputs auto` (default) uses these files whenever `scale.json` exists; `--inputs windows`
+returns to estimating from `--windows-dir` / `--obs-dir`. `--depth-per-copy`,
+`--junction-reads-per-copy` and `--baseline-cn` still override. A subgraph describes one
+sample (`subgraph_construct.py --sample`, default the first tumor); build one subgraph folder
+per sample. `--sample` is ignored with a warning when it differs from `scale.json`.
+
+**How the depth scale is fitted (in `rck_inputs.py`).** Depth only gives copy number up to a
+scale, and dividing by 2 is wrong for any non-diploid tumor: a whole-genome doubling made the
+benchmark copy numbers about 0.55x the truth. The fit follows ASCAT / HATCHet: 1 Mb blocks of
+depth and allelic imbalance (phased SNP counts in 100 kb sub-blocks, binomial variance
+removed), segmented per chromosome, then a grid over purity and the copy number at median
+depth that puts every segment's tumor allele copies closest to whole numbers, plus a BAF
+term that checks each segment's predicted imbalance (copy-neutral LOH reads BAF 0 in a pure
+diploid tumor, (1 - purity) / 2 after a doubling). The best solution per ploidy class (about
+2, 4, 6 copies) is kept and the class is chosen jointly over the tumor samples, because a
+doubling is truncal. On the runs checked: demo3 13.76 (truth about 13.8, purity 0.80
+recovered), demo4 13.68 / 13.62 (truth about 13.7), a run with a whole-genome doubling 7.29 /
+7.27 at purity 0.80 (truth 7.29, 0.80). `scale.json` lists every class's solution;
+`subgraph_construct.py --rck-ploidy 2|4|6` or `--rck-depth-per-copy` override the call.
+
+**Limitation (simulator).** `adjacency.tsv`, `extremity.tsv` and `path.tsv` are written for
+the first tumor sample only, so junction copy numbers always describe that sample
+(`scale.json` `junction_sample`). For other samples the segment copy numbers are theirs but
+the junction evidence is not.
+
 ## 3. Inputs
 
 | Option | Content |
 |---|---|
-| `--subgraph-dir` | `nodes.tsv`, `edges.tsv` (and optionally `phase_blocks.tsv`) of one amplicon |
+| `--subgraph-dir` | `nodes.tsv`, `edges.tsv` (and optionally `phase_blocks.tsv`) of one amplicon; with `scale.json` etc. (above) it is the only input needed |
+| `--inputs` | `auto` (subgraph files when `scale.json` exists), `subgraph`, or `windows` |
 | `--windows-dir` | UGP windows: `window.tsv.gz`, `window.depth.npz`, `sample_ids.tsv`, optional `snp.tsv.gz` + `snp.[AB]allele.npz` |
 | `--extremities` | `extremity.tsv` with genome-wide `#REF`, used to estimate junction reads per copy |
 | `--paths` | `path.tsv` long-read paths, used to rank alternative orderings |
@@ -356,6 +401,7 @@ scales from the windows.
 | `test_ilp_circular.py` | yes (small) | single circle (10 copies on A plus a 1+1 background); haplotype crossings; imputed closing edge used when cheap, linear flow when expensive, no flow with `--linear-ends none`; linear ends only at boundaries and flanks; a linear amplicon; `--enforce-is` |
 | `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; a linear species; a circle plus a linear piece (called ecDNA); end-to-end `rck-ecdna` for a circle (`ecDNA`) and for an amplicon with no closing junction (`linear`, and `none` with `--linear-ends none`); read constraints (merging a read and its reverse, dropping single-junction, weak and off-flow reads); a read through a>x>b choosing the merged circle (reward and `--path-fraction`); a read never adding a species, and the order post-check |
 | `test_refit.py` | LP: no; CLI: yes (small) | a fractional weight (10.4); an unsupported leftover dropped; a supported one kept; the `--refit-min-copies` threshold; the last species never dropped; observation rows use the flow background; end-to-end fractional copy number (10.4, integer 10) and `--no-refit` |
+| `test_subgraph_inputs.py` | observations: no; run: yes (small) | scales, segment and junction copy numbers and flank background read from `scale.json`, `CN_*` columns and `cn_profile.tsv`; CN columns win over the scale; `--depth-per-copy` recomputes from `WEIGHT`; `--inputs auto/subgraph/windows`; a full run from the subgraph folder alone |
 | `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
 | `test_demo4.py` | yes (full license) | both demo4 subgraphs: evaluation never errors, each subgraph is scored only against its own species, per-sample truth weights; accuracy is printed, not asserted (`RCK_ECDNA_DEMO4_OBS` enables estimated scales for both samples) |
 | `test_demo3.py` | yes (full license) | `amplicon_0` against the demo3 truth, rank-1 decomposition only: cycle order matches, haplotype Jaccard ≥ 0.95, junction recall ≥ 0.9, copy-number error ≤ 30%; the same with the fixture's long-read paths in the decomposition (≥ 90% of read support explained) |

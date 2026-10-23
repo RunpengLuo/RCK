@@ -25,7 +25,7 @@ from rck.ecdna.gurobi_env import default_threads, quiet_gurobi_logger
 from rck.ecdna.ilp_circular import CircularParams, solve_flow
 from rck.ecdna.output import write_all
 from rck.ecdna.refit import RefitParams, refit_decompositions
-from rck.ecdna.scale import ScaleParams, build_observations
+from rck.ecdna.scale import ScaleParams, build_observations, load_subgraph_scale
 from rck.ecdna.subgraph_io import read_subgraph
 from rck.ecdna.walk import read_paths
 
@@ -36,7 +36,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="rck-ecdna", description="Allele-specific ecDNA reconstruction (circular RCK).",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     io = parser.add_argument_group("input / output")
-    io.add_argument("--subgraph-dir", required=True, help="Directory with nodes.tsv / edges.tsv of one amplicon")
+    io.add_argument("--subgraph-dir", required=True,
+                    help="Directory with nodes.tsv / edges.tsv of one amplicon. When it also has scale.json (written by "
+                         "subgraph_construct.py) it is all RCK needs: see --inputs")
+    io.add_argument("--inputs", choices=["auto", "subgraph", "windows"], default="auto",
+                    help="Where copy numbers come from. subgraph: scale.json, CN_* edge columns, cn_profile.tsv and paths.tsv "
+                         "of the subgraph folder (no windows needed). windows: estimate from --windows-dir / --obs-dir. "
+                         "auto: subgraph when scale.json exists, else windows")
     io.add_argument("--obs-dir", default=None, help="Observation directory; sets --windows-dir OBS/windows, --extremities OBS/extremity.tsv "
                                                     "and --paths OBS/path.tsv when those exist")
     io.add_argument("--windows-dir", default=None, help="UGP windows directory (window.tsv.gz, window.depth.npz, sample_ids.tsv)")
@@ -51,7 +57,8 @@ def build_parser() -> argparse.ArgumentParser:
     sc.add_argument("--depth-per-copy", type=float, default=None, help="Override: tumor depth of one copy")
     sc.add_argument("--junction-reads-per-copy", type=float, default=None, help="Override: reads spanning one junction copy")
     sc.add_argument("--depth-mode", choices=["tumor", "ratio"], default="tumor", help="tumor depth / gamma, or tumor/normal ratio")
-    sc.add_argument("--baseline-cn", type=float, default=2.0, help="Copy number of the dominant balanced background")
+    sc.add_argument("--baseline-cn", type=float, default=None,
+                    help="Copy number of the dominant balanced background (default: scale.json's cell ploidy in subgraph mode, else 2)")
     sc.add_argument("--block-bp", type=int, default=1_000_000)
     sc.add_argument("--min-snps-allele", type=int, default=5, help="SNPs needed for an allele-specific segment observation")
 
@@ -123,6 +130,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _resolve_inputs(args) -> Dict[str, Optional[str]]:
     windows, extremities, paths = args.windows_dir, args.extremities, args.paths
+    mode = getattr(args, "inputs", "auto")
+    has_scale = os.path.exists(os.path.join(args.subgraph_dir, "scale.json"))
+    if mode == "subgraph" and not has_scale:
+        raise SystemExit("--inputs subgraph: {d} has no scale.json; rebuild the subgraph with subgraph_construct.py "
+                         "(without --no-rck-inputs) or use --inputs windows".format(d=args.subgraph_dir))
+    if mode == "subgraph" or (mode == "auto" and has_scale):
+        local = os.path.join(args.subgraph_dir, "paths.tsv")
+        return {"mode": "subgraph", "windows": None, "extremities": None,
+                "paths": paths or (local if os.path.exists(local) and os.path.getsize(local) > 0 else None)}
     if args.obs_dir:
         candidate = os.path.join(args.obs_dir, "windows")
         windows = windows or (candidate if os.path.isdir(candidate) else None)
@@ -130,7 +146,7 @@ def _resolve_inputs(args) -> Dict[str, Optional[str]]:
         extremities = extremities or (candidate if os.path.exists(candidate) else None)
         candidate = os.path.join(args.obs_dir, "path.tsv")
         paths = paths or (candidate if os.path.exists(candidate) else None)
-    return {"windows": windows, "extremities": extremities, "paths": paths}
+    return {"mode": "windows", "windows": windows, "extremities": extremities, "paths": paths}
 
 
 def run(args) -> Dict[str, object]:
@@ -142,10 +158,26 @@ def run(args) -> Dict[str, object]:
     graph = read_subgraph(args.subgraph_dir, phantom_max_bp=args.phantom_max_bp, soft_junction_hap=args.soft_junction_hap, name=args.name)
     log.info("graph %s: %d segments, %d adjacencies; Gurobi threads %d", graph.name, len(graph.segments), len(graph.adjacencies), args.threads)
 
+    subgraph_scale = load_subgraph_scale(args.subgraph_dir) if inputs["mode"] == "subgraph" else None
+    baseline_cn = args.baseline_cn
+    if baseline_cn is None:
+        baseline_cn = float(subgraph_scale.get("background_cn", 2.0)) if subgraph_scale is not None else 2.0
+    if subgraph_scale is not None:
+        built_for = str(subgraph_scale.get("sample", "?"))
+        log.info("inputs: subgraph folder only (scale.json for sample %s; %s)", built_for, subgraph_scale.get("method", ""))
+        if not getattr(args, "truth_sample", None) and not args.sample:
+            args.truth_sample = built_for  # score against the sample the copy numbers describe
+        if args.sample and args.sample != built_for:
+            log.warning("--sample %s ignored: the subgraph's copy numbers were computed for %s; rebuild it with "
+                        "subgraph_construct.py --sample %s for that sample", args.sample, built_for, args.sample)
+        if args.windows_dir or args.obs_dir or args.extremities or args.hatchet_seg:
+            log.info("--windows-dir / --obs-dir / --extremities / --hatchet-seg are not used with subgraph inputs "
+                     "(pass --inputs windows to use them)")
     scale_params = ScaleParams(depth_per_copy=args.depth_per_copy, junction_reads_per_copy=args.junction_reads_per_copy,
-                               baseline_cn=args.baseline_cn, depth_mode=args.depth_mode, sample=args.sample,
+                               baseline_cn=baseline_cn, depth_mode=args.depth_mode, sample=args.sample,
                                hatchet_seg=args.hatchet_seg, block_bp=args.block_bp, min_snps_allele=args.min_snps_allele)
-    obs = build_observations(graph, scale_params, windows_dir=inputs["windows"], extremities_path=inputs["extremities"])
+    obs = build_observations(graph, scale_params, windows_dir=inputs["windows"], extremities_path=inputs["extremities"],
+                             subgraph_scale=subgraph_scale)
 
     flow_params = CircularParams(imputed_penalty=args.imputed_penalty, novel_penalty=args.novel_penalty, alpha_novel=args.alpha_novel,
                                  alpha_ref=args.alpha_ref, bg_max=args.bg_max, bg_prior_weight=args.bg_prior_weight,

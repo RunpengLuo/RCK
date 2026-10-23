@@ -9,6 +9,12 @@ Two scales are needed:
 
 Gamma is taken from the first available source:
 
+0. the subgraph folder itself: ``scale.json`` written by amplicon-allele-analysis
+   ``subgraph_construct.py`` (``rck_inputs.py``), which fits gamma, purity and tumor ploidy from
+   genome-wide depth and SNPs and also stores theta, per-segment copy numbers (``CN_TOTAL``,
+   ``CN_A``, ``CN_B`` edge columns) and a copy-number profile for the region flanks
+   (``cn_profile.tsv``). With these, RCK needs no windows, extremities or HATCHet input
+   (see :func:`load_subgraph_scale`; ``--depth-per-copy`` still overrides);
 1. ``--depth-per-copy`` (explicit override);
 2. ``--hatchet-seg`` (HATCHet ``best.seg.ucn``): median of tumor depth / fractional total copy
    number over long background segments. This is the route for cell lines (no matched
@@ -392,17 +398,97 @@ def estimate_junction_scale(graph: ECGraph, windows: Optional[Windows], gamma: f
 
 
 # ---------------------------------------------------------------------------------------- #
+# scale inputs stored in the subgraph folder
+# ---------------------------------------------------------------------------------------- #
+
+SUBGRAPH_SCALE_FORMAT = "rck-ecdna-subgraph-scale/1"
+
+
+@dataclass
+class SubgraphScale:
+    """``scale.json`` (+ ``cn_profile.tsv``) of a subgraph folder written by subgraph_construct.py."""
+
+    path: str
+    data: Dict[str, object]
+    profile: Optional["CNProfile"] = None
+
+    def get(self, key, default=None):
+        value = self.data.get(key, default)
+        return default if value is None else value
+
+
+def load_subgraph_scale(subgraph_dir: str) -> Optional[SubgraphScale]:
+    path = os.path.join(subgraph_dir, "scale.json")
+    if not os.path.exists(path):
+        return None
+    with open(path) as handle:
+        data = json.load(handle)
+    if data.get("format") != SUBGRAPH_SCALE_FORMAT:
+        log.warning("%s has format %r, expected %r; reading it anyway", path, data.get("format"), SUBGRAPH_SCALE_FORMAT)
+    profile = None
+    name = (data.get("files") or {}).get("cn_profile") or "cn_profile.tsv"
+    if os.path.exists(os.path.join(subgraph_dir, name)):
+        profile = CNProfile(os.path.join(subgraph_dir, name))
+    return SubgraphScale(path=path, data=data, profile=profile)
+
+
+class CNProfile:
+    """Binned cell-averaged copy number (``#CHR START END CN_TOTAL N_BINS``), for region flanks."""
+
+    def __init__(self, path: str):
+        frame = pd.read_csv(path, sep="\t")
+        self.by_chrom = {str(c): (g["START"].values.astype(np.int64), g["END"].values.astype(np.int64), g["CN_TOTAL"].values.astype(float),
+                                  g["N_BINS"].values.astype(float) if "N_BINS" in g else np.ones(len(g)))
+                         for c, g in frame.groupby("#CHR", sort=False)}
+
+    def mean_cn(self, chrom: str, start: int, end_inclusive: int) -> Tuple[float, float]:
+        """(overlap-weighted mean copy number, overlapped bins in kb) over [start, end_inclusive]."""
+        if chrom not in self.by_chrom:
+            return float("nan"), 0.0
+        s, e, cn, nb = self.by_chrom[chrom]
+        ov = np.clip(np.minimum(e, end_inclusive + 1) - np.maximum(s, start), 0, None).astype(float)
+        keep = (ov > 0) & np.isfinite(cn) & (nb > 0)
+        if not keep.any():
+            return float("nan"), 0.0
+        return float(np.average(cn[keep], weights=ov[keep])), float(ov[keep].sum() / 1000.0)
+
+
+# ---------------------------------------------------------------------------------------- #
 # observations
 # ---------------------------------------------------------------------------------------- #
 
 def build_observations(graph: ECGraph, params: ScaleParams, windows_dir: Optional[str] = None,
-                       extremities_path: Optional[str] = None) -> Observations:
-    """Observed copy numbers for every segment, adjacency and background flank of ``graph``."""
-    windows = Windows(windows_dir, sample=params.sample) if windows_dir else None
+                       extremities_path: Optional[str] = None, subgraph_scale: Optional[SubgraphScale] = None) -> Observations:
+    """Observed copy numbers for every segment, adjacency and background flank of ``graph``.
+
+    With ``subgraph_scale`` (subgraph-only mode) windows are not read: gamma and theta come from
+    ``scale.json`` (overrides still win), segment copy numbers from the ``CN_*`` edge columns
+    and the flanks from ``cn_profile.tsv``.
+    """
+    windows = Windows(windows_dir, sample=params.sample) if (windows_dir and subgraph_scale is None) else None
     regions = graph.regions()
-    gamma, depth_method, ratio_baseline, details = estimate_depth_scale(windows, regions, params)
-    theta, junction_method, jdetails = estimate_junction_scale(graph, windows, gamma, regions, params, extremities_path)
-    details.update(jdetails)
+    details: Dict[str, object] = {}
+    ratio_baseline = None
+    if subgraph_scale is not None:
+        for key in ("sample", "purity", "tumor_ploidy", "cell_ploidy", "ploidy_class", "method", "junction_sample"):
+            details["subgraph_" + key] = subgraph_scale.data.get(key)
+        details["subgraph_alternatives"] = subgraph_scale.data.get("alternatives")
+        if params.depth_per_copy is not None:
+            gamma, depth_method = float(params.depth_per_copy), "override"
+        else:
+            gamma, depth_method = float(subgraph_scale.get("depth_per_copy")), "subgraph_scale"
+        if params.junction_reads_per_copy is not None:
+            theta, junction_method = float(params.junction_reads_per_copy), "override"
+        elif subgraph_scale.get("junction_reads_per_copy"):
+            theta, junction_method = float(subgraph_scale.get("junction_reads_per_copy")), "subgraph_scale"
+        else:
+            theta, junction_method, jdetails = estimate_junction_scale(graph, None, gamma, regions, params, None)
+            details.update(jdetails)
+    else:
+        gamma, depth_method, ratio_baseline, details = estimate_depth_scale(windows, regions, params)
+        theta, junction_method, jdetails = estimate_junction_scale(graph, windows, gamma, regions, params, extremities_path)
+        details.update(jdetails)
+    profile = subgraph_scale.profile if subgraph_scale is not None else None
     scale = Scale(depth_per_copy=gamma, junction_reads_per_copy=theta, baseline_cn=params.baseline_cn,
                   depth_method=depth_method, junction_method=junction_method, depth_mode=params.depth_mode,
                   ratio_baseline=ratio_baseline, details=details)
@@ -410,6 +496,9 @@ def build_observations(graph: ECGraph, params: ScaleParams, windows_dir: Optiona
 
     def cn_over(chrom, start, end):
         if windows is None:
+            if profile is not None:
+                cn, kb = profile.mean_cn(chrom, start, end)
+                return cn, cn * gamma, kb
             return float("nan"), float("nan"), 0.0
         if params.depth_mode == "ratio" and ratio_baseline:
             r, nb = windows.ratio(chrom, start, end)
@@ -420,7 +509,18 @@ def build_observations(graph: ECGraph, params: ScaleParams, windows_dir: Optiona
 
     segments: Dict[str, SegmentObservation] = {}
     for s in graph.segments.values():
-        total, depth, nb = cn_over(s.chrom, s.start, s.end)
+        if subgraph_scale is not None and s.cn_total is not None and params.depth_per_copy is None:
+            total, nb, source = float(s.cn_total), s.length / 1000.0, "subgraph_cn"
+            depth = total * gamma
+            a = b = None
+            if s.cn_a is not None and s.cn_b is not None and s.n_snps >= params.min_snps_allele:
+                a, b = float(s.cn_a), float(s.cn_b)
+            elif s.baf is not None and s.n_snps >= params.min_snps_allele:
+                baf = min(max(float(s.baf), 0.0), 1.0)
+                a, b = total * (1.0 - baf), total * baf
+            segments[s.sid] = SegmentObservation(sid=s.sid, depth=float(depth), total=total, a=a, b=b, n_bins=float(nb), source=source)
+            continue
+        total, depth, nb = cn_over(s.chrom, s.start, s.end) if windows is not None else (float("nan"), float("nan"), 0.0)
         source = "windows"
         if not (nb > 0 and math.isfinite(total)):
             depth = s.depth

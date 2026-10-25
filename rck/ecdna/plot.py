@@ -1,7 +1,8 @@
 """Figures for a finished ``rck-ecdna`` run: one page per inferred species, and the recovery matrix.
 
 Everything is read back from the run's output folder (``decompositions.tsv``,
-``flow_segments.tsv``, ``summary.json`` and, after an evaluation, ``evaluation.tsv``,
+``flow_segments.tsv``, ``summary.json``, the phase-block pieces in ``observations.json`` of a
+``--block-flip`` run and, after an evaluation, ``evaluation.tsv``,
 ``truth_cycles.tsv`` and ``recovery_matrix.tsv``), so ``rck-ecdna-plot`` can redraw any earlier run.
 
 Each species page has, on one cnplot ``GenomeAxis`` restricted to the segments the species (and
@@ -340,13 +341,14 @@ def _pseudo_bins(segments: pd.DataFrame, regions: Sequence[Tuple[str, int, int]]
 
 
 def draw_copy_number(ax, axis, cnplot, segments: pd.DataFrame, species: PSpecies, hap: str, ylim: Tuple[float, float],
-                     regions: Sequence[Tuple[str, int, int]]) -> None:
+                     regions: Sequence[Tuple[str, int, int]], observed: Optional[pd.DataFrame] = None) -> None:
     """Observed allele copy number (points), inferred ecDNA + background (step line) and this species'
-    copies (shaded) for haplotype ``hap``; B is drawn mirrored under A."""
+    copies (shaded) for haplotype ``hap``; B is drawn mirrored under A. ``observed`` (same columns
+    as ``segments``) replaces the segment rows for the points, e.g. phase-block pieces."""
     from matplotlib.patches import Rectangle
 
     column = "CN-" + hap
-    bins = _pseudo_bins(segments, regions)
+    bins = _pseudo_bins(segments if observed is None else observed, regions)
     expected = pd.DataFrame({"#CHR": segments["chrom"], "START": segments["start"].astype(int), "END": segments["end"].astype(int) + 1,
                              "exp_" + column: segments["ecdna_" + hap] + segments["bg_" + hap]})
     if bins[column].notna().any():
@@ -428,8 +430,11 @@ def _legend(fig) -> None:
 # ---------------------------------------------------------------------------------------- #
 
 def species_page(plt, cnplot, species: PSpecies, segments: pd.DataFrame, name: str, scratch: str,
-                 truth: Optional[Tuple[str, float, List[PStep]]] = None, score: Optional[Dict[str, object]] = None):
-    """One figure for one inferred species (see the module docstring for the tracks)."""
+                 truth: Optional[Tuple[str, float, List[PStep]]] = None, score: Optional[Dict[str, object]] = None,
+                 pieces: Optional[pd.DataFrame] = None):
+    """One figure for one inferred species (see the module docstring for the tracks). With
+    ``pieces`` (:func:`read_pieces`), the observation points of a segment that has pieces are its
+    pieces' (after the flow's block flips)."""
     all_steps = list(species.steps) + (list(truth[2]) if truth else [])
     regions = axis_regions(all_steps)
     axis = build_axis(cnplot, regions, scratch)
@@ -457,11 +462,14 @@ def species_page(plt, cnplot, species: PSpecies, segments: pd.DataFrame, name: s
         draw_topology(axes[row], axis, truth[2], True, "truth\n{t}".format(t=truth[0]))
     row += 1
     draw_junctions(axes[row], axis, species.steps, species.topology != "linear", species.joins)
-    observed = pd.concat([local["obs_A"], local["obs_B"], local["ecdna_A"] + local["bg_A"], local["ecdna_B"] + local["bg_B"]])
+    points = local
+    if pieces is not None and len(pieces):
+        points = pd.concat([local[~local["sid"].isin(pieces["sid"])], pieces[pieces["sid"].isin(local["sid"])]], ignore_index=True)
+    observed = pd.concat([points["obs_A"], points["obs_B"], local["ecdna_A"] + local["bg_A"], local["ecdna_B"] + local["bg_B"]])
     peak = float(np.nanmax(observed.to_numpy(dtype=float))) if len(local) and np.isfinite(observed.to_numpy(dtype=float)).any() else 1.0
     ylim = (0.0, max(peak * 1.1, 2.0))
-    draw_copy_number(axes[row + 1], axis, cnplot, local, species, "A", ylim, regions)
-    draw_copy_number(axes[row + 2], axis, cnplot, local, species, "B", ylim, regions)
+    draw_copy_number(axes[row + 1], axis, cnplot, local, species, "A", ylim, regions, observed=points)
+    draw_copy_number(axes[row + 2], axis, cnplot, local, species, "B", ylim, regions, observed=points)
     for ax in axes:
         ax.set_xlim(axis.ch_coords[0], axis.chr_end)
         for boundary in axis.chr_boundaries:
@@ -526,6 +534,22 @@ def _as_float(value) -> float:
         return float("nan")
 
 
+def read_pieces(observations_json: str, segments: pd.DataFrame) -> Optional[pd.DataFrame]:
+    """Phase-block pieces of a ``--block-flip`` run (``observations.json``) as segment-like rows:
+    ``sid chrom start end obs_A obs_B obs_total``, A / B after the flow's flips. None without pieces."""
+    if not os.path.exists(observations_json):
+        return None
+    with open(observations_json) as handle:
+        pieces = json.load(handle).get("pieces")
+    if not pieces:
+        return None
+    chrom = dict(zip(segments["sid"], segments["chrom"]))
+    rows = [{"sid": p["sid"], "chrom": chrom.get(p["sid"]), "start": int(p["start"]), "end": int(p["end"]) - 1,
+             "obs_A": p["a_final"], "obs_B": p["b_final"], "obs_total": p["total"]} for p in pieces if p["sid"] in chrom]
+    return pd.DataFrame(rows, columns=["sid", "chrom", "start", "end", "obs_A", "obs_B", "obs_total"]).astype(
+        {"obs_A": float, "obs_B": float, "obs_total": float})
+
+
 def plot_run(outdir: str, ranks: int = 1, include_low_weight: bool = False, cnplot_path: Optional[str] = None,
              png: bool = True) -> Dict[str, object]:
     """Write ``plots/<name>_ecdna.pdf`` (one page per species, then the recovery matrix when there is
@@ -542,6 +566,7 @@ def plot_run(outdir: str, ranks: int = 1, include_low_weight: bool = False, cnpl
             name = json.load(handle).get("graph", {}).get("name", name)
     species = read_species(os.path.join(outdir, "decompositions.tsv"), ranks=ranks, include_low_weight=include_low_weight)
     segments = pd.read_csv(os.path.join(outdir, "flow_segments.tsv"), sep="\t")
+    pieces = read_pieces(os.path.join(outdir, "observations.json"), segments)
     evaluation = _read_optional(os.path.join(outdir, "evaluation.tsv"))
     truth_path = os.path.join(outdir, "truth_cycles.tsv")
     truth = read_truth_steps(truth_path) if os.path.exists(truth_path) else {}
@@ -562,7 +587,7 @@ def plot_run(outdir: str, ranks: int = 1, include_low_weight: bool = False, cnpl
                     score = hit.iloc[0].to_dict()
                     if "composite" not in score:
                         score = None  # evaluation written before the composite score existed
-            fig = species_page(plt, cnplot, sp, segments, name, scratch, truth=match, score=score)
+            fig = species_page(plt, cnplot, sp, segments, name, scratch, truth=match, score=score, pieces=pieces)
             pdf.savefig(fig, bbox_inches="tight")
             if png:
                 path = os.path.join(plot_dir, "{n}_rank{r}_{s}.png".format(n=name, r=sp.rank, s=sp.name))

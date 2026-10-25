@@ -1,8 +1,9 @@
 """Read an ecDNA breakpoint subgraph and normalize it into a DIAG.
 
 Input is the directory written by amplicon-allele-analysis ``subgraph_construct.py`` for one
-amplicon (``nodes.tsv``, ``edges.tsv``, optionally ``phase_blocks.tsv``). Its edge types map
-onto RCK's interval adjacency graph as follows:
+amplicon (``nodes.tsv``, ``edges.tsv``, optionally ``phase_blocks.tsv`` and
+``segment_blocks.tsv``, which :func:`read_segment_blocks` reads for ``--block-flip``). Its edge
+types map onto RCK's interval adjacency graph as follows:
 
 =================  ======================================================================
 ``EDGE_TYPE``      DIAG element
@@ -61,6 +62,9 @@ CROSS_HAP_PHASINGS = (Phasing.AB, Phasing.BA)
 REFERENCE = "reference"
 NOVEL = "novel"
 IMPUTED = "imputed"
+
+# a reference edge of edges.tsv: NODE_1, NODE_2, CHROM_1, POS_1, POS_2
+EdgeKey = Tuple[str, str, str, int, int]
 
 HEAD = "+"  # right end of a segment (the subgraph's "_+" node side)
 TAIL = "-"  # left end of a segment (the subgraph's "_-" node side)
@@ -169,13 +173,16 @@ class ECGraph:
     """The normalized DIAG of one amplicon."""
 
     def __init__(self, nodes: Dict[str, Node], segments: Dict[str, Segment], adjacencies: Dict[str, Adjacency],
-                 name: str = "amplicon", log_messages: Optional[List[str]] = None, node_alias: Optional[Dict[str, str]] = None):
+                 name: str = "amplicon", log_messages: Optional[List[str]] = None, node_alias: Optional[Dict[str, str]] = None,
+                 edge_segments: Optional[Dict[EdgeKey, str]] = None, segment_alias: Optional[Dict[str, str]] = None):
         self.name = name
         self.nodes = nodes
         self.segments = segments
         self.adjacencies = adjacencies
         self.log_messages = log_messages or []
         self.node_alias = node_alias or {}
+        self.edge_segments = edge_segments or {}  # edges.tsv key of a reference edge -> the sid it was read into
+        self.segment_alias = segment_alias or {}  # contracted phantom sid -> the segment that absorbed its base
         self._adj_at = defaultdict(list)
         for a in self.adjacencies.values():
             self._adj_at[a.u].append(a.aid)
@@ -192,6 +199,15 @@ class ECGraph:
 
     def terminals(self) -> List[str]:
         return sorted(n.nid for n in self.nodes.values() if n.terminal)
+
+    def segment_of_edge(self, key: "EdgeKey") -> Optional[str]:
+        """The segment a reference edge of edges.tsv ended up in (following phantom contraction)."""
+        sid = self.edge_segments.get(key)
+        seen = set()
+        while sid in self.segment_alias and sid not in seen:
+            seen.add(sid)
+            sid = self.segment_alias[sid]
+        return sid if sid in self.segments else None
 
     def resolve(self, nid: str) -> Optional[str]:
         """Map an original subgraph node id (possibly a contracted phantom) to a graph node."""
@@ -260,6 +276,11 @@ def _num(value, default=None):
         return f
     except (TypeError, ValueError):
         return default
+
+
+def edge_key(row) -> EdgeKey:
+    """The key of an edges.tsv / segment_blocks.tsv row (``NODE_1 NODE_2 CHROM_1 POS_1 POS_2``)."""
+    return (str(row["NODE_1"]), str(row["NODE_2"]), str(row["CHROM_1"]), int(float(row["POS_1"])), int(float(row["POS_2"])))
 
 
 def _str(value) -> Optional[str]:
@@ -334,6 +355,7 @@ def build_graph(nodes_df: pd.DataFrame, edges_df: pd.DataFrame, phantom_max_bp: 
             messages.append("node {n} appears only in edges.tsv; added".format(n=nid))
 
     segments: Dict[str, Segment] = {}
+    edge_segments: Dict[EdgeKey, str] = {}
     raw_adjacencies: List[Adjacency] = []
     counter = defaultdict(int)
 
@@ -347,6 +369,7 @@ def build_graph(nodes_df: pd.DataFrame, edges_df: pd.DataFrame, phantom_max_bp: 
             a, b = (n1, n2) if nodes[n1].pos <= nodes[n2].pos else (n2, n1)
             counter["s"] += 1
             sid = "s{i:04d}".format(i=counter["s"])
+            edge_segments[edge_key(row)] = sid
             baf = _num(row.get("BAF"))
             n_snps = int(_num(row.get("n_snps"), 0) or 0)
             segments[sid] = Segment(sid=sid, chrom=nodes[a].chrom, start=nodes[a].pos, end=nodes[b].pos, tail=a, head=b,
@@ -374,7 +397,8 @@ def build_graph(nodes_df: pd.DataFrame, edges_df: pd.DataFrame, phantom_max_bp: 
             messages.append("ignored edge {a}-{b} of unknown type {t}".format(a=n1, b=n2, t=etype))
 
     alias: Dict[str, str] = {}
-    segments, raw_adjacencies = _contract_phantoms(nodes, segments, raw_adjacencies, phantom_max_bp, alias, messages)
+    segment_alias: Dict[str, str] = {}
+    segments, raw_adjacencies = _contract_phantoms(nodes, segments, raw_adjacencies, phantom_max_bp, alias, messages, segment_alias)
     adjacencies = _merge_parallel(raw_adjacencies, messages)
 
     # attach segments to nodes
@@ -404,14 +428,15 @@ def build_graph(nodes_df: pd.DataFrame, edges_df: pd.DataFrame, phantom_max_bp: 
         boundary = node.source == "chromosome_boundary" or node.side is None
         node.terminal = node.segment is None or boundary or ref_at[node.nid] == 0
 
-    graph = ECGraph(nodes=nodes, segments=segments, adjacencies=adjacencies, name=name, log_messages=messages, node_alias=alias)
+    graph = ECGraph(nodes=nodes, segments=segments, adjacencies=adjacencies, name=name, log_messages=messages, node_alias=alias,
+                    edge_segments=edge_segments, segment_alias=segment_alias)
     for problem in graph.validate():
         log.warning("subgraph %s: %s", name, problem)
         messages.append("WARNING " + problem)
     return graph
 
 
-def _contract_phantoms(nodes, segments, adjacencies, phantom_max_bp, alias, messages):
+def _contract_phantoms(nodes, segments, adjacencies, phantom_max_bp, alias, messages, segment_alias=None):
     """Contract 1-2 bp segments that only connect two reference adjacencies."""
     if phantom_max_bp <= 0:
         return segments, adjacencies
@@ -456,6 +481,8 @@ def _contract_phantoms(nodes, segments, adjacencies, phantom_max_bp, alias, mess
             right.start = s.start
         alias[s.tail] = q
         alias[s.head] = p
+        if segment_alias is not None:
+            segment_alias[sid] = right.sid
         del segments[sid]
         del seg_at[s.tail]
         del seg_at[s.head]
@@ -525,3 +552,77 @@ def _merge_parallel(adjacencies: Iterable[Adjacency], messages: List[str]) -> Di
                 a.aid = "{a}_{i}".format(a=a.aid, i=len(result))
             result[a.aid] = a
     return result
+
+
+# ---------------------------------------------------------------------------------------- #
+# per-phase-block allele observations (segment_blocks.tsv, phase_blocks.tsv)
+# ---------------------------------------------------------------------------------------- #
+
+@dataclass
+class BlockPiece:
+    """One row of ``segment_blocks.tsv``: the part of a segment edge inside one phase block.
+
+    Counts and copy numbers are in the *observed* phase frame (before any orientation)."""
+
+    sid: str
+    block: str
+    start: int  # half-open [start, end) on the parent edge
+    end: int
+    n_snps: int
+    count_a: float
+    count_b: float
+    cn_total: Optional[float]
+    cn_a: Optional[float]
+    cn_b: Optional[float]
+
+    @property
+    def length(self) -> int:
+        return max(self.end - self.start, 1)
+
+
+@dataclass
+class SegmentBlocks:
+    pieces: List[BlockPiece]
+    orientation: Dict[str, int]  # phase_blocks.tsv orientation (1, -1, 0); a block missing here counts as 0
+    unmapped: int = 0  # rows whose parent edge is not a segment of the graph
+
+
+def read_segment_blocks(subgraph_dir: str, graph: ECGraph) -> Optional[SegmentBlocks]:
+    """Read ``segment_blocks.tsv`` and ``phase_blocks.tsv`` and map every piece to its graph segment.
+
+    Pieces are matched to segments by the parent edge key (``NODE_1 NODE_2 CHROM_1 POS_1 POS_2``),
+    through phantom contraction (a contracted phantom's pieces go to the segment that absorbed it).
+    Returns None, with a warning, when ``segment_blocks.tsv`` is missing. Without
+    ``phase_blocks.tsv`` the orientation column of ``segment_blocks.tsv`` is used."""
+    path = os.path.join(subgraph_dir, "segment_blocks.tsv")
+    if not os.path.exists(path):
+        log.warning("%s not found (subgraph built before segment_blocks.tsv existed?); using segment-level allele "
+                    "observations without block flips", path)
+        return None
+    frame = pd.read_csv(path, sep="\t", dtype={"NODE_1": str, "NODE_2": str, "phase_block": str})
+    pb_path = os.path.join(subgraph_dir, "phase_blocks.tsv")
+    if os.path.exists(pb_path) and os.path.getsize(pb_path) > 1:
+        blocks = pd.read_csv(pb_path, sep="\t", dtype={"phase_block": str})
+        orientation = {str(b): int(o) for b, o in zip(blocks["phase_block"], blocks["orientation"])}
+    elif os.path.exists(pb_path):
+        orientation = {}
+    else:
+        log.warning("%s not found; block orientations taken from segment_blocks.tsv", pb_path)
+        orientation = {str(b): int(o) for b, o in zip(frame["phase_block"], frame["orientation"])}
+    pieces, unmapped = [], 0
+    for row in frame.to_dict("records"):
+        sid = graph.segment_of_edge(edge_key(row))
+        if sid is None:
+            unmapped += 1
+            continue
+        # back to the observed frame: segment_blocks.tsv CN_A / CN_B are oriented by its own orientation column
+        swap = int(_num(row.get("orientation"), 0)) == -1
+        cn_a, cn_b = _num(row.get("CN_A")), _num(row.get("CN_B"))
+        if swap:
+            cn_a, cn_b = cn_b, cn_a
+        pieces.append(BlockPiece(sid=sid, block=str(row["phase_block"]), start=int(row["piece_start"]), end=int(row["piece_end"]),
+                                 n_snps=int(_num(row.get("n_snps"), 0)), count_a=_num(row.get("A_count_obs"), 0.0),
+                                 count_b=_num(row.get("B_count_obs"), 0.0), cn_total=_num(row.get("CN_TOTAL")), cn_a=cn_a, cn_b=cn_b))
+    if unmapped:
+        log.warning("%d of %d segment_blocks.tsv rows match no segment of the graph; they are ignored", unmapped, len(frame))
+    return SegmentBlocks(pieces=pieces, orientation=orientation, unmapped=unmapped)

@@ -90,6 +90,47 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
   - matplotlib and cnplot are optional. Without them, or on a plotting error, the run logs a
     warning and still succeeds.
 - `bg_balance_weight`: a small tie-break toward a heterozygous background.
+- **Phase-block flips** (`--block-flip unoriented`, default `off`): allele observations per
+  phase-block piece, with the A/B labelling of every block the subgraph left unoriented chosen
+  by the flow MILP.
+  - `subgraph_io`: reads `segment_blocks.tsv` (written by amplicon-allele-analysis
+    `subgraph_construct.py`) and `phase_blocks.tsv`, and maps each piece to its segment by the
+    parent edge's key, through phantom contraction. Without `segment_blocks.tsv` the run logs a
+    warning and keeps the segment observations.
+  - `scale`: one observation per piece. Pieces below `--min-snps-allele` SNPs are total-only.
+    Pieces in blocks with orientation 1 or −1 are fixed; pieces in blocks with orientation 0 or
+    missing from `phase_blocks.tsv` follow the block's flip.
+  - `ilp_circular`:
+    - one binary flip per unoriented block, shared by its pieces across segments;
+    - piece targets `a + f (b − a)` and `b + f (a − b)`, linear in the flip;
+    - the segment's data weight split over its pieces by length, so the objective scale is
+      unchanged;
+    - a 10⁻⁶ cost per flip, so a block without evidence stays as observed;
+    - after solving, `delta_if_reversed` per block, and `unresolved` blocks (reversal within
+      `--flip-tol`, default 0.01) kept as observed;
+    - optional `--flip-oriented-penalty` lets oriented blocks flip at a cost.
+  - The flips are fixed after the flow: the refit, `flow_segments.tsv` (segment observations
+    pooled over the pieces after the flips) and the CN-A / CN-B figure points use them.
+  - New `block_flips.tsv`; `observations.json` gains `pieces`, and `summary.json` gains
+    `block_flip` (mode, counts per status, flipped blocks). With `--block-flip off` no output
+    changes.
+  - demo7, on the union subgraph rebuilt with `segment_blocks.tsv` (run on ionic; outputs in
+    amplicon-allele-analysis `simulations/runs/demo7_nestedcycles_ecdna/rck_out_union_blockflip/`):
+    - the flow flips chr4:185 and chr4:186 and keeps chr4:171, chr4:172 and chr4:187 as
+      oriented; the 12 blocks of the unamplified 172.4–185.5 Mb gap are `unresolved`;
+    - the flow objective is 9.13, with no imputed edge (39.26 with `--block-flip off`, which
+      reproduces `rck_out_union/`, and 8.8 with total-only observations);
+    - both nested species are recovered as separate circles in the rank-1 decomposition: 16.43
+      copies against a true 16.90 and 9.08 against 9.10. Composites are 0.994 and 0.9996 (0.43
+      and 0 before), with segment, haplotype, junction and phasing scores of 1.0 and matching
+      order. The refit drops one 0.39-copy leftover.
+  - Tests:
+    - `test_block_flip.py`: inputs without Gurobi; small MILPs and runs;
+    - `test_demo7.py`: needs a full licence and `RCK_ECDNA_DEMO7_SUBGRAPH`, and is skipped
+      otherwise. It passes on ionic;
+    - `tests/ecdna/helpers.py` gains `write_segment_blocks` and `have_full_gurobi`.
+  - Documented in `docs/ecDNA.md`: the subgraph folder files, inputs, the model, outputs,
+    figures and the tests table.
 - Tests under `tests/ecdna/`, with fixtures from demo3 and demo4: subgraph reading, scale,
   flow, decomposition, walks, refit, subgraph inputs, evaluation, recovery matrix
   (`test_recovery.py`), figures (`test_plot.py`), Gurobi environment, and end-to-end demo3 and
@@ -120,22 +161,34 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
   - demo7, a 3 Mb cycle with a second cycle nested inside it on chr4
     (`demo7_nestedcycles_ecdna/rck_out_union/` and `rck_out_union_totalonly/`): not
     recovered. With default settings the composites are 0.43 and 0. With total-only
-    observations (`--min-snps-allele 100000000`) they are 0.51 and 0.33.
+    observations (`--min-snps-allele 100000000`) they are 0.51 and 0.33. With
+    `--block-flip unoriented` (above; `rck_out_union_blockflip/`) both species are recovered,
+    with composites 0.994 and 0.9996.
 - Known limitations found by demo7:
-  - **Nested species merge.** When two species share reference segments, the
-    minimum-species decomposition prefers one walk that traverses both. On demo7 it returned
-    a 7.54 Mb circle at 8 copies that runs through the outer cycle twice and the nested cycle
-    once. The flow itself was close to the truth (16–17 and 8–10 junction copies against
-    16.9 and 9.1). Long-read paths only break the tie when some read separates the
-    species, and demo7's 3 multi-junction reads each lie inside one species. Possible
-    remedies: penalize walks that repeat a sub-cycle, use copy-number differences between
-    species, or require more read support.
-  - **Allele observations are trusted as phased.** Segment allele copy numbers are taken on
-    the true haplotype scale. When `subgraph_construct.py` cannot orient a phase block, here
-    because the only pure junctions there attach to segments shared by both species, A and B
-    are swapped against the junction labels. On demo7 this made the flow objective 39.3
-    instead of 8.8 and brought in imputed edges. Possible remedy: let the flow choose a
-    per-block A/B flip for blocks whose `phase_blocks.tsv` orientation is 0 or missing.
+  - **Nested species merge** (when allele data cannot separate them). When two species share
+    reference segments, the minimum-species decomposition prefers one walk that traverses
+    both. On demo7 with total-only observations it returned a 7.54 Mb circle at 8 copies that
+    runs through the outer cycle twice and the nested cycle once. The flow itself was close to
+    the truth (16–17 and 8–10 junction copies against 16.9 and 9.1). Long-read paths only
+    break the tie when some read separates the species, and demo7's 3 multi-junction reads
+    each lie inside one species.
+    - With `--block-flip unoriented` the demo7 species no longer merge. The two species share
+      9 reference segments but only one segment haplotype, because `ecdna1` is on B and
+      `ecdna2` on A where they overlap. Once the allele observations are correctly phased, a
+      single walk cannot reproduce the haplotype-specific flow more cheaply than two circles.
+    - The merge is still expected for nested species on the same haplotype; no simulation
+      tests that case yet. Possible remedies: penalize walks that repeat a sub-cycle, use
+      copy-number differences between species, or require more read support.
+  - **Allele observations are trusted as phased** (by default). Segment allele copy numbers
+    are taken on the true haplotype scale. When `subgraph_construct.py` cannot orient a phase
+    block, here because the only pure junctions there attach to segments shared by both
+    species, A and B are swapped against the junction labels. On demo7 this made the flow
+    objective 39.3 instead of 8.8 and brought in imputed edges. `--block-flip unoriented`
+    (above) lets the flow choose a per-block A/B flip for blocks whose `phase_blocks.tsv`
+    orientation is 0 or missing. It needs a subgraph with `segment_blocks.tsv`. On demo7 it
+    brings the flow objective to 9.13 with no imputed edge. Blocks the subgraph oriented are
+    still trusted, unless `--flip-oriented-penalty` is set. It remains opt-in: `off` is the
+    default.
 
 ### Changed
 

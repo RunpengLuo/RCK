@@ -76,6 +76,8 @@ Subgraphs built by amplicon-allele-analysis `simulations/subgraph_construct.py` 
 | `edges.tsv` column `CN` | junction copy number (`#REF` or `#NOV` / junction reads per copy) |
 | `cn_profile.tsv` | copy number in 100 kb bins along each chromosome of the subgraph, for the region flanks (background layer) |
 | `paths.tsv` | long-read paths whose extremities are all in the subgraph |
+| `phase_blocks.tsv` | one row per phase block of the subgraph's segments and junction flanks: `votes_same`, `votes_flip`, `orientation` (1 as observed, −1 flipped, 0 not oriented), `n_snps`, `status` (`voted` / `no_votes`). Older folders list only the voted blocks |
+| `segment_blocks.tsv` | one row per (segment edge, phase block it overlaps): the parent edge's `NODE_1 NODE_2 CHROM_1 POS_1 POS_2` and `edge_index`, `phase_block`, `piece_start`, `piece_end` (half-open; the pieces tile the edge), `piece_length`, `n_snps`, `A_count_obs` / `B_count_obs` (observed phase), `orientation`, `A_count` / `B_count` / `BAF` and `CN_TOTAL` / `CN_A` / `CN_B` (oriented; `CN_A` / `CN_B` empty below 5 SNPs). Read with `--block-flip` (section 4) |
 
 ```bash
 python -m rck.ecdna_run --subgraph-dir subgraphs/demo4/amplicon_0 --outdir rck_out/amplicon_0 \
@@ -111,7 +113,7 @@ the junction evidence is not.
 
 | Option | Content |
 |---|---|
-| `--subgraph-dir` | `nodes.tsv`, `edges.tsv` (and optionally `phase_blocks.tsv`) of one amplicon; with `scale.json` etc. (above) it is the only input needed |
+| `--subgraph-dir` | `nodes.tsv`, `edges.tsv` (and optionally `phase_blocks.tsv`, `segment_blocks.tsv`) of one amplicon; with `scale.json` etc. (above) it is the only input needed |
 | `--inputs` | `auto` (subgraph files when `scale.json` exists), `subgraph`, or `windows` |
 | `--windows-dir` | UGP windows: `window.tsv.gz`, `window.depth.npz`, `sample_ids.tsv`, optional `snp.tsv.gz` + `snp.[AB]allele.npz` |
 | `--extremities` | `extremity.tsv` with genome-wide `#REF`, used to estimate junction reads per copy |
@@ -175,6 +177,24 @@ independently for each sample, so on simulated data the ratio adds noise; that i
 subgraph: c_A = c(1 − BAF), c_B = c × BAF. Segments with fewer than `--min-snps-allele`
 SNPs get a total-only observation.
 
+**Per-phase-block observations (`--block-flip unoriented`).** The segment BAF is only on the
+true haplotype scale where `subgraph_construct.py` could orient every phase block the segment
+touches. With `--block-flip unoriented`, every segment with rows in `segment_blocks.tsv` gets
+one observation per *piece* (its part inside one phase block) instead:
+
+- pieces are matched to segments by their parent edge (`NODE_1 NODE_2 CHROM_1 POS_1 POS_2`),
+  following phantom contraction (a contracted phantom's pieces go to the segment that absorbed
+  its base);
+- the piece's total is its `CN_TOTAL`; its A / B are `CN_A` / `CN_B` (or, in windows mode or
+  with `--depth-per-copy`, the piece total split by its BAF). A piece with fewer than
+  `--min-snps-allele` SNPs is total-only;
+- a piece in a block with orientation 1 or −1 in `phase_blocks.tsv` is *fixed* and taken in the
+  oriented frame. A piece in a block with orientation 0, or a block missing from
+  `phase_blocks.tsv`, is taken in the observed frame and depends on that block's flip (below).
+
+Without `segment_blocks.tsv` the run logs a warning and uses the segment observations, as with
+`--block-flip off` (the default).
+
 ## 4. Model
 
 ### Flow MILP (`rck/ecdna/ilp_circular.py`)
@@ -217,6 +237,53 @@ imputed closing edge costs `--imputed-penalty` (2.0) once, so with ≥ 4 copies 
 imputed closure still wins, while a long, otherwise unsupported gap is explained as linear.
 A tiny `bg_balance_weight` term prefers a heterozygous background (1A + 1B); without it,
 linear copies can swap haplotype at no cost.
+
+#### Phase-block flips (`--block-flip unoriented`)
+
+`subgraph_construct.py` orients a phase block only from votes of pure-haplotype junctions at
+segments that are clearly one haplotype. A block with no votes keeps an arbitrary A/B labelling,
+so its allele observations can contradict the junction haplotype labels (demo7: blocks chr4:185
+and chr4:186, flow objective 39.3 with two imputed edges). With `--block-flip unoriented` the
+flow MILP chooses the labelling:
+
+- one binary f<sub>b</sub> per phase block the subgraph left unoriented that has an
+  allele-specific piece, shared by every piece in that block, across segments;
+- a piece with observed copy numbers a, b gets the targets t<sub>A</sub> = a + f<sub>b</sub>(b − a)
+  and t<sub>B</sub> = b + f<sub>b</sub>(a − b). These are linear in f<sub>b</sub>, so the usual
+  absolute-deviation constraints apply. The model value is the segment's inferred A / B copy
+  number (ecDNA + background), which all pieces of a segment share; total-only pieces fit the
+  segment total;
+- the segment's data weight is split over its pieces in proportion to piece length (the
+  segment weight is length-based), so each segment's total weight and the objective scale are
+  unchanged. The 1/√c normalizer uses the segment's total copy number, so it is the same for A
+  and B and does not depend on f<sub>b</sub>;
+- each flipped block costs 10<sup>−6</sup>, so a block with no evidence either way stays as
+  observed. The junction haplotype labels, through the balance constraints, then decide the
+  orientation;
+- after solving, `delta_if_reversed` is the objective change from reversing a block's flip with
+  every copy number fixed. A block not oriented by the subgraph whose change is at most
+  `--flip-tol` (0.01) is `unresolved` and kept as observed;
+- `--flip-oriented-penalty P` (off by default) also gives the oriented blocks a flip, at cost P
+  each, for when a block's votes are wrong.
+
+The flips are fixed after the flow MILP: the copy-number refit, `flow_segments.tsv` and the
+figures use the observations with the chosen flips applied.
+
+On the demo7 union subgraph rebuilt with `segment_blocks.tsv` (amplicon-allele-analysis
+`simulations/runs/demo7_nestedcycles_ecdna/rck_out_union_blockflip/`):
+
+- the flow flips chr4:185 and chr4:186 and keeps chr4:171, chr4:172 and chr4:187 as oriented.
+  The 12 blocks of the unamplified 172.4–185.5 Mb gap are `unresolved`;
+- the flow objective is 9.13 with no imputed edge (8.8 with total-only observations, 39.3
+  without flips);
+- the rank-1 decomposition has the two nested species as separate circles, at 16.43 and 9.08
+  copies against a true 16.90 and 9.10, with composites 0.994 and 0.9996.
+
+Without flips, the total-only run merged the two cycles into one walk. Correctly phased, the
+species share 9 reference segments but only one segment haplotype (`ecdna1` is on B and
+`ecdna2` on A where they overlap), so a merged walk can no longer reproduce the
+haplotype-specific flow. Nested species on the *same* haplotype may still merge; see the known
+limitations in `CHANGELOG.md`.
 
 ### Cycle decomposition (`rck/ecdna/decompose.py`)
 
@@ -296,11 +363,12 @@ order.
 | File | Content |
 |---|---|
 | `decompositions.tsv` | one row per decomposition, species and ordering: `amplicon_call`, `circular_fraction`, `reads_explained`, `data_objective` (observation misfit after the refit), `topology`, `status` (`species` or `low_weight`), `weight` (copies per cell, bulk average, fractional after the refit), `weight_int` (integer weight of the structure search), `length_bp`, `path_support`, `uses_imputed`, `junctions`, `walk` (`chrom:start-end:hap:strand`, comma-separated) and `joins` (adjacency after each step, `kind:aid:phasing`; a linear walk's last join is `end:<extremity>:<hap>`) |
-| `flow_segments.tsv` | per segment: observed total and allele copy numbers, plus inferred ecDNA and background copy numbers for A and B |
+| `flow_segments.tsv` | per segment: observed total and allele copy numbers, plus inferred ecDNA and background copy numbers for A and B. With `--block-flip`, a segment with pieces reports its total split by the BAF of its piece counts summed after the chosen flips |
 | `flow_adjacencies.tsv` | per adjacency labeling: read support, observed copy number, ecDNA and background flow; `linear_end` rows for copy-ends |
 | `aa/<name>_graph.txt`, `aa/<name>_decomp<k>_cycles.txt` | AmpliconArchitect-style graph and cycles (total copy number; cycle lines also carry `Haplotypes=`; linear walks start and end with AA's `0+`/`0-` source) |
-| `observations.json` | scales, how each was estimated, and every observation |
-| `summary.json` | graph normalization log, flow status (with `linear_end_copies`), top-level `amplicon_call` and `circular_fraction`, decompositions (with `reads_total`, `reads_explained`, `data_objective` and `data_objective_int`, and `pruned`: species the refit dropped) |
+| `observations.json` | scales, how each was estimated, and every observation; with `--block-flip`, also `pieces`: each piece's segment, block, span, totals, A / B in its base frame, `fixed`, `flipped` and the A / B after the flip (`a_final`, `b_final`) |
+| `block_flips.tsv` | with `--block-flip` only: one row per phase block with a piece: `phase_block`, `orientation` (from the subgraph), `flip` (1 when A and B were swapped), `status` (`fixed`, `flipped`, `kept` or `unresolved`), `n_pieces`, `n_snps` and `delta_if_reversed` |
+| `summary.json` | graph normalization log, flow status (with `linear_end_copies`), top-level `amplicon_call` and `circular_fraction`, decompositions (with `reads_total`, `reads_explained`, `data_objective` and `data_objective_int`, and `pruned`: species the refit dropped); with `--block-flip`, `block_flip` (mode, number of pieces and blocks, counts per status, the flipped blocks) |
 | `gurobi_flow.log`, `gurobi_decompose.log` | solver logs |
 | `evaluation.tsv`, `evaluation.json`, `truth_cycles.tsv`, `recovery_matrix.tsv` | only with `--truth-dir` or `--truth-cycles` (section 6) |
 | `plots/<name>_ecdna.pdf`, `plots/<name>_rank<r>_<species>.png`, `plots/<name>_recovery_matrix.png` | figures: one page per inferred species, then the recovery matrix (below) |
@@ -322,7 +390,8 @@ gaps between them collapsed. The tracks are:
 - **junctions**: one arc per non-reference join of the walk, coloured by the haplotype it joins.
   Grey marks a haplotype crossing (AB / BA) and a dotted arc an imputed junction;
 - **CN-A / CN-B**: allele-specific copy number, B mirrored under A. Points are the observations,
-  drawn with cnplot `plot_scatter_1d` along each segment. The step line is the inferred ecDNA +
+  drawn with cnplot `plot_scatter_1d` along each segment (with `--block-flip`, along each piece,
+  after the chosen flips). The step line is the inferred ecDNA +
   background copy number. Shaded blocks are this species' own copies (weight × the number of
   times its walk uses the segment).
 
@@ -478,6 +547,8 @@ scales from the windows.
 | `test_subgraph_inputs.py` | observations: no; run: yes (small) | scales, segment and junction copy numbers and flank background read from `scale.json`, `CN_*` columns and `cn_profile.tsv`; CN columns win over the scale; `--depth-per-copy` recomputes from `WEIGHT`; `--inputs auto/subgraph/windows`; a full run from the subgraph folder alone |
 | `test_recovery.py` | no | segment recall and precision, junction F1, phasing accuracy (one haplotype wrong; every haplotype swapped, which only the swap-invariant score forgives), the composite and its copy-number term; the recovery matrix: a missed species scores 0, `best_rank` finds a better alternative, out-of-scope rows are listed but not scored or averaged, the TSV columns, strict JSON, and a run with no decompositions |
 | `test_plot.py` | no (figures: matplotlib and cnplot) | axis regions padded and merged; figures skipped when cnplot cannot be imported; a circular species with truth and recovery-matrix pages and their PNGs; a linear species without truth |
+| `test_block_flip.py` | inputs: no; flow and run: yes (small) | pieces read and mapped through phantom contraction; orientation −1 swapped and fixed; a block missing from `phase_blocks.tsv` is unoriented; low-SNP pieces total-only; a missing `segment_blocks.tsv` falls back with a warning; a circle on A whose unoriented block has swapped observations: the block is flipped, all ecDNA on A, no imputed edge, the objective of the unswapped input; `--block-flip off` unchanged; an oriented block never flipped (but flips with `--flip-oriented-penalty`); a block without evidence `unresolved`; a segment over an oriented and an unoriented block; the refit uses flipped observations; `block_flips.tsv`, `summary.json`, `observations.json` pieces, `flow_segments.tsv` and the plot points |
 | `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
 | `test_demo4.py` | yes (full license) | both demo4 subgraphs: evaluation never errors, each subgraph is scored only against its own species, per-sample truth weights; accuracy is printed, not asserted (`RCK_ECDNA_DEMO4_OBS` enables estimated scales for both samples) |
+| `test_demo7.py` | yes (full license) | `--block-flip unoriented` on a rebuilt demo7 union subgraph (`RCK_ECDNA_DEMO7_SUBGRAPH`, with `segment_blocks.tsv`): chr4:185 and chr4:186 flipped, chr4:171, chr4:172 and chr4:187 fixed, no imputed edge; the flow objective is printed. Skipped without a full licence |
 | `test_demo3.py` | yes (full license) | `amplicon_0` against the demo3 truth, rank-1 decomposition only: cycle order matches, haplotype Jaccard ≥ 0.95, junction recall ≥ 0.9, copy-number error ≤ 30%; the same with the fixture's long-read paths in the decomposition (≥ 90% of read support explained) |

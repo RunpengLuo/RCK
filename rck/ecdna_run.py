@@ -26,7 +26,7 @@ from rck.ecdna.ilp_circular import CircularParams, solve_flow
 from rck.ecdna.output import write_all
 from rck.ecdna.refit import RefitParams, refit_decompositions
 from rck.ecdna.scale import ScaleParams, build_observations, load_subgraph_scale
-from rck.ecdna.subgraph_io import read_subgraph
+from rck.ecdna.subgraph_io import read_segment_blocks, read_subgraph
 from rck.ecdna.walk import read_paths
 
 log = logging.getLogger("rck.ecdna")
@@ -61,6 +61,13 @@ def build_parser() -> argparse.ArgumentParser:
                     help="Copy number of the dominant balanced background (default: scale.json's cell ploidy in subgraph mode, else 2)")
     sc.add_argument("--block-bp", type=int, default=1_000_000)
     sc.add_argument("--min-snps-allele", type=int, default=5, help="SNPs needed for an allele-specific segment observation")
+    sc.add_argument("--block-flip", choices=["off", "unoriented"], default="off",
+                    help="unoriented: allele observations per phase-block piece (segment_blocks.tsv), and the flow MILP chooses "
+                         "an A/B flip for every phase block the subgraph left unoriented")
+    sc.add_argument("--flip-oriented-penalty", type=float, default=None,
+                    help="With --block-flip: let blocks the subgraph oriented flip too, at this cost (default: never)")
+    sc.add_argument("--flip-tol", type=float, default=0.01,
+                    help="With --block-flip: a block whose reversed flip changes the flow objective by at most this is unresolved")
 
     gr = parser.add_argument_group("graph")
     gr.add_argument("--phantom-max-bp", type=int, default=2, help="Contract segments up to this length between two reference joins (0 = off)")
@@ -183,21 +190,27 @@ def run(args) -> Dict[str, object]:
                      "(pass --inputs windows to use them)")
     scale_params = ScaleParams(depth_per_copy=args.depth_per_copy, junction_reads_per_copy=args.junction_reads_per_copy,
                                baseline_cn=baseline_cn, depth_mode=args.depth_mode, sample=args.sample,
-                               hatchet_seg=args.hatchet_seg, block_bp=args.block_bp, min_snps_allele=args.min_snps_allele)
+                               hatchet_seg=args.hatchet_seg, block_bp=args.block_bp, min_snps_allele=args.min_snps_allele,
+                               block_flip=getattr(args, "block_flip", "off"))
+    segment_blocks = read_segment_blocks(args.subgraph_dir, graph) if scale_params.block_flip != "off" else None
     obs = build_observations(graph, scale_params, windows_dir=inputs["windows"], extremities_path=inputs["extremities"],
-                             subgraph_scale=subgraph_scale)
+                             subgraph_scale=subgraph_scale, segment_blocks=segment_blocks)
 
     flow_params = CircularParams(imputed_penalty=args.imputed_penalty, novel_penalty=args.novel_penalty, alpha_novel=args.alpha_novel,
                                  alpha_ref=args.alpha_ref, bg_max=args.bg_max, bg_prior_weight=args.bg_prior_weight,
                                  soft_junction_penalty=args.soft_junction_penalty, enforce_is=args.enforce_is,
                                  allow_background_novel=not args.no_background_novel, linear_ends=args.linear_ends,
                                  linear_end_penalty=args.linear_end_penalty, boundary_min_copies=args.boundary_min_copies,
-                                 boundary_frac=args.boundary_frac, time_limit=args.time_limit,
+                                 boundary_frac=args.boundary_frac, flip_oriented_penalty=getattr(args, "flip_oriented_penalty", None),
+                                 flip_tol=getattr(args, "flip_tol", 0.01), time_limit=args.time_limit,
                                  threads=args.threads, mip_gap=args.mip_gap, log_file=os.path.join(args.outdir, "gurobi_flow.log"),
                                  log_to_console=args.verbose)
     sol = solve_flow(graph, obs, flow_params)
     log.info("flow: %s, objective %.4f, %d ecDNA edge copies, %d linear-end copies, imputed used: %s", sol.status, sol.objective,
              sum(sol.ecdna_edges().values()), sum(sol.linear_ends.values()), ",".join(sol.imputed_used) or "none")
+    if sol.blocks:
+        log.info("phase blocks: %s", ", ".join("{b} {s}".format(b=b["phase_block"], s=b["status"]) for b in sol.blocks
+                                                if b["status"] != "fixed" or b["flip"]))
 
     paths = read_paths(inputs["paths"], graph) if inputs["paths"] else None
     dec_params = DecompositionParams(max_species=args.max_species, max_multiplicity=args.max_multiplicity,

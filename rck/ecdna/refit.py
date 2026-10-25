@@ -11,7 +11,8 @@ copy numbers ``w_k >= 0``, as real numbers (CoRAL also uses fractional cycle wei
 the observations directly with the flow MILP's own data terms:
 
 * each segment haplotype (or the segment total without allele data):
-  ``seg_weight x |bg + sum_k w_k m_k,seg - observed| / sqrt(observed)``;
+  ``seg_weight x |bg + sum_k w_k m_k,seg - observed| / sqrt(observed)``; with ``--block-flip``,
+  one such term per phase-block piece instead, with the flow's block flips applied;
 * each adjacency with read support:
   ``alpha x |bg + sum_k w_k m_k,adj - observed| / sqrt(observed)``;
 
@@ -66,7 +67,16 @@ def observation_rows(graph: ECGraph, obs, flow, cparams) -> List[Row]:
         s, so = graph.segments[sid], obs.segments[sid]
         w = max(min(s.length / float(cparams.seg_length_cap), 1.0), cparams.min_seg_weight)
         norm = 1.0 / math.sqrt(max(so.total, 1.0))
-        if so.a is not None and so.b is not None:
+        if obs.pieces.get(sid):  # --block-flip: one row per piece, with the flow's block flips applied
+            flips = getattr(flow, "block_flips", {}) or {}
+            bg = {h: flow.seg_bg.get((sid, h), 0) for h in HAPLOTYPES}
+            for pc in obs.pieces[sid]:
+                if pc.has_alleles:
+                    for h, value in zip(HAPLOTYPES, pc.alleles(flips.get(pc.block, 0))):
+                        rows.append(Row(w * pc.share * norm, value - bg[h], (seg_key(sid, h),)))
+                else:
+                    rows.append(Row(w * pc.share * norm, pc.total - sum(bg.values()), tuple(seg_key(sid, h) for h in HAPLOTYPES)))
+        elif so.a is not None and so.b is not None:
             for h, value in zip(HAPLOTYPES, (so.a, so.b)):
                 rows.append(Row(w * norm, value - flow.seg_bg.get((sid, h), 0), (seg_key(sid, h),)))
         else:

@@ -73,6 +73,9 @@ class CircularParams:
     bg_balance_weight: float = 0.01  # tie-break: background copies split evenly between haplotypes
     boundary_min_copies: float = 2.0  # copy-number step that makes an extremity a boundary ...
     boundary_frac: float = 0.25  # ... or this fraction of the larger copy number, whichever is larger
+    flip_penalty: float = 1e-6  # tie-break per flipped unoriented phase block (--block-flip): keep the observed frame
+    flip_oriented_penalty: Optional[float] = None  # cost of flipping a block the subgraph oriented; None = never
+    flip_tol: float = 0.01  # a block whose reversed flip changes the objective by at most this is "unresolved"
     time_limit: Optional[float] = None
     threads: Optional[int] = None
     mip_gap: float = 1e-4
@@ -92,6 +95,8 @@ class FlowSolution:
     terminal_bg: Dict[Tuple[str, Haplotype], int]
     imputed_used: List[str] = field(default_factory=list)
     linear_ends: Dict[Tuple[str, Haplotype], int] = field(default_factory=dict)
+    block_flips: Dict[str, int] = field(default_factory=dict)  # phase block -> 1 if its A / B were swapped (--block-flip)
+    blocks: List[Dict[str, object]] = field(default_factory=list)  # one block_flips.tsv row per phase block
 
     def ecdna_edges(self) -> Dict[Tuple[str, str, str], int]:
         """Positive ecDNA-layer flow on phased edge keys (see :mod:`rck.ecdna.phased`)."""
@@ -111,9 +116,10 @@ class FlowSolution:
         rows = []
         for sid, s in sorted(graph.segments.items(), key=lambda kv: (kv[1].chrom, kv[1].start)):
             so = obs.segments[sid]
+            obs_a, obs_b = obs.segment_alleles(sid, self.block_flips)
             rows.append({
                 "sid": sid, "chrom": s.chrom, "start": s.start, "end": s.end, "length": s.length,
-                "obs_total": so.total, "obs_A": so.a, "obs_B": so.b, "obs_source": so.source,
+                "obs_total": so.total, "obs_A": obs_a, "obs_B": obs_b, "obs_source": so.source,
                 "ecdna_A": self.seg_ec[(sid, Haplotype.A)], "ecdna_B": self.seg_ec[(sid, Haplotype.B)],
                 "bg_A": self.seg_bg[(sid, Haplotype.A)], "bg_B": self.seg_bg[(sid, Haplotype.B)],
             })
@@ -146,6 +152,7 @@ class OptModelCircular:
         self.params = params or CircularParams()
         self.model = None
         self.xe, self.xb, self.ye, self.yb, self.pv, self.t, self.te = {}, {}, {}, {}, {}, {}, {}
+        self.flip = {}  # phase block -> binary A / B swap (--block-flip)
         self.end_nodes: List[str] = []
         self.ub_seg: Dict[str, int] = {}
 
@@ -194,6 +201,76 @@ class OptModelCircular:
                     result.append(nid)
                     break
         return result
+
+    def flippable_blocks(self) -> set:
+        """Phase blocks that get a flip variable: those the subgraph left unoriented, plus the
+        oriented ones when ``flip_oriented_penalty`` is set; only blocks with allele data."""
+        return {pc.block for pieces in self.obs.pieces.values() for pc in pieces
+                if pc.has_alleles and (not pc.fixed or self.params.flip_oriented_penalty is not None)}
+
+    def _flip_cost(self, block: str) -> float:
+        fixed = any(pc.fixed for ps in self.obs.pieces.values() for pc in ps if pc.block == block)
+        return self.params.flip_oriented_penalty if fixed else self.params.flip_penalty
+
+    def _piece_terms(self, gp, sid: str, w: float, norm: float) -> List:
+        """Segment data term split over its phase-block pieces by length. Allele targets are
+        linear in the block's flip f: t_A = a + f (b - a), t_B = b + f (a - b)."""
+        terms = []
+        for i, pc in enumerate(self.obs.pieces[sid]):
+            weight = w * pc.share * norm
+            if pc.has_alleles:
+                f = self.flip.get(pc.block)
+                for h, (own, other) in ((Haplotype.A, (pc.a, pc.b)), (Haplotype.B, (pc.b, pc.a))):
+                    target = own if f is None else own + (other - own) * f
+                    d = self._abs_dev(gp, self.xe[sid, h] + self.xb[sid, h], target, "dpc[{s},{i},{h}]".format(s=sid, i=i, h=h))
+                    terms.append(weight * d)
+            else:
+                total = gp.quicksum(self.xe[sid, h] + self.xb[sid, h] for h in HAPLOTYPES)
+                d = self._abs_dev(gp, total, pc.total, "dpc[{s},{i},T]".format(s=sid, i=i))
+                terms.append(weight * d)
+        return terms
+
+    def block_report(self, seg_cn: Dict[Tuple[str, Haplotype], int], flips: Dict[str, int]) -> Tuple[Dict[str, int], List[Dict[str, object]]]:
+        """Final flips and one row per phase block, from the solved copy numbers.
+
+        ``delta_if_reversed`` is the objective change if the block's flip were reversed with every
+        copy number fixed. A not-oriented block within ``flip_tol`` of that is ``unresolved`` and
+        is kept as observed (its flip set back to 0)."""
+        p, obs = self.params, self.obs
+        rows: Dict[str, Dict[str, object]] = {}
+        misfit: Dict[str, List[float]] = {}  # block -> [data cost unflipped, flipped]
+        for sid, pieces in obs.pieces.items():
+            norm = 1.0 / math.sqrt(max(obs.segments[sid].total, 1.0))
+            w = self._seg_weight(sid)
+            for pc in pieces:
+                row = rows.setdefault(pc.block, {"phase_block": pc.block, "orientation": pc.orientation, "n_pieces": 0, "n_snps": 0})
+                row["n_pieces"] += 1
+                row["n_snps"] += pc.n_snps
+                cost = misfit.setdefault(pc.block, [0.0, 0.0])
+                if not pc.has_alleles:
+                    continue
+                for k, flip in enumerate((0, 1)):
+                    ta, tb = pc.alleles(flip)
+                    cost[k] += w * pc.share * norm * (abs(seg_cn[(sid, Haplotype.A)] - ta) + abs(seg_cn[(sid, Haplotype.B)] - tb))
+        final = {}
+        for block in sorted(rows):
+            row, (c0, c1) = rows[block], misfit[block]
+            flip = int(flips.get(block, 0))
+            variable = block in self.flip
+            penalty = self._flip_cost(block) if variable else 0.0
+            delta = (c0 - c1 - penalty) if flip else (c1 + penalty - c0)
+            if row["orientation"] != 0 and not flip:
+                status = "fixed"
+            elif row["orientation"] == 0 and (not variable or delta <= p.flip_tol):
+                status = "unresolved"
+                if flip:
+                    log.info("phase block %s: flip changes the objective by only %.4g; kept as observed", block, delta)
+                    flip, delta = 0, -delta
+            else:
+                status = "flipped" if flip else "kept"
+            row.update({"flip": flip, "status": status, "delta_if_reversed": round(delta, 6)})
+            final[block] = flip
+        return final, [rows[b] for b in sorted(rows, key=_block_order)]
 
     def _uses_background(self, aid: str) -> bool:
         a = self.graph.adjacencies[aid]
@@ -247,6 +324,9 @@ class OptModelCircular:
             for h in HAPLOTYPES:
                 self.t[nid, h] = m.addVar(lb=0, ub=4 * p.bg_max, vtype=GRB.INTEGER, name="t[{n},{h}]".format(n=nid, h=h))
 
+        for block in sorted(self.flippable_blocks()):
+            self.flip[block] = m.addVar(vtype=GRB.BINARY, name="flip[{b}]".format(b=block))
+
         self.end_nodes = self.linear_end_nodes()
         for nid in self.end_nodes:
             ub = self.ub_seg[g.nodes[nid].segment]
@@ -297,7 +377,9 @@ class OptModelCircular:
             so = obs.segments[sid]
             w = self._seg_weight(sid)
             norm = 1.0 / math.sqrt(max(so.total, 1.0))
-            if so.a is not None and so.b is not None:
+            if obs.pieces.get(sid):
+                terms.extend(self._piece_terms(gp, sid, w, norm))
+            elif so.a is not None and so.b is not None:
                 for h, value in ((Haplotype.A, so.a), (Haplotype.B, so.b)):
                     d = self._abs_dev(gp, self.xe[sid, h] + self.xb[sid, h], value, "dseg[{s},{h}]".format(s=sid, h=h))
                     terms.append(w * norm * d)
@@ -308,7 +390,7 @@ class OptModelCircular:
             bg_total = gp.quicksum(self.xb[sid, h] for h in HAPLOTYPES)
             d = self._abs_dev(gp, bg_total, obs.background.get(sid, 2.0), "dbg[{s}]".format(s=sid))
             terms.append(p.bg_prior_weight * w * d)
-            if p.bg_balance_weight > 0 and so.a is not None and so.b is not None:
+            if p.bg_balance_weight > 0 and obs.has_alleles(sid):
                 d = self._abs_dev(gp, self.xb[sid, Haplotype.A] - self.xb[sid, Haplotype.B], 0.0, "dbal[{s}]".format(s=sid))
                 terms.append(p.bg_balance_weight * d)
 
@@ -327,6 +409,8 @@ class OptModelCircular:
                     terms.append((cost + extra) * self.pv[aid, ph])
         if self.te:
             terms.append(p.linear_end_penalty * gp.quicksum(self.te.values()))
+        for block, f in sorted(self.flip.items()):
+            terms.append(self._flip_cost(block) * f)
         m.setObjective(gp.quicksum(terms), GRB.MINIMIZE)
 
     def _infinite_sites(self, gp):
@@ -369,8 +453,13 @@ class OptModelCircular:
         linear_ends = {k: val(v) for k, v in self.te.items()}
         imputed = sorted({aid for (aid, ph), v in self.pv.items() if v.X > 0.5 and self.graph.adjacencies[aid].kind == IMPUTED})
         gap = m.MIPGap if m.IsMIP else 0.0
+        flips, blocks = {}, []
+        if self.obs.pieces:
+            seg_cn = {k: seg_ec[k] + seg_bg[k] for k in seg_ec}
+            flips, blocks = self.block_report(seg_cn, {b: val(v) for b, v in self.flip.items()})
         solution = FlowSolution(status=status, objective=float(m.ObjVal), mip_gap=float(gap), seg_ec=seg_ec, seg_bg=seg_bg,
-                                adj_ec=adj_ec, adj_bg=adj_bg, terminal_bg=terminal, imputed_used=imputed, linear_ends=linear_ends)
+                                adj_ec=adj_ec, adj_bg=adj_bg, terminal_bg=terminal, imputed_used=imputed, linear_ends=linear_ends,
+                                block_flips=flips, blocks=blocks)
         self.close()
         return solution
 
@@ -382,6 +471,11 @@ class OptModelCircular:
         """
         close_model(self.model)
         self.model = None
+
+
+def _block_order(block: str):
+    chrom, _, idx = block.partition(":")
+    return chrom, int(idx) if idx.isdigit() else -1
 
 
 def solve_flow(graph: ECGraph, obs: Observations, params: Optional[CircularParams] = None) -> FlowSolution:

@@ -21,6 +21,9 @@ DECOMPOSITION_COLUMNS = ["decomposition_rank", "objective", "residual", "n_speci
                          "n_steps", "uses_imputed", "junctions", "walk", "joins"]
 
 
+BLOCK_FLIP_COLUMNS = ["phase_block", "orientation", "flip", "status", "n_pieces", "n_snps", "delta_if_reversed"]
+
+
 def decomposition_table(graph: ECGraph, decompositions: List[Decomposition]) -> pd.DataFrame:
     """One row per (decomposition, species, ordering).
 
@@ -119,7 +122,10 @@ def write_all(outdir: str, graph: ECGraph, obs: Observations, sol: FlowSolution,
         "aa_graph": os.path.join(aa_dir, "{n}_graph.txt".format(n=graph.name)),
         "summary": os.path.join(outdir, "summary.json"),
     }
-    obs.write_json(paths["scale"])
+    obs.write_json(paths["scale"], flips=sol.block_flips)
+    if obs.block_flip != "off":
+        paths["block_flips"] = os.path.join(outdir, "block_flips.tsv")
+        pd.DataFrame(sol.blocks, columns=BLOCK_FLIP_COLUMNS).to_csv(paths["block_flips"], sep="\t", index=False)
     sol.segment_table(graph, obs).to_csv(paths["flow_segments"], sep="\t", index=False)
     sol.adjacency_table(graph, obs).to_csv(paths["flow_adjacencies"], sep="\t", index=False)
     decomposition_table(graph, decompositions).to_csv(paths["decompositions"], sep="\t", index=False)
@@ -143,6 +149,13 @@ def write_all(outdir: str, graph: ECGraph, obs: Observations, sol: FlowSolution,
             for d in decompositions
         ],
     }
+    if obs.block_flip != "off":
+        statuses = [b["status"] for b in sol.blocks]
+        summary["block_flip"] = {"mode": obs.block_flip, "pieces": int(sum(len(v) for v in obs.pieces.values())),
+                                 "blocks": len(sol.blocks), "flipped": statuses.count("flipped"),
+                                 "unresolved": statuses.count("unresolved"), "kept": statuses.count("kept"),
+                                 "fixed": statuses.count("fixed"),
+                                 "flipped_blocks": [b["phase_block"] for b in sol.blocks if b["status"] == "flipped"]}
     if extra:
         summary.update(extra)
     with open(paths["summary"], "w") as handle:

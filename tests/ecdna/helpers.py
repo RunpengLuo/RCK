@@ -24,6 +24,21 @@ except ImportError:  # pragma: no cover
 
 requires_gurobi = unittest.skipUnless(HAVE_GUROBI, "gurobipy is not installed")
 
+
+def have_full_gurobi() -> bool:
+    """Whether Gurobi can solve a model above the size-limited licence's 2000 variables."""
+    if not HAVE_GUROBI:
+        return False
+    try:
+        model = gurobipy.Model()
+        model.Params.OutputFlag = 0
+        model.addVars(2001)
+        model.optimize()
+        model.dispose()
+        return True
+    except gurobipy.GurobiError:
+        return False
+
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 MIN_TEMP_FREE_BYTES = 200 * 1024 ** 2
@@ -202,3 +217,40 @@ def loop_counts(graph, ends, uses, weight=1):
         for aid in ("x>{n}".format(n=name), "{n}>x".format(n=name)):
             counts[adj_key(aid, "AA")] = counts.get(adj_key(aid, "AA"), 0) + weight
     return counts
+
+
+def write_segment_blocks(directory, pieces, orientation=None, reads_per_snp=24):
+    """Write ``segment_blocks.tsv`` (and ``phase_blocks.tsv`` from ``orientation``, if given) in the
+    layout of subgraph_construct.py, for a subgraph already written to ``directory``.
+
+    ``pieces`` is a list of dicts: ``edge`` (the (NODE_1, NODE_2) of a reference edge), ``block``,
+    ``start``, ``end`` (half-open), ``total`` (CN_TOTAL), ``baf`` (observed-frame BAF, or None for
+    no SNPs), ``n_snps`` (default 20) and ``orientation`` (default: from ``orientation``, else 0).
+    Counts are ``reads_per_snp`` reads per SNP; CN_A / CN_B follow the orientation and are empty
+    below 5 SNPs, as subgraph_construct.py writes them.
+    """
+    edges = pd.read_csv(os.path.join(directory, "edges.tsv"), sep="\t", dtype={"NODE_1": str, "NODE_2": str})
+    index = {(r["NODE_1"], r["NODE_2"]): (i, r) for i, r in edges.iterrows()}
+    orientation = orientation or {}
+    rows = []
+    for p in pieces:
+        i, e = index[p["edge"]]
+        n = p.get("n_snps", 20)
+        o = p.get("orientation", orientation.get(p["block"], 0))
+        baf = p.get("baf")
+        a_obs = 0 if baf is None else int(round(n * reads_per_snp * (1 - baf)))
+        b_obs = 0 if baf is None else n * reads_per_snp - a_obs
+        a, b = (b_obs, a_obs) if o == -1 else (a_obs, b_obs)
+        oriented = b / (a + b) if a + b else float("nan")
+        allele = n >= 5 and a + b > 0
+        rows.append({"NODE_1": e["NODE_1"], "NODE_2": e["NODE_2"], "CHROM_1": e["CHROM_1"], "POS_1": e["POS_1"], "POS_2": e["POS_2"],
+                     "edge_index": i, "phase_block": p["block"], "piece_start": p["start"], "piece_end": p["end"],
+                     "piece_length": p["end"] - p["start"], "n_snps": n, "A_count_obs": a_obs, "B_count_obs": b_obs,
+                     "orientation": o, "A_count": a, "B_count": b, "BAF": oriented, "CN_TOTAL": p["total"],
+                     "CN_A": p["total"] * (1 - oriented) if allele else None, "CN_B": p["total"] * oriented if allele else None})
+    pd.DataFrame(rows).to_csv(os.path.join(directory, "segment_blocks.tsv"), sep="\t", index=False)
+    if orientation:
+        pd.DataFrame([{"phase_block": blk, "votes_same": int(o == 1), "votes_flip": int(o == -1), "orientation": o, "n_snps": 0,
+                       "status": "voted" if o else "no_votes"} for blk, o in orientation.items()]).to_csv(
+            os.path.join(directory, "phase_blocks.tsv"), sep="\t", index=False)
+    return directory

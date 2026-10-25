@@ -46,7 +46,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from rck.ecdna.subgraph_io import ECGraph, REFERENCE
+from rck.ecdna.subgraph_io import ECGraph, REFERENCE, SegmentBlocks
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +66,7 @@ class ScaleParams:
     flank_bp: int = 1_000_000
     flank_gap_bp: int = 10_000
     min_snps_allele: int = 5
+    block_flip: str = "off"  # off | unoriented: allele observations per phase-block piece (segment_blocks.tsv)
     theta_window_bp: int = 25_000
     hatchet_min_segment_bp: int = 1_000_000
 
@@ -97,19 +98,96 @@ class SegmentObservation:
 
 
 @dataclass
+class PieceObservation:
+    """Observation of the part of a segment inside one phase block (``--block-flip unoriented``).
+
+    ``a`` / ``b`` (and ``count_a`` / ``count_b``) are in the piece's base frame: oriented by the
+    subgraph when the block is ``fixed`` (orientation 1 or -1), observed when it is not
+    (orientation 0 or missing). The flow may swap them in a block that is not fixed. ``a`` and
+    ``b`` are None for a total-only piece (fewer than ``--min-snps-allele`` SNPs). ``share`` is
+    the piece's part of its segment's data weight (by length)."""
+
+    sid: str
+    block: str
+    start: int
+    end: int
+    n_snps: int
+    total: float
+    a: Optional[float]
+    b: Optional[float]
+    count_a: float
+    count_b: float
+    orientation: int
+    share: float
+
+    @property
+    def fixed(self) -> bool:
+        return self.orientation != 0
+
+    @property
+    def has_alleles(self) -> bool:
+        return self.a is not None and self.b is not None
+
+    def alleles(self, flip: int = 0) -> Tuple[Optional[float], Optional[float]]:
+        return (self.b, self.a) if flip else (self.a, self.b)
+
+    def counts(self, flip: int = 0) -> Tuple[float, float]:
+        return (self.count_b, self.count_a) if flip else (self.count_a, self.count_b)
+
+
+@dataclass
 class Observations:
     scale: Scale
     segments: Dict[str, SegmentObservation]
     adjacencies: Dict[str, Optional[float]]
     background: Dict[str, float]
+    pieces: Dict[str, List[PieceObservation]] = field(default_factory=dict)  # sid -> pieces, with --block-flip only
+    block_flip: str = "off"
+    min_snps_allele: int = 5
 
-    def write_json(self, path: str) -> None:
+    def has_alleles(self, sid: str) -> bool:
+        """Whether the segment has any allele-specific observation (in a piece, or the segment's own)."""
+        if self.pieces.get(sid):
+            return any(p.has_alleles for p in self.pieces[sid])
+        so = self.segments[sid]
+        return so.a is not None and so.b is not None
+
+    def block_orientation(self) -> Dict[str, int]:
+        """Subgraph orientation of every phase block that has a piece."""
+        return {p.block: p.orientation for ps in self.pieces.values() for p in ps}
+
+    def segment_alleles(self, sid: str, flips: Optional[Dict[str, int]] = None) -> Tuple[Optional[float], Optional[float]]:
+        """Segment-level A / B copy number. With pieces: the segment total split by the BAF of the
+        piece counts summed after ``flips`` (as subgraph_construct.py pools a segment's blocks)."""
+        so = self.segments[sid]
+        pieces = self.pieces.get(sid)
+        if not pieces:
+            return so.a, so.b
+        flips = flips or {}
+        a = b = 0.0
+        for p in pieces:
+            ca, cb = p.counts(flips.get(p.block, 0))
+            a, b = a + ca, b + cb
+        if sum(p.n_snps for p in pieces) < self.min_snps_allele or a + b <= 0:
+            return None, None
+        return so.total * a / (a + b), so.total * b / (a + b)
+
+    def write_json(self, path: str, flips: Optional[Dict[str, int]] = None) -> None:
         payload = {
             "scale": self.scale.to_dict(),
             "segments": {k: asdict(v) for k, v in self.segments.items()},
             "adjacencies": self.adjacencies,
             "background_total_cn": self.background,
         }
+        if self.block_flip != "off":
+            flips = flips or {}
+            payload["block_flip"] = self.block_flip
+            payload["pieces"] = []
+            for sid in sorted(self.pieces):
+                for p in self.pieces[sid]:
+                    flip = int(flips.get(p.block, 0))
+                    a, b = p.alleles(flip)
+                    payload["pieces"].append(dict(asdict(p), fixed=p.fixed, flipped=bool(flip), a_final=a, b_final=b))
         with open(path, "w") as handle:
             json.dump(payload, handle, indent=2, default=float)
 
@@ -458,12 +536,17 @@ class CNProfile:
 # ---------------------------------------------------------------------------------------- #
 
 def build_observations(graph: ECGraph, params: ScaleParams, windows_dir: Optional[str] = None,
-                       extremities_path: Optional[str] = None, subgraph_scale: Optional[SubgraphScale] = None) -> Observations:
+                       extremities_path: Optional[str] = None, subgraph_scale: Optional[SubgraphScale] = None,
+                       segment_blocks: Optional[SegmentBlocks] = None) -> Observations:
     """Observed copy numbers for every segment, adjacency and background flank of ``graph``.
 
     With ``subgraph_scale`` (subgraph-only mode) windows are not read: gamma and theta come from
     ``scale.json`` (overrides still win), segment copy numbers from the ``CN_*`` edge columns
     and the flanks from ``cn_profile.tsv``.
+
+    With ``params.block_flip`` other than ``off`` and ``segment_blocks``, every segment that has
+    pieces in ``segment_blocks.tsv`` also gets one observation per piece (see
+    :class:`PieceObservation` and :func:`piece_observations`).
     """
     windows = Windows(windows_dir, sample=params.sample) if (windows_dir and subgraph_scale is None) else None
     regions = graph.regions()
@@ -557,4 +640,59 @@ def build_observations(graph: ECGraph, params: ScaleParams, windows_dir: Optiona
                 break
         background[s.sid] = value
     scale.details["background_flank_cn"] = flank_cn
-    return Observations(scale=scale, segments=segments, adjacencies=adjacencies, background=background)
+    obs = Observations(scale=scale, segments=segments, adjacencies=adjacencies, background=background,
+                       block_flip=params.block_flip, min_snps_allele=params.min_snps_allele)
+    if params.block_flip != "off" and segment_blocks is not None:
+        sub_gamma = float(subgraph_scale.get("depth_per_copy")) if subgraph_scale is not None and subgraph_scale.get("depth_per_copy") else None
+        obs.pieces = piece_observations(graph, segment_blocks, segments, params, gamma, sub_gamma,
+                                        cn_over if windows is not None else None)
+        log.info("block flips: %d pieces on %d segments, %d phase blocks (%d not oriented by the subgraph)",
+                 sum(len(v) for v in obs.pieces.values()), len(obs.pieces), len(obs.block_orientation()),
+                 sum(1 for o in obs.block_orientation().values() if o == 0))
+    return obs
+
+
+def piece_observations(graph: ECGraph, blocks: SegmentBlocks, segments: Dict[str, SegmentObservation], params: ScaleParams,
+                       gamma: float, sub_gamma: Optional[float], cn_over=None) -> Dict[str, List[PieceObservation]]:
+    """Per-piece observations: total, A / B in the base frame, and the share of the segment weight.
+
+    The total is the piece's ``CN_TOTAL`` (rescaled when ``--depth-per-copy`` overrides the
+    subgraph's depth per copy), or the windows' copy number over the piece in windows mode. A / B
+    come from the ``CN_A`` / ``CN_B`` columns in subgraph mode, else from the piece total split by
+    its BAF; pieces with fewer than ``--min-snps-allele`` SNPs are total-only. Pieces of a block
+    with orientation -1 are swapped to the oriented frame and marked fixed."""
+    by_sid: Dict[str, List] = {}
+    for bp in blocks.pieces:
+        by_sid.setdefault(bp.sid, []).append(bp)
+    result: Dict[str, List[PieceObservation]] = {}
+    for sid, rows in by_sid.items():
+        s, so = graph.segments[sid], segments[sid]
+        rows = sorted(rows, key=lambda r: r.start)
+        span = float(sum(r.length for r in rows))
+        out = []
+        for r in rows:
+            total, a, b = None, None, None
+            if cn_over is not None:
+                cn, _, nb = cn_over(s.chrom, r.start, r.end - 1)
+                total = cn if nb > 0 and math.isfinite(cn) else None
+            elif r.cn_total is not None:
+                total = r.cn_total if params.depth_per_copy is None or not sub_gamma else r.cn_total * sub_gamma / gamma
+                if params.depth_per_copy is None and r.cn_a is not None and r.cn_b is not None:
+                    a, b = r.cn_a, r.cn_b
+            if total is None:
+                total = so.total
+            if r.n_snps < params.min_snps_allele or r.count_a + r.count_b <= 0:
+                a = b = None
+            elif a is None or b is None:
+                baf = r.count_b / (r.count_a + r.count_b)
+                a, b = total * (1.0 - baf), total * baf
+            orientation = int(blocks.orientation.get(r.block, 0))
+            ca, cb = r.count_a, r.count_b
+            if orientation == -1:
+                a, b, ca, cb = b, a, cb, ca
+            out.append(PieceObservation(sid=sid, block=r.block, start=r.start, end=r.end, n_snps=r.n_snps, total=float(total),
+                                        a=None if a is None else float(a), b=None if b is None else float(b),
+                                        count_a=float(ca), count_b=float(cb), orientation=orientation,
+                                        share=r.length / span if span > 0 else 1.0 / len(rows)))
+        result[sid] = out
+    return result

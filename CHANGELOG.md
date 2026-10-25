@@ -131,6 +131,34 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
     - `tests/ecdna/helpers.py` gains `write_segment_blocks` and `have_full_gurobi`.
   - Documented in `docs/ecDNA.md`: the subgraph folder files, inputs, the model, outputs,
     figures and the tests table.
+- **Walk complexity and ambiguity** (`decompose`), for nested species that the copy numbers
+  cannot separate:
+  - `--step-penalty λ` (default 0, so existing results are unchanged): the ranking's structure
+    cost adds λ per step (segment traversal) of each significant species. This prefers separate
+    simple walks over walks that re-traverse shared sequence, without pushing towards splits.
+    - The penalty is applied in the ranking only. In the MILP it also charged the light
+      leftover species and made the solver split true duplications (demo3, demo7). A weight
+      threshold inside the MILP was gamed by splitting a merged walk into light copies.
+    - With λ > 0 the solution pool keeps every solution within `--ambiguity-window` of the best
+      objective instead of within 10%, then drops the ones the prior cannot prefer.
+  - Ambiguity report (`--ambiguity-window`, default 2.0; 0 = off): one more MILP fixes the
+    flow each edge covers to the top decomposition's and forbids two species on the same
+    support. It then enumerates alternatives with exactly the same fit. `summary.json` gains
+    `ambiguity` (`ambiguous`, `n_alternatives`, `gap`, `decided_by`, the alternatives) and a
+    `steps` count per decomposition; an ambiguous top decomposition logs a warning.
+  - Sweep of λ = 0, 0.02, 0.05, 0.1 and 0.2 on ionic, kept in `results/step_sweep/` (summary
+    `sweep.tsv`, every run's output, the sweep script and `README.md`):
+    - demo3, demo4, demo5, demo6 and demo7 with `--block-flip`: unchanged at every λ;
+    - demo7 total-only: the merged walk (composites 0.51 / 0.34) becomes the two true species
+      at λ ≥ 0.05 (0.98 / 0.97, no leftover);
+    - demo8: the same correct answer, now decided by the step penalty (gap 1.9 at λ = 0.1)
+      rather than a 0.004 tie-break.
+    - λ = 0.1 is recommended for nested amplicons. The wider pool makes the demo8
+      decomposition take 31 s instead of 8 s.
+    - `results/step_sweep/sweep_v1_milp_penalty.tsv` keeps the first design's sweep, with the
+      penalty in the MILP. It split true duplications on demo3 (composite 0.96 → 0.72) and on
+      demo7 with block flips (0.77 for `ecdna2`).
+  - Tests: `test_step_penalty.py`. Documented in `docs/ecDNA.md` (section 4).
 - Tests under `tests/ecdna/`, with fixtures from demo3 and demo4: subgraph reading, scale,
   flow, decomposition, walks, refit, subgraph inputs, evaluation, recovery matrix
   (`test_recovery.py`), figures (`test_plot.py`), Gurobi environment, and end-to-end demo3 and
@@ -164,6 +192,11 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
     observations (`--min-snps-allele 100000000`) they are 0.51 and 0.33. With
     `--block-flip unoriented` (above; `rck_out_union_blockflip/`) both species are recovered,
     with composites 0.994 and 0.9996.
+  - demo8, demo7's two nested cycles on one haplotype at 3:1, with no haplotype crossings
+    (`demo8_nestedcycles_ecdna/rck_out_union/`): both species are recovered at rank 1
+    (composites 0.985 and 0.989), but only by the edge-traversal tie-break, 0.004 ahead of a
+    merged walk with identical copy numbers. This motivated `--step-penalty` and the ambiguity
+    report (above).
 - Known limitations found by demo7:
   - **Nested species merge** (when allele data cannot separate them). When two species share
     reference segments, the minimum-species decomposition prefers one walk that traverses
@@ -176,9 +209,10 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
       9 reference segments but only one segment haplotype, because `ecdna1` is on B and
       `ecdna2` on A where they overlap. Once the allele observations are correctly phased, a
       single walk cannot reproduce the haplotype-specific flow more cheaply than two circles.
-    - The merge is still expected for nested species on the same haplotype; no simulation
-      tests that case yet. Possible remedies: penalize walks that repeat a sub-cycle, use
-      copy-number differences between species, or require more read support.
+    - demo8 tests nested species on one haplotype (3:1). Rank 1 was right, but only by a 0.004
+      tie-break over a merged walk with identical copy numbers. `--step-penalty` (above) now
+      decides such cases explicitly, and the ambiguity report says when the copy numbers
+      cannot. Long reads that span the difference remain the only evidence-based remedy.
   - **Allele observations are trusted as phased** (by default). Segment allele copy numbers
     are taken on the true haplotype scale. When `subgraph_construct.py` cannot orient a phase
     block, here because the only pure junctions there attach to segments shared by both

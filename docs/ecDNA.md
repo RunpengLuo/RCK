@@ -301,14 +301,92 @@ goes round the same circle g times is reported as that circle at g times the wei
 lighter than `--min-species-weight` (default `--min-species-weight-frac` = 10% of the
 heaviest species) are kept but flagged `low_weight`: they usually absorb small unevenness in
 the flow rather than describing a molecule, and the evaluation ignores them unless
-`--include-low-weight` is passed to `rck-ecdna-eval`. Decompositions are ranked by residual, then by the number of
-species that are not `low_weight`, then by total species and objective, so one molecule plus
-small leftovers ranks above the same molecule split in two.
+`--include-low-weight` is passed to `rck-ecdna-eval`. Decompositions are ranked by residual, then by a structure
+cost (`--species-penalty` per species that is not `low_weight`, plus `--step-penalty` per step
+of those species, below), then by the number of such species, total species and objective. One
+molecule plus small leftovers therefore ranks above the same molecule split in two.
 Each species has a `topology` (`circular` or `linear`). Each decomposition gets an amplicon
 call from its significant species: the circular fraction is the copy-weighted share of
 circular species with weight ≥ `--min-ecdna-copies` (2). The call is `ecDNA` when that share is
 ≥ `--ecdna-call-fraction` (0.8), `linear` when it is ≤ 1 − that fraction, `mixed` in between,
 and `none` when there are no species.
+#### Walk complexity (`--step-penalty`) and ambiguity
+
+Species that share reference sequence, such as nested ecDNA, can often be explained in several
+ways that reproduce the flow, and so the copy numbers, exactly. Take demo8, an outer cycle at
+19.5 copies with a nested cycle at 6.5 on the same haplotype. "Outer circle at 18 + nested
+circle at 6" and "outer circle at 12 + one walk through outer and nested at 6" predict the same
+copy number on every segment and junction: outer-only segments 18 = 12 + 6, shared segments
+18 + 6 = 12 + 2 × 6. Neither a better fit nor more samples can separate them (unless the nested
+species outnumbers the outer one somewhere); only reads that span the
+difference, or a prior, can. demo7 with total-only observations shows the other form: one walk
+round the outer cycle twice and the nested one once needs one species fewer, and the species
+penalty chose it.
+
+`--step-penalty λ` (default 0) adds λ per *step* of a significant species to the ranking's
+structure cost. A step is one segment traversal of one species (a walk's length in segments, not
+weighted by copies). This is a minimum-description-length prior:
+
+- splitting a species into pieces keeps the total step count about the same, so it does not
+  push towards splits;
+- a merged walk re-traverses the shared sequence, so it costs the extra steps (demo8: 47 steps
+  against 28 for the separate circles);
+- merging saves one species and costs the extra steps, so it is undone once λ × extra steps
+  exceeds `--species-penalty`;
+- a true internal duplication (a tandem duplication traverses its segment twice) has the same
+  steps as its split into two species, so the species penalty keeps it whole.
+
+**Where the penalty acts.** It is applied in the ranking, to species that are not `low_weight`,
+and not in the decomposition MILP. In the MILP it would also charge the light leftover species
+that absorb unevenness in the integer flow. Their walks are often long (45 steps on demo3), so
+the solver reshaped real species to shorten them: it split demo3's duplicated section and
+demo7's tandem duplication into separate species. A weight threshold inside the MILP was gamed
+too: it split a merged walk into copies too light to pay. With λ > 0, the solution pool keeps
+every solution within `--ambiguity-window` of the best objective (never less than `--pool-gap`)
+instead of within 10%. The alternatives the prior chooses between, which can need more species,
+then reach the ranking. Solutions the prior cannot prefer are dropped again, so the listed
+alternatives stay comparable. The wider pool costs time: the demo8 run went from 8 s to 31 s.
+
+With λ = 0 only the 10<sup>−4</sup> tie-break on edge traversals separates such answers, as on
+demo8, where the right one won by 0.004.
+
+**Effect on the demos** (rank-1 composite per truth species; λ 0.05, 0.1 and 0.2 gave identical
+results):
+
+| run | λ = 0 | λ = 0.02 | λ ≥ 0.05 |
+|---|---|---|---|
+| demo3 | 0.960 | 0.959 | 0.959 (weight 12.77 → 12.70, an equivalent solution) |
+| demo4 amplicon_0 / amplicon_1 | 0.983 / 0.997 | same | same |
+| demo5 | 0.990 | same | same |
+| demo6 union | 0.984, 0.994 | same | same |
+| demo7 union, `--block-flip unoriented` | 0.994, 1.000 | same | same |
+| demo7 union, total-only (`--min-snps-allele 100000000`) | 0.51, 0.34 (merged walk) | same | **0.98, 0.97** (two species, no leftover) |
+| demo8 union (3:1, one haplotype) | 0.985, 0.989 (tie-break, gap 0.004) | same | same, decided by `step_penalty` (gap 0.95 at 0.05, 1.9 at 0.1) |
+
+demo7's total-only merge needs λ above about 1/36: merging saves one species and adds 36 steps
+(67 against 31). The default stays 0, so earlier results are unchanged; `--step-penalty 0.1`
+is recommended for nested amplicons.
+
+**Ambiguity report** (`--ambiguity-window`, default 2.0; 0 turns it off). After ranking, one more
+MILP looks for alternatives that the data cannot tell apart from the top decomposition. It fixes
+the ecDNA flow covered by every edge to the top decomposition's, so the fit is identical. It
+forbids two species with the same support, which excludes one walk split into copies. Then it
+enumerates solutions within the window of the objective. An alternative whose significant species
+structures differ makes the top decomposition `ambiguous`. `summary.json` reports, under
+`ambiguity` (top level, and in the first decomposition):
+
+- `ambiguous` and `n_alternatives` (distinct structure sets);
+- `gap`: the closest alternative's objective minus the top one's. Negative means the ranking
+  preferred fewer species over a lower objective;
+- `decided_by`: what separates them: `species_penalty`, `step_penalty`, `tie-break`, or
+  `reads or tie-break`;
+- the first 10 alternatives: species count, steps, integer weights, and their rank if listed.
+
+A run whose top decomposition is ambiguous also logs a warning. Ambiguity is expected with
+nested species. The report says whether the choice came from the data or from a prior, and how
+strongly the prior decided. The extra MILP has the size of the decomposition MILP plus K(K−1)/2
+binaries per edge (K = `--max-species`).
+
 Alternatives come from Gurobi's solution pool (`--alternatives-mode pool`) or from repeated
 solves with a no-good cut (`--alternatives-mode nogood`), within `--pool-gap` of the
 optimum. Every alternative is re-checked and deduplicated.
@@ -368,7 +446,7 @@ order.
 | `aa/<name>_graph.txt`, `aa/<name>_decomp<k>_cycles.txt` | AmpliconArchitect-style graph and cycles (total copy number; cycle lines also carry `Haplotypes=`; linear walks start and end with AA's `0+`/`0-` source) |
 | `observations.json` | scales, how each was estimated, and every observation; with `--block-flip`, also `pieces`: each piece's segment, block, span, totals, A / B in its base frame, `fixed`, `flipped` and the A / B after the flip (`a_final`, `b_final`) |
 | `block_flips.tsv` | with `--block-flip` only: one row per phase block with a piece: `phase_block`, `orientation` (from the subgraph), `flip` (1 when A and B were swapped), `status` (`fixed`, `flipped`, `kept` or `unresolved`), `n_pieces`, `n_snps` and `delta_if_reversed` |
-| `summary.json` | graph normalization log, flow status (with `linear_end_copies`), top-level `amplicon_call` and `circular_fraction`, decompositions (with `reads_total`, `reads_explained`, `data_objective` and `data_objective_int`, and `pruned`: species the refit dropped); with `--block-flip`, `block_flip` (mode, number of pieces and blocks, counts per status, the flipped blocks) |
+| `summary.json` | graph normalization log, flow status (with `linear_end_copies`), top-level `amplicon_call` and `circular_fraction`, decompositions (with `reads_total`, `reads_explained`, `data_objective` and `data_objective_int`, `pruned`: species the refit dropped, and `steps`), top-level `ambiguity` (section 4, walk complexity); with `--block-flip`, `block_flip` (mode, number of pieces and blocks, counts per status, the flipped blocks) |
 | `gurobi_flow.log`, `gurobi_decompose.log` | solver logs |
 | `evaluation.tsv`, `evaluation.json`, `truth_cycles.tsv`, `recovery_matrix.tsv` | only with `--truth-dir` or `--truth-cycles` (section 6) |
 | `plots/<name>_ecdna.pdf`, `plots/<name>_rank<r>_<species>.png`, `plots/<name>_recovery_matrix.png` | figures: one page per inferred species, then the recovery matrix (below) |
@@ -547,6 +625,7 @@ scales from the windows.
 | `test_subgraph_inputs.py` | observations: no; run: yes (small) | scales, segment and junction copy numbers and flank background read from `scale.json`, `CN_*` columns and `cn_profile.tsv`; CN columns win over the scale; `--depth-per-copy` recomputes from `WEIGHT`; `--inputs auto/subgraph/windows`; a full run from the subgraph folder alone |
 | `test_recovery.py` | no | segment recall and precision, junction F1, phasing accuracy (one haplotype wrong; every haplotype swapped, which only the swap-invariant score forgives), the composite and its copy-number term; the recovery matrix: a missed species scores 0, `best_rank` finds a better alternative, out-of-scope rows are listed but not scored or averaged, the TSV columns, strict JSON, and a run with no decompositions |
 | `test_plot.py` | no (figures: matplotlib and cnplot) | axis regions padded and merged; figures skipped when cnplot cannot be imported; a circular species with truth and recovery-matrix pages and their PNGs; a linear species without truth |
+| `test_step_penalty.py` | yes (small) | a hub segment with two 3-segment loops (nested-like). At 2:1 the merged walk wins without `--step-penalty` (ambiguous, decided by the species penalty) and the separate circles win with it. At 3:1 the answer is decided by the tie-break and, with `--step-penalty`, by the steps; the gaps match λ × extra steps. Default ranking unchanged; a single circle is not ambiguous; `--ambiguity-window 0` turns the report off |
 | `test_block_flip.py` | inputs: no; flow and run: yes (small) | pieces read and mapped through phantom contraction; orientation −1 swapped and fixed; a block missing from `phase_blocks.tsv` is unoriented; low-SNP pieces total-only; a missing `segment_blocks.tsv` falls back with a warning; a circle on A whose unoriented block has swapped observations: the block is flipped, all ecDNA on A, no imputed edge, the objective of the unswapped input; `--block-flip off` unchanged; an oriented block never flipped (but flips with `--flip-oriented-penalty`); a block without evidence `unresolved`; a segment over an oriented and an unoriented block; the refit uses flipped observations; `block_flips.tsv`, `summary.json`, `observations.json` pieces, `flow_segments.tsv` and the plot points |
 | `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
 | `test_demo4.py` | yes (full license) | both demo4 subgraphs: evaluation never errors, each subgraph is scored only against its own species, per-sample truth weights; accuracy is printed, not asserted (`RCK_ECDNA_DEMO4_OBS` enables estimated scales for both samples) |

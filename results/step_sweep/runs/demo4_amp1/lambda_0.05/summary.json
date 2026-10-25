@@ -1,0 +1,114 @@
+{
+  "graph": {
+    "name": "amplicon_1",
+    "nodes": 42,
+    "segments": 17,
+    "adjacencies": {
+      "reference": 21,
+      "novel": 4,
+      "imputed": 17
+    },
+    "terminals": 8,
+    "regions": [
+      "chr16:25450001-25640000",
+      "chr4:144711001-145252000",
+      "chr5:9350001-10580000",
+      "chr6:50744001-50796999"
+    ],
+    "normalization": [
+      "merged imputed imputed_adj_inter_chr16_2 into reference ref0004",
+      "merged imputed imputed_adj_inter_chr16_5 into reference ref0005",
+      "merged imputed imputed_adj_anchor_chr4_20 into reference ref0007",
+      "merged imputed imputed_adj_inter_chr4_19 into reference ref0009",
+      "merged imputed imputed_adj_inter_chr4_22 into reference ref0010",
+      "merged imputed imputed_adj_inter_chr4_24 into reference ref0011",
+      "merged imputed imputed_adj_inter_chr5_28 into reference ref0016",
+      "merged imputed imputed_adj_inter_chr5_31 into reference ref0017",
+      "merged imputed imputed_adj_inter_chr5_34 into reference ref0018"
+    ]
+  },
+  "scale": {
+    "depth_per_copy": 13.5,
+    "junction_reads_per_copy": 5.5,
+    "baseline_cn": 2.0,
+    "depth_method": "override",
+    "junction_method": "subgraph_reference_median",
+    "depth_mode": "tumor",
+    "ratio_baseline": null,
+    "details": {
+      "reference_adjacencies_used": 8,
+      "background_flank_cn": {
+        "chr16:25450001-25640000": 2.0,
+        "chr4:144711001-145252000": 2.0,
+        "chr5:9350001-10580000": 2.0,
+        "chr6:50744001-50796999": 2.0
+      }
+    }
+  },
+  "flow": {
+    "status": "optimal",
+    "objective": 5.781767328083341,
+    "mip_gap": 0.0,
+    "imputed_used": [],
+    "ecdna_copies_total": 144,
+    "linear_end_copies": 0
+  },
+  "amplicon_call": "ecDNA",
+  "ambiguity": {
+    "ambiguous": false,
+    "window": 2.0,
+    "n_alternatives": 0,
+    "n_species": 1,
+    "steps": 12,
+    "alternatives": []
+  },
+  "circular_fraction": 1.0,
+  "decompositions": [
+    {
+      "rank": 1,
+      "objective": 1.0024,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 4.999576,
+      "data_objective_int": 5.577765,
+      "pruned": [],
+      "steps": 12,
+      "ambiguity": {
+        "ambiguous": false,
+        "window": 2.0,
+        "n_alternatives": 0,
+        "n_species": 1,
+        "steps": 12,
+        "alternatives": []
+      },
+      "species": [
+        {
+          "weight": 6.39,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 1997996,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00012",
+            "sim00013",
+            "sim00014",
+            "sim00017"
+          ]
+        }
+      ]
+    }
+  ],
+  "inputs": {
+    "mode": "windows",
+    "windows": null,
+    "extremities": null,
+    "paths": null
+  },
+  "runtime_s": 0.13,
+  "paths_loaded": 0
+}

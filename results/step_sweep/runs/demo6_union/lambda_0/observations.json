@@ -1,0 +1,187 @@
+{
+  "scale": {
+    "depth_per_copy": 13.809776182367344,
+    "junction_reads_per_copy": 6.5,
+    "baseline_cn": 1.968779953124812,
+    "depth_method": "subgraph_scale",
+    "junction_method": "subgraph_scale",
+    "depth_mode": "tumor",
+    "ratio_baseline": null,
+    "details": {
+      "subgraph_sample": "sim_tumor1",
+      "subgraph_purity": 0.8000000000000005,
+      "subgraph_tumor_ploidy": 1.96709323583181,
+      "subgraph_cell_ploidy": 1.968779953124812,
+      "subgraph_ploidy_class": 2,
+      "subgraph_method": "segment lattice fit, ploidy class chosen jointly over 1 tumor sample(s)",
+      "subgraph_junction_sample": "sim_tumor1",
+      "subgraph_alternatives": {
+        "2": {
+          "score": 0.05710993190571667,
+          "depth_per_copy": 13.809776182367344,
+          "purity": 0.8000000000000005,
+          "tumor_ploidy": 1.96709323583181
+        },
+        "4": {
+          "score": 0.08981192103872863,
+          "depth_per_copy": 8.323700712659768,
+          "purity": 0.6600000000000004,
+          "tumor_ploidy": 3.937842778793419
+        },
+        "6": {
+          "score": 0.12290289168124595,
+          "depth_per_copy": 6.456518734613304,
+          "purity": 0.5700000000000003,
+          "tumor_ploidy": 5.9067641681901275
+        }
+      },
+      "background_flank_cn": {
+        "chr15:50227001-52785999": 2.081446534245925,
+        "chr17:3900001-5790000": 1.910424550783282,
+        "chr17:61941001-62059999": 2.2702787817891092
+      }
+    }
+  },
+  "segments": {
+    "s0001": {
+      "sid": "s0001",
+      "depth": 125.06961897322807,
+      "total": 9.0566,
+      "a": 0.9098,
+      "b": 8.1468,
+      "n_bins": 1869.0,
+      "source": "subgraph_cn"
+    },
+    "s0002": {
+      "sid": "s0002",
+      "depth": 119.99314524858985,
+      "total": 8.689,
+      "a": null,
+      "b": null,
+      "n_bins": 2.999,
+      "source": "subgraph_cn"
+    },
+    "s0003": {
+      "sid": "s0003",
+      "depth": 28.304517263380106,
+      "total": 2.0496,
+      "a": 1.0094,
+      "b": 1.0403,
+      "n_bins": 557.001,
+      "source": "subgraph_cn"
+    },
+    "s0004": {
+      "sid": "s0004",
+      "depth": 63.74592685780765,
+      "total": 4.616,
+      "a": null,
+      "b": null,
+      "n_bins": 3.0,
+      "source": "subgraph_cn"
+    },
+    "s0005": {
+      "sid": "s0005",
+      "depth": 139.31026017248527,
+      "total": 10.0878,
+      "a": 0.8683,
+      "b": 9.2195,
+      "n_bins": 65.999,
+      "source": "subgraph_cn"
+    },
+    "s0007": {
+      "sid": "s0007",
+      "depth": 147.5326009114668,
+      "total": 10.6832,
+      "a": 0.9966,
+      "b": 9.6866,
+      "n_bins": 61.0,
+      "source": "subgraph_cn"
+    },
+    "s0008": {
+      "sid": "s0008",
+      "depth": 57.85329536079151,
+      "total": 4.1893,
+      "a": null,
+      "b": null,
+      "n_bins": 6.0,
+      "source": "subgraph_cn"
+    },
+    "s0009": {
+      "sid": "s0009",
+      "depth": 140.40951835660175,
+      "total": 10.1674,
+      "a": 9.1666,
+      "b": 1.0008,
+      "n_bins": 1876.999,
+      "source": "subgraph_cn"
+    },
+    "s0011": {
+      "sid": "s0011",
+      "depth": 199.98765476257094,
+      "total": 14.4816,
+      "a": null,
+      "b": null,
+      "n_bins": 3.0,
+      "source": "subgraph_cn"
+    },
+    "s0012": {
+      "sid": "s0012",
+      "depth": 26.998112436528157,
+      "total": 1.955,
+      "a": null,
+      "b": null,
+      "n_bins": 4.001,
+      "source": "subgraph_cn"
+    },
+    "s0013": {
+      "sid": "s0013",
+      "depth": 147.72179484516522,
+      "total": 10.6969,
+      "a": 9.6217,
+      "b": 1.0753,
+      "n_bins": 118.999,
+      "source": "subgraph_cn"
+    }
+  },
+  "adjacencies": {
+    "ref0001": 2.0,
+    "ref0002": 1.2307692307692308,
+    "ref0003": 2.3076923076923075,
+    "ref0006": 1.2307692307692308,
+    "ref0007": null,
+    "ref0008": null,
+    "ref0009": 2.923076923076923,
+    "ref0012": 2.4615384615384617,
+    "ref0013": 1.8461538461538463,
+    "ref0014": 2.0,
+    "ref0015": null,
+    "ref0016": null,
+    "sim00005": 8.153846153846153,
+    "sim00006": 9.538461538461538,
+    "sim00007": 9.23076923076923,
+    "sim00010": 8.615384615384615,
+    "sim00011": 8.615384615384615,
+    "sim00012": 8.0,
+    "imputed_adj_intra_chr15_1": null,
+    "imputed_adj_inter_chr15_2": null,
+    "imputed_adj_intra_chr15_4": null,
+    "imputed_adj_anchor_chr15_5": null,
+    "imputed_adj_intra_chr17_7": null,
+    "imputed_adj_anchor_chr17_8": null,
+    "ref_c001": 1.6923076923076923,
+    "ref_c002": 2.230769230769231
+  },
+  "background_total_cn": {
+    "s0001": 2.081446534245925,
+    "s0002": 2.081446534245925,
+    "s0003": 2.081446534245925,
+    "s0004": 2.081446534245925,
+    "s0005": 2.081446534245925,
+    "s0007": 2.081446534245925,
+    "s0008": 1.910424550783282,
+    "s0009": 1.910424550783282,
+    "s0011": 1.910424550783282,
+    "s0012": 1.910424550783282,
+    "s0013": 2.2702787817891092
+  }
+}

@@ -1,0 +1,41 @@
+case	step_penalty	n_species	weights	steps	residual	composites	mean_composite	ambiguous	decided_by	gap	n_alternatives	runtime_s
+demo3	0.0	1	12.77	22	0.0	ecdna1=0.960	0.9596	True	species_penalty	-0.0008	3	3.5
+demo3	0.02	1	12.7	22	0.0	ecdna1=0.959	0.9587	True	species_penalty	-0.0064	3	8.6
+demo3	0.05	1	12.7	22	0.0	ecdna1=0.959	0.9587	True	species_penalty	-0.0064	3	8.6
+demo3	0.1	1	12.7	22	0.0	ecdna1=0.959	0.9587	True	species_penalty	-0.0064	3	8.6
+demo3	0.2	1	12.7	22	0.0	ecdna1=0.959	0.9587	True	species_penalty	-0.0064	3	8.6
+demo4_amp0	0.0	1	5.76	18	0.0	ecdna1=0.983	0.9834	False			0	0.6
+demo4_amp0	0.02	1	5.76	18	0.0	ecdna1=0.983	0.9834	False			0	0.8
+demo4_amp0	0.05	1	5.76	18	0.0	ecdna1=0.983	0.9834	False			0	0.8
+demo4_amp0	0.1	1	5.76	18	0.0	ecdna1=0.983	0.9834	False			0	0.8
+demo4_amp0	0.2	1	5.76	18	0.0	ecdna1=0.983	0.9834	False			0	0.8
+demo4_amp1	0.0	1	6.39	12	0.0	ecdna2=0.997	0.9966	False			0	0.2
+demo4_amp1	0.02	1	6.39	12	0.0	ecdna2=0.997	0.9966	False			0	0.2
+demo4_amp1	0.05	1	6.39	12	0.0	ecdna2=0.997	0.9966	False			0	0.2
+demo4_amp1	0.1	1	6.39	12	0.0	ecdna2=0.997	0.9966	False			0	0.2
+demo4_amp1	0.2	1	6.39	12	0.0	ecdna2=0.997	0.9966	False			0	0.2
+demo5	0.0	1	16.82	5	0.0	ecdna1=0.990	0.9897	False			0	0.1
+demo5	0.02	1	16.82	5	0.0	ecdna1=0.990	0.9897	False			0	0.1
+demo5	0.05	1	16.82	5	0.0	ecdna1=0.990	0.9897	False			0	0.1
+demo5	0.1	1	16.82	5	0.0	ecdna1=0.990	0.9897	False			0	0.1
+demo5	0.2	1	16.82	5	0.0	ecdna1=0.990	0.9897	False			0	0.1
+demo6_union	0.0	2	8.62,8.22	7	0.0	ecdna1=0.984,ecdna2=0.994	0.9895	False			0	0.2
+demo6_union	0.02	2	8.62,8.22	7	0.0	ecdna1=0.984,ecdna2=0.994	0.9895	False			0	0.4
+demo6_union	0.05	2	8.62,8.22	7	0.0	ecdna1=0.984,ecdna2=0.994	0.9895	False			0	0.4
+demo6_union	0.1	2	8.62,8.22	7	0.0	ecdna1=0.984,ecdna2=0.994	0.9895	False			0	0.4
+demo6_union	0.2	2	8.62,8.22	7	0.0	ecdna1=0.984,ecdna2=0.994	0.9895	False			0	0.4
+demo7_blockflip	0.0	2	16.43,9.08	31	0.0	ecdna1=0.994,ecdna2=1.000	0.997	True	species_penalty	0.0	16	5.1
+demo7_blockflip	0.02	2	16.43,9.08	31	0.0	ecdna1=0.994,ecdna2=1.000	0.997	True	species_penalty	0.82	16	8.4
+demo7_blockflip	0.05	2	16.43,9.08	31	0.0	ecdna1=0.994,ecdna2=1.000	0.997	True	species_penalty	0.9942	16	8.3
+demo7_blockflip	0.1	2	16.43,9.08	31	0.0	ecdna1=0.994,ecdna2=1.000	0.997	True	species_penalty	0.9942	16	8.2
+demo7_blockflip	0.2	2	16.43,9.08	31	0.0	ecdna1=0.994,ecdna2=1.000	0.997	True	species_penalty	0.9942	16	8.2
+demo7_totalonly	0.0	2	8.17,1.77	67	0.0	ecdna1=0.510,ecdna2=0.335	0.4221	True	tie-break	0.0102	19	6.1
+demo7_totalonly	0.02	2	8.17,1.77	67	0.0	ecdna1=0.510,ecdna2=0.335	0.4221	True	step_penalty	0.356	19	11.6
+demo7_totalonly	0.05	2	15.38,7.77	31	0.0	ecdna1=0.982,ecdna2=0.971	0.9764	True	species_penalty	0.193	20	11.5
+demo7_totalonly	0.1	2	15.38,7.77	31	0.0	ecdna1=0.982,ecdna2=0.971	0.9764	True	species_penalty	0.393	20	11.5
+demo7_totalonly	0.2	2	15.38,7.77	31	0.0	ecdna1=0.982,ecdna2=0.971	0.9764	True	species_penalty	0.793	20	11.5
+demo8	0.0	2	18,6.15	28	0.0	ecdna1=0.985,ecdna2=0.989	0.9869	True	tie-break	0.0038	25	7.7
+demo8	0.02	2	18,6.15	28	0.0	ecdna1=0.985,ecdna2=0.989	0.9869	True	step_penalty	0.3838	25	31.3
+demo8	0.05	2	18,6.15	28	0.0	ecdna1=0.985,ecdna2=0.989	0.9869	True	step_penalty	0.9538	25	32.1
+demo8	0.1	2	18,6.15	28	0.0	ecdna1=0.985,ecdna2=0.989	0.9869	True	step_penalty	1.9038	25	31.1
+demo8	0.2	2	18,6.15	28	0.0	ecdna1=0.985,ecdna2=0.989	0.9869	True	step_penalty	3.8038	25	31.6

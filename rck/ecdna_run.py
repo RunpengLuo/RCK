@@ -94,6 +94,12 @@ def build_parser() -> argparse.ArgumentParser:
     dc.add_argument("--max-species", type=int, default=4)
     dc.add_argument("--max-multiplicity", type=int, default=3, help="Largest number of times one species may use an edge")
     dc.add_argument("--species-penalty", type=float, default=1.0)
+    dc.add_argument("--step-penalty", type=float, default=0.0,
+                    help="Cost per segment traversal of a species (walk complexity): favours separate simple walks over "
+                         "walks that re-traverse shared sequence, e.g. merged nested cycles. 0 = tie-break only")
+    dc.add_argument("--ambiguity-window", type=float, default=2.0,
+                    help="Report alternatives to the top decomposition that fit the flow exactly as well and whose objective "
+                         "is within this window (summary.json ambiguity); 0 = off")
     dc.add_argument("--min-species-weight", type=int, default=None,
                     help="Species lighter than this are flagged low_weight (default: --min-species-weight-frac of the heaviest)")
     dc.add_argument("--min-species-weight-frac", type=float, default=0.10)
@@ -214,7 +220,8 @@ def run(args) -> Dict[str, object]:
 
     paths = read_paths(inputs["paths"], graph) if inputs["paths"] else None
     dec_params = DecompositionParams(max_species=args.max_species, max_multiplicity=args.max_multiplicity,
-                                     species_penalty=args.species_penalty, min_species_weight=args.min_species_weight,
+                                     species_penalty=args.species_penalty, step_penalty=getattr(args, "step_penalty", 0.0),
+                                     ambiguity_window=getattr(args, "ambiguity_window", 2.0), min_species_weight=args.min_species_weight,
                                      min_species_weight_frac=args.min_species_weight_frac, min_ecdna_copies=args.min_ecdna_copies,
                                      ecdna_call_fraction=args.ecdna_call_fraction, num_alternatives=args.num_alternatives,
                                      pool_gap=args.pool_gap, mode=args.alternatives_mode, max_orderings=args.max_orderings,

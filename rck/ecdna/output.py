@@ -139,11 +139,13 @@ def write_all(outdir: str, graph: ECGraph, obs: Observations, sol: FlowSolution,
                  "ecdna_copies_total": int(sum(sol.ecdna_edges().values())),
                  "linear_end_copies": int(sum(sol.linear_ends.values()))},
         "amplicon_call": decompositions[0].call if decompositions else "none",
+        "ambiguity": decompositions[0].ambiguity if decompositions else None,
         "circular_fraction": decompositions[0].circular_fraction if decompositions else None,
         "decompositions": [
             {"rank": d.rank, "objective": d.objective, "residual": d.residual, "call": d.call, "circular_fraction": d.circular_fraction,
              "reads_total": d.reads_total, "reads_explained": d.reads_explained,
              "data_objective": d.data_objective, "data_objective_int": d.data_objective_int, "pruned": d.pruned,
+             "steps": d.steps, "ambiguity": d.ambiguity,
              "species": [{"weight": s.weight, "weight_int": s.weight_int, "topology": s.topology, "status": s.status, "length_bp": s.length_bp, "n_orderings": len(s.orderings),
                           "imputed": s.imputed, "junctions": s.junctions} for s in d.species]}
             for d in decompositions

@@ -1,0 +1,26 @@
+aid	kind	u	v	phasing	reads	obs_cn	junction_hap	ecdna	bg
+imputed_adj_anchor_chr17_3	imputed	imputed_ext_chr17_1_-	chr17:3906000-_+	AA			imputed	0	0
+imputed_adj_anchor_chr17_3	imputed	imputed_ext_chr17_1_-	chr17:3906000-_+	BB			imputed	0	0
+imputed_adj_intra_chr17_1	imputed	imputed_ext_chr17_2_+	imputed_ext_chr17_1_-	AA			imputed	0	0
+imputed_adj_intra_chr17_1	imputed	imputed_ext_chr17_2_+	imputed_ext_chr17_1_-	BB			imputed	0	0
+imputed_adj_intra_chr17_4	imputed	imputed_ext_chr17_3_+	imputed_ext_chr17_2_-	AA			imputed	0	0
+imputed_adj_intra_chr17_4	imputed	imputed_ext_chr17_3_+	imputed_ext_chr17_2_-	BB			imputed	0	0
+ref0001	reference	chr17:3906000-_+	chr17:3906000-_-	AA	13.0	2.0		0	1
+ref0001	reference	chr17:3906000-_+	chr17:3906000-_-	BB	13.0	2.0		0	1
+ref0004	reference	chr17:5785999+_+	chr17:5785999+_-	AA	9.0	1.3846153846153846		0	0
+ref0004	reference	chr17:5785999+_+	chr17:5785999+_-	BB	9.0	1.3846153846153846		0	1
+ref0005	reference	chr17:61941000-_+	chr17:61941000-_-	AA	10.0	1.5384615384615385		0	0
+ref0005	reference	chr17:61941000-_+	chr17:61941000-_-	BB	10.0	1.5384615384615385		0	1
+ref0006	reference	chr17:62059999+_+	chr17:62059999+_-	AA	7.0	1.0769230769230769		0	1
+ref0006	reference	chr17:62059999+_+	chr17:62059999+_-	BB	7.0	1.0769230769230769		0	1
+ref0007	reference	imputed_ext_chr17_1_+	imputed_ext_chr17_1_-	AA				17	1
+ref0007	reference	imputed_ext_chr17_1_+	imputed_ext_chr17_1_-	BB				0	1
+ref0008	reference	imputed_ext_chr17_2_+	imputed_ext_chr17_2_-	AA				17	1
+ref0008	reference	imputed_ext_chr17_2_+	imputed_ext_chr17_2_-	BB				0	1
+ref0009	reference	imputed_ext_chr17_3_+	imputed_ext_chr17_3_-	AA				0	0
+ref0009	reference	imputed_ext_chr17_3_+	imputed_ext_chr17_3_-	BB				0	1
+ref_c001	reference	chr17:5782999+_+	chr17:5783000-_-	AA	6.0	0.9230769230769231		0	0
+ref_c001	reference	chr17:5782999+_+	chr17:5783000-_-	BB	6.0	0.9230769230769231		0	1
+sim00007	novel	chr17:3906000-_-	chr17:62059999+_+	AA	111.0	17.076923076923077	A	17	0
+sim00008	novel	chr17:5782999+_+	chr17:5785999+_+	AA	117.0	18.0	A	17	1
+sim00009	novel	chr17:5783000-_-	chr17:61941000-_-	AA	103.0	15.846153846153847	A	17	1

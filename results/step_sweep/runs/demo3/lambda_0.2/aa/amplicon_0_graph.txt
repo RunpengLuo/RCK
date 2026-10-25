@@ -1,0 +1,54 @@
+SequenceEdge: StartPosition, EndPosition, PredictedCopyCount, AverageCoverage, Size, NumberReadsMapped
+sequence	chr4:6019001-	chr4:6220999+	17.000000	229.827097	201999	0
+sequence	chr4:6221000-	chr4:6343999+	16.000000	232.370651	123000	0
+sequence	chr4:6344000-	chr4:6344999+	32.000000	296.982153	1000	0
+sequence	chr4:6345000-	chr4:6350000+	32.000000	296.982153	5001	0
+sequence	chr4:6350001-	chr4:6370000+	32.000000	496.470158	20000	0
+sequence	chr4:6370001-	chr4:6680000+	32.000000	416.297561	310000	0
+sequence	chr4:6680001-	chr4:6687999+	32.000000	295.482243	7999	0
+sequence	chr4:6688000-	chr4:6690000+	1.000000	295.482243	2001	0
+sequence	chr6:69527001-	chr6:69532999+	18.000000	299.981972	5999	0
+sequence	chr6:69533000-	chr6:69661999+	18.000000	305.017384	129000	0
+sequence	chr6:69662000-	chr6:69897000+	18.000000	289.732588	235001	0
+sequence	chr6:69897001-	chr6:69925999+	18.000000	246.485187	28999	0
+sequence	chr6:69926000-	chr6:70089999+	18.000000	258.234480	164000	0
+sequence	chr6:70090000-	chr6:70211999+	18.000000	262.830358	122000	0
+sequence	chr6:70212000-	chr6:70322999+	18.000000	266.483985	111000	0
+sequence	chr6:70323000-	chr6:70767000+	18.000000	263.684153	444001	0
+sequence	chr6:70767001-	chr6:70843999+	18.000000	232.298540	76999	0
+sequence	chr6:70844000-	chr6:70856999+	18.000000	211.487289	13000	0
+BreakpointEdge: StartPosition->EndPosition, PredictedCopyCount, NumberOfReadPairs, HomologySizeIfAvailable(<0ForInsertions), Homology/InsertionSequence
+concordant	chr4:6019000+->chr4:6019001-	1.000000	9	None	None
+concordant	chr4:6687999+->chr4:6688000-	1.000000	21	None	None
+concordant	chr4:6350000+->chr4:6350001-	32.000000	0	None	None
+concordant	chr4:6370000+->chr4:6370001-	32.000000	0	None	None
+concordant	chr4:6680000+->chr4:6680001-	32.000000	0	None	None
+concordant	chr4:6690000+->chr4:6690001-	1.000000	0	None	None
+concordant	chr6:69527000+->chr6:69527001-	2.000000	7	None	None
+concordant	chr6:70856999+->chr6:70857000-	2.000000	15	None	None
+concordant	chr6:69897000+->chr6:69897001-	18.000000	0	None	None
+concordant	chr6:70767000+->chr6:70767001-	18.000000	0	None	None
+concordant	chr4:6220999+->chr4:6221000-	1.000000	9	None	None
+concordant	chr4:6343999+->chr4:6344000-	2.000000	18	None	None
+concordant	chr4:6344999+->chr4:6345000-	2.000000	12	None	None
+concordant	chr6:69532999+->chr6:69533000-	2.000000	6	None	None
+concordant	chr6:69661999+->chr6:69662000-	2.000000	12	None	None
+concordant	chr6:69925999+->chr6:69926000-	2.000000	15	None	None
+concordant	chr6:70089999+->chr6:70090000-	2.000000	10	None	None
+concordant	chr6:70211999+->chr6:70212000-	2.000000	15	None	None
+concordant	chr6:70322999+->chr6:70323000-	2.000000	14	None	None
+concordant	chr6:70843999+->chr6:70844000-	2.000000	13	None	None
+discordant	chr4:6019001-->chr6:70856999+	16.000000	114	None	None
+discordant	chr4:6220999+->chr4:6344000-	16.000000	100	None	None
+discordant	chr4:6221000-->chr4:6687999+	15.000000	106	None	None
+discordant	chr4:6343999+->chr4:6344000-	14.000000	102	None	None
+discordant	chr4:6344999+->chr4:6345000-	14.000000	87	None	None
+discordant	chr4:6344999+->chr6:70211999+	16.000000	106	None	None
+discordant	chr4:6345000-->chr6:70843999+	16.000000	113	None	None
+discordant	chr4:6687999+->chr6:69527001-	16.000000	112	None	None
+discordant	chr6:69532999+->chr6:70322999+	16.000000	87	None	None
+discordant	chr6:69533000-->chr6:70323000-	16.000000	95	None	None
+discordant	chr6:69661999+->chr6:70844000-	16.000000	106	None	None
+discordant	chr6:69662000-->chr6:69926000-	16.000000	107	None	None
+discordant	chr6:69925999+->chr6:70212000-	16.000000	101	None	None
+discordant	chr6:70089999+->chr6:70090000-	16.000000	94	None	None

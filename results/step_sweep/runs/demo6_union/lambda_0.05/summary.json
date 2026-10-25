@@ -1,0 +1,144 @@
+{
+  "graph": {
+    "name": "union",
+    "nodes": 28,
+    "segments": 11,
+    "adjacencies": {
+      "reference": 14,
+      "novel": 6,
+      "imputed": 6
+    },
+    "terminals": 6,
+    "regions": [
+      "chr15:50227001-52785999",
+      "chr17:3900001-5790000",
+      "chr17:61941001-62059999"
+    ],
+    "normalization": [
+      "contracted 2 phantom segment(s) of <= 2 bp",
+      "merged imputed imputed_adj_anchor_chr15_3 into reference ref0001"
+    ]
+  },
+  "scale": {
+    "depth_per_copy": 13.809776182367344,
+    "junction_reads_per_copy": 6.5,
+    "baseline_cn": 1.968779953124812,
+    "depth_method": "subgraph_scale",
+    "junction_method": "subgraph_scale",
+    "depth_mode": "tumor",
+    "ratio_baseline": null,
+    "details": {
+      "subgraph_sample": "sim_tumor1",
+      "subgraph_purity": 0.8000000000000005,
+      "subgraph_tumor_ploidy": 1.96709323583181,
+      "subgraph_cell_ploidy": 1.968779953124812,
+      "subgraph_ploidy_class": 2,
+      "subgraph_method": "segment lattice fit, ploidy class chosen jointly over 1 tumor sample(s)",
+      "subgraph_junction_sample": "sim_tumor1",
+      "subgraph_alternatives": {
+        "2": {
+          "score": 0.05710993190571667,
+          "depth_per_copy": 13.809776182367344,
+          "purity": 0.8000000000000005,
+          "tumor_ploidy": 1.96709323583181
+        },
+        "4": {
+          "score": 0.08981192103872863,
+          "depth_per_copy": 8.323700712659768,
+          "purity": 0.6600000000000004,
+          "tumor_ploidy": 3.937842778793419
+        },
+        "6": {
+          "score": 0.12290289168124595,
+          "depth_per_copy": 6.456518734613304,
+          "purity": 0.5700000000000003,
+          "tumor_ploidy": 5.9067641681901275
+        }
+      },
+      "background_flank_cn": {
+        "chr15:50227001-52785999": 2.081446534245925,
+        "chr17:3900001-5790000": 1.910424550783282,
+        "chr17:61941001-62059999": 2.2702787817891092
+      }
+    }
+  },
+  "flow": {
+    "status": "optimal",
+    "objective": 3.0288016826819706,
+    "mip_gap": 8.547486652379724e-05,
+    "imputed_used": [],
+    "ecdna_copies_total": 112,
+    "linear_end_copies": 0
+  },
+  "amplicon_call": "ecDNA",
+  "ambiguity": {
+    "ambiguous": false,
+    "window": 2.0,
+    "n_alternatives": 0,
+    "n_species": 2,
+    "steps": 7,
+    "alternatives": []
+  },
+  "circular_fraction": 1.0,
+  "decompositions": [
+    {
+      "rank": 1,
+      "objective": 2.0014,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 2.300736,
+      "data_objective_int": 2.656931,
+      "pruned": [],
+      "steps": 7,
+      "ambiguity": {
+        "ambiguous": false,
+        "window": 2.0,
+        "n_alternatives": 0,
+        "n_species": 2,
+        "steps": 7,
+        "alternatives": []
+      },
+      "species": [
+        {
+          "weight": 8.62,
+          "weight_int": 8,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 1998998,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00010",
+            "sim00011",
+            "sim00012"
+          ]
+        },
+        {
+          "weight": 8.22,
+          "weight_int": 8,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 1998998,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00005",
+            "sim00006",
+            "sim00007"
+          ]
+        }
+      ]
+    }
+  ],
+  "inputs": {
+    "mode": "subgraph",
+    "windows": null,
+    "extremities": null,
+    "paths": "/n/fs/ugrad/ug28/ym3292/amplicon-allele-analysis/simulations/runs/demo6_cycle2_ecdna/subgraph_union/union/paths.tsv"
+  },
+  "runtime_s": 0.35,
+  "paths_loaded": 2
+}

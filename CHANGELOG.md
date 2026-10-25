@@ -108,6 +108,34 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
 - Result and log files:
   - `results/plan2/`: demo3, and demo4 normal, tumor1 and tumor2;
   - `bench_summary.txt`, `test_run.log` and `test_demo3.log`.
+- Validation runs of `rck-ecdna` on new simulations. Each was run from the subgraph folder
+  alone, with `--truth-dir`, on a Gurobi academic WLS license. The outputs are kept in
+  amplicon-allele-analysis under `simulations/runs/<run>/`, and that repository's
+  `CHANGELOG.md` gives the full scores. No RCK code changed.
+  - demo5, one simple cycle (`demo5_cycle1_ecdna/rck_out/`): one circular species recovered
+    exactly (16.82 copies against 16.0), composite 0.99.
+  - demo6, two unnested cycles on chr17 and chr15, given as one union subgraph
+    (`demo6_cycle2_ecdna/rck_out_union/`): exactly two circular species, each matching its
+    truth species one to one, composites 0.984 and 0.994.
+  - demo7, a 3 Mb cycle with a second cycle nested inside it on chr4
+    (`demo7_nestedcycles_ecdna/rck_out_union/` and `rck_out_union_totalonly/`): not
+    recovered. With default settings the composites are 0.43 and 0. With total-only
+    observations (`--min-snps-allele 100000000`) they are 0.51 and 0.33.
+- Known limitations found by demo7:
+  - **Nested species merge.** When two species share reference segments, the
+    minimum-species decomposition prefers one walk that traverses both. On demo7 it returned
+    a 7.54 Mb circle at 8 copies that runs through the outer cycle twice and the nested cycle
+    once. The flow itself was close to the truth (16–17 and 8–10 junction copies against
+    16.9 and 9.1). Long-read paths only break the tie when some read separates the
+    species, and demo7's 3 multi-junction reads each lie inside one species. Possible
+    remedies: penalize walks that repeat a sub-cycle, use copy-number differences between
+    species, or require more read support.
+  - **Allele observations are trusted as phased.** Segment allele copy numbers are taken on
+    the true haplotype scale. When `subgraph_construct.py` cannot orient a phase block, here
+    because the only pure junctions there attach to segments shared by both species, A and B
+    are swapped against the junction labels. On demo7 this made the flow objective 39.3
+    instead of 8.8 and brought in imputed edges. Possible remedy: let the flow choose a
+    per-block A/B flip for blocks whose `phase_blocks.tsv` orientation is 0 or missing.
 
 ### Changed
 

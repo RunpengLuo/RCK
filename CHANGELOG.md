@@ -159,6 +159,73 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
       penalty in the MILP. It split true duplications on demo3 (composite 0.96 → 0.72) and on
       demo7 with block flips (0.77 for `ecdna2`).
   - Tests: `test_step_penalty.py`. Documented in `docs/ecDNA.md` (section 4).
+- **Offline re-ranking over `--step-penalty`** (`--keep-pool`, `rck.ecdna.rerank`,
+  `rck-ecdna-rerank`), so one run gives the answer of every λ > 0. λ acts only in the ranking,
+  and every λ > 0 widens the pool to the same `--ambiguity-window`. The decomposition MILP and
+  its pool therefore do not depend on λ, but the pruning of the widened pool does.
+  - `--keep-pool` (needs `--step-penalty` > 0) also writes `pool/`. The run's own outputs are
+    unchanged.
+    - `pool.tsv`: every pool solution before the pruning, with what the ranking reads.
+    - `decompositions.tsv` and `evaluation.tsv`: the same solutions, annotated, refitted and
+      evaluated like ranked ones.
+    - `pool.json`: the settings, the rank-1 solution per `--pool-lambdas` value (default 0, 0.02,
+      0.05, 0.1, 0.2, 0.5), and those solutions' same-fit alternatives.
+  - `python -m rck.ecdna.rerank RUN --lambdas ...`: per λ, the rank-1 solution, its refitted
+    significant species, steps, residual, composite per truth species, and `ambiguous`,
+    `decided_by`, `gap` and `n_alternatives`. It uses the run's own functions.
+  - λ = 0 is only emulated, because a λ = 0 run solves a narrower pool whose ties can come out
+    differently. On demo3, λ = 0 gives 12.77 copies and every λ > 0 an equivalent 12.70.
+  - `decompose`: the pruning (`pool_keeps`, `prune_pool`), the ranking key (`ranking_key`,
+    `rank_pool`) and the ambiguity report (`same_fit_structures`, `ambiguity_summary`) are now
+    functions of recorded numbers, shared by the run and the re-ranking. `CycleDecomposer.solve`
+    returns the unpruned pool, and `decompose()` prunes it as before. Results are unchanged: the
+    existing `test_step_penalty.py` cases pass as before.
+  - Tests in `test_step_penalty.py`:
+    - pool ranking without Gurobi;
+    - at 2:1 and 3:1, a pool kept at λ = 0.1 re-ranks to the rank-1 decomposition and ambiguity
+      fields of direct runs at λ = 0.02–0.5;
+    - the command line refuses `--keep-pool` at λ = 0, and `rerank` reproduces a run's rank 1.
+  - The re-ranking was checked locally (restricted licence) against `results/step_sweep/sweep.tsv`
+    on demo4 `amplicon_1`, demo5 and demo6. The informative cases, demo3, demo7 total-only and
+    demo8, need a full licence and are the first step of `results/bench_nested/`.
+- **`results/bench_nested/`**: a minimum benchmark for choosing `--step-penalty` and measuring
+  nested ecDNA end to end.
+  - Cases: 14 simulations from amplicon-allele-analysis `make_scenarios.py --set nested` (7
+    scenarios × 2 checked seeds, with `--block-flip unoriented`) and the 8 step-sweep cases.
+  - Each case gets two runs, λ = 0 and a `--keep-pool` run at 0.1. λ = 0.02, 0.05, 0.1, 0.2 and
+    0.5 are re-ranked from the pool.
+  - `run_case.py` and `bench_nested.sbatch`: a Slurm array with at most 2 concurrent tasks, the
+    conda env on `PATH`, and each run skipped when its outputs exist.
+  - `collect.py` writes:
+    - `rerank_validation.tsv`;
+    - `bench_sweep.tsv`: per case and λ, the rank-1 species against the truth, composites, a
+      `merged` flag, ambiguity and runtime;
+    - `pipeline.tsv`: per bench case at the chosen λ, subgraph scores, the flow, block flips
+      against the truth, the RCK scores, and the stage behind each failure;
+    - the results section of `README.md`: the smallest λ on the best plateau with no control or
+      demo regression, and the λ range that gives the same answers.
+  - The default `--step-penalty` stays 0.
+  - Run on ionic, 20 of 22 cases. `nest_cross_3sp_s406` and `nest_cross_1to1_s502` were stopped
+    at the session's time limit. Their decomposition MILPs take tens of minutes; the three-species
+    case was at an 81% gap after 800 s.
+    - Re-ranking check: the re-ranked λ > 0 composites and ambiguity fields match
+      `results/step_sweep/sweep.tsv` at 32/32 (case, λ), including demo3, demo7 total-only and
+      demo8, and the λ = 0 runs at 8/8. λ = 0 emulated from the pool misses demo3 (0.959 against
+      0.960), the expected tie; that is why λ = 0 is run.
+    - Mean composite over the 20 cases: 0.800 at λ = 0, 0.803 at 0.02, 0.896 at 0.05–0.2 and
+      0.898 at 0.5. No control or demo case loses against λ = 0.
+    - The rule picks 0.5 (the edge of the grid) because of one case that stays wrong at every λ.
+      λ = 0.05 is the smallest value with the large gain. The README records both.
+    - Six of 12 bench cases still fail at the chosen λ:
+      - `ctrl_separate_s601` and `s602`: the subgraph drops segments of one species;
+      - `nest_samehap_3to1_s301` and `nest_cross_3sp_s402`: a species is still merged;
+      - `nest_cross_1to1_s501`: the nested species scores 0.56;
+      - `ctrl_dup_s702`: one ecDNA phase block wrong after the flow, and an imputed edge.
+    - 754 s of RCK wall time in all.
+  - `run_case.py`: frees the Gurobi default environment at the end of each task
+    (`disposeDefaultEnv`) and retries up to 5 times, 2 min apart. Sessions of finished WLS
+    processes stayed counted ("5 active sessions for a baseline of 2"), and 3 tasks failed on it.
+  - The runs live on scratch: `results/bench_nested/runs` is a git-ignored symlink.
 - Tests under `tests/ecdna/`, with fixtures from demo3 and demo4: subgraph reading, scale,
   flow, decomposition, walks, refit, subgraph inputs, evaluation, recovery matrix
   (`test_recovery.py`), figures (`test_plot.py`), Gurobi environment, and end-to-end demo3 and

@@ -1,0 +1,122 @@
+case	kind	scenario	step_penalty	source	n_species	n_truth	weights	steps	residual	composites	mean_composite	merged	merged_note	ambiguous	decided_by	gap	n_alternatives	runtime_s
+demo3	regression	demo3	0.0	run	1	1	12.77	22	0.0	ecdna1=0.960	0.9596	False		True	species_penalty	-0.0008	3	4.69
+demo3	regression	demo3	0.02	pool	1	1	12.7	22	0.0	ecdna1=0.959	0.9587	False		True	species_penalty	-0.0064	3	10.37
+demo3	regression	demo3	0.05	pool	1	1	12.7	22	0.0	ecdna1=0.959	0.9587	False		True	species_penalty	-0.0064	3	10.37
+demo3	regression	demo3	0.1	pool	1	1	12.7	22	0.0	ecdna1=0.959	0.9587	False		True	species_penalty	-0.0064	3	10.37
+demo3	regression	demo3	0.2	pool	1	1	12.7	22	0.0	ecdna1=0.959	0.9587	False		True	species_penalty	-0.0064	3	10.37
+demo3	regression	demo3	0.5	pool	1	1	12.7	22	0.0	ecdna1=0.959	0.9587	False		True	species_penalty	-0.0064	3	10.37
+demo4_amp0	regression	demo4_amp0	0.0	run	1	1	5.76	18	0.0	ecdna1=0.983	0.9834	False		False			0	1.28
+demo4_amp0	regression	demo4_amp0	0.02	pool	1	1	5.76	18	0.0	ecdna1=0.983	0.9834	False		False			0	0.91
+demo4_amp0	regression	demo4_amp0	0.05	pool	1	1	5.76	18	0.0	ecdna1=0.983	0.9834	False		False			0	0.91
+demo4_amp0	regression	demo4_amp0	0.1	pool	1	1	5.76	18	0.0	ecdna1=0.983	0.9834	False		False			0	0.91
+demo4_amp0	regression	demo4_amp0	0.2	pool	1	1	5.76	18	0.0	ecdna1=0.983	0.9834	False		False			0	0.91
+demo4_amp0	regression	demo4_amp0	0.5	pool	1	1	5.76	18	0.0	ecdna1=0.983	0.9834	False		False			0	0.91
+demo4_amp1	regression	demo4_amp1	0.0	run	1	1	6.39	12	0.0	ecdna2=0.997	0.9966	False		False			0	0.74
+demo4_amp1	regression	demo4_amp1	0.02	pool	1	1	6.39	12	0.0	ecdna2=0.997	0.9966	False		False			0	0.22
+demo4_amp1	regression	demo4_amp1	0.05	pool	1	1	6.39	12	0.0	ecdna2=0.997	0.9966	False		False			0	0.22
+demo4_amp1	regression	demo4_amp1	0.1	pool	1	1	6.39	12	0.0	ecdna2=0.997	0.9966	False		False			0	0.22
+demo4_amp1	regression	demo4_amp1	0.2	pool	1	1	6.39	12	0.0	ecdna2=0.997	0.9966	False		False			0	0.22
+demo4_amp1	regression	demo4_amp1	0.5	pool	1	1	6.39	12	0.0	ecdna2=0.997	0.9966	False		False			0	0.22
+demo5	regression	demo5	0.0	run	1	1	16.82	5	0.0	ecdna1=0.990	0.9897	False		False			0	0.74
+demo5	regression	demo5	0.02	pool	1	1	16.82	5	0.0	ecdna1=0.990	0.9897	False		False			0	0.16
+demo5	regression	demo5	0.05	pool	1	1	16.82	5	0.0	ecdna1=0.990	0.9897	False		False			0	0.16
+demo5	regression	demo5	0.1	pool	1	1	16.82	5	0.0	ecdna1=0.990	0.9897	False		False			0	0.16
+demo5	regression	demo5	0.2	pool	1	1	16.82	5	0.0	ecdna1=0.990	0.9897	False		False			0	0.16
+demo5	regression	demo5	0.5	pool	1	1	16.82	5	0.0	ecdna1=0.990	0.9897	False		False			0	0.16
+demo6_union	regression	demo6_union	0.0	run	2	2	8.62,8.22	7	0.0	ecdna1=0.984,ecdna2=0.994	0.9895	False		False			0	0.78
+demo6_union	regression	demo6_union	0.02	pool	2	2	8.62,8.22	7	0.0	ecdna1=0.984,ecdna2=0.994	0.9895	False		False			0	0.52
+demo6_union	regression	demo6_union	0.05	pool	2	2	8.62,8.22	7	0.0	ecdna1=0.984,ecdna2=0.994	0.9895	False		False			0	0.52
+demo6_union	regression	demo6_union	0.1	pool	2	2	8.62,8.22	7	0.0	ecdna1=0.984,ecdna2=0.994	0.9895	False		False			0	0.52
+demo6_union	regression	demo6_union	0.2	pool	2	2	8.62,8.22	7	0.0	ecdna1=0.984,ecdna2=0.994	0.9895	False		False			0	0.52
+demo6_union	regression	demo6_union	0.5	pool	2	2	8.62,8.22	7	0.0	ecdna1=0.984,ecdna2=0.994	0.9895	False		False			0	0.52
+demo7_blockflip	regression	demo7_blockflip	0.0	run	2	2	16.43,9.08	31	0.0	ecdna1=0.994,ecdna2=1.000	0.997	False		True	species_penalty	0.0	16	6.37
+demo7_blockflip	regression	demo7_blockflip	0.02	pool	2	2	16.43,9.08	31	0.0	ecdna1=0.994,ecdna2=1.000	0.997	False		True	species_penalty	0.82	16	11.19
+demo7_blockflip	regression	demo7_blockflip	0.05	pool	2	2	16.43,9.08	31	0.0	ecdna1=0.994,ecdna2=1.000	0.997	False		True	species_penalty	0.9942	16	11.19
+demo7_blockflip	regression	demo7_blockflip	0.1	pool	2	2	16.43,9.08	31	0.0	ecdna1=0.994,ecdna2=1.000	0.997	False		True	species_penalty	0.9942	16	11.19
+demo7_blockflip	regression	demo7_blockflip	0.2	pool	2	2	16.43,9.08	31	0.0	ecdna1=0.994,ecdna2=1.000	0.997	False		True	species_penalty	0.9942	16	11.19
+demo7_blockflip	regression	demo7_blockflip	0.5	pool	2	2	16.43,9.08	31	0.0	ecdna1=0.994,ecdna2=1.000	0.997	False		True	species_penalty	0.9942	16	11.19
+demo7_totalonly	regression	demo7_totalonly	0.0	run	2	2	8.17,1.77	67	0.0	ecdna1=0.510,ecdna2=0.335	0.4221	True	ec1 carries ecdna1+ecdna2	True	tie-break	0.0102	19	7.86
+demo7_totalonly	regression	demo7_totalonly	0.02	pool	2	2	8.17,1.77	67	0.0	ecdna1=0.510,ecdna2=0.335	0.4221	True	ec1 carries ecdna1+ecdna2	True	step_penalty	0.356	19	16.09
+demo7_totalonly	regression	demo7_totalonly	0.05	pool	2	2	15.38,7.77	31	0.0	ecdna1=0.982,ecdna2=0.971	0.9764	False		True	species_penalty	0.193	20	16.09
+demo7_totalonly	regression	demo7_totalonly	0.1	pool	2	2	15.38,7.77	31	0.0	ecdna1=0.982,ecdna2=0.971	0.9764	False		True	species_penalty	0.393	20	16.09
+demo7_totalonly	regression	demo7_totalonly	0.2	pool	2	2	15.38,7.77	31	0.0	ecdna1=0.982,ecdna2=0.971	0.9764	False		True	species_penalty	0.793	20	16.09
+demo7_totalonly	regression	demo7_totalonly	0.5	pool	2	2	15.38,7.77	31	0.0	ecdna1=0.982,ecdna2=0.971	0.9764	False		True	species_penalty	1.993	20	16.09
+demo8	regression	demo8	0.0	run	2	2	18,6.15	28	0.0	ecdna1=0.985,ecdna2=0.989	0.9869	False		True	tie-break	0.0038	25	9.47
+demo8	regression	demo8	0.02	pool	2	2	18,6.15	28	0.0	ecdna1=0.985,ecdna2=0.989	0.9869	False		True	step_penalty	0.3838	25	35.29
+demo8	regression	demo8	0.05	pool	2	2	18,6.15	28	0.0	ecdna1=0.985,ecdna2=0.989	0.9869	False		True	step_penalty	0.9538	25	35.29
+demo8	regression	demo8	0.1	pool	2	2	18,6.15	28	0.0	ecdna1=0.985,ecdna2=0.989	0.9869	False		True	step_penalty	1.9038	25	35.29
+demo8	regression	demo8	0.2	pool	2	2	18,6.15	28	0.0	ecdna1=0.985,ecdna2=0.989	0.9869	False		True	step_penalty	3.8038	25	35.29
+demo8	regression	demo8	0.5	pool	2	2	18,6.15	28	0.0	ecdna1=0.985,ecdna2=0.989	0.9869	False		True	step_penalty	9.5038	25	35.29
+nest_cross_2to1_s101	bench	nest_cross_2to1	0.0	run	2	2	7,5.77	58	0.0	ecdna1=0.523,ecdna2=0.529	0.5262	True	ec1 carries ecdna1+ecdna2	True	tie-break	0.0002	23	22.92
+nest_cross_2to1_s101	bench	nest_cross_2to1	0.02	pool	2	2	7,5.77	58	0.0	ecdna1=0.523,ecdna2=0.529	0.5262	True	ec1 carries ecdna1+ecdna2	True	step_penalty	0.0202	23	47.01
+nest_cross_2to1_s101	bench	nest_cross_2to1	0.05	pool	2	2	12.9,5.77	29	0.0	ecdna1=0.973,ecdna2=0.955	0.9636	False		True	species_penalty	-0.0004	23	47.01
+nest_cross_2to1_s101	bench	nest_cross_2to1	0.1	pool	2	2	12.9,5.77	29	0.0	ecdna1=0.973,ecdna2=0.955	0.9636	False		True	species_penalty	-0.0004	23	47.01
+nest_cross_2to1_s101	bench	nest_cross_2to1	0.2	pool	2	2	12.9,5.77	29	0.0	ecdna1=0.973,ecdna2=0.955	0.9636	False		True	species_penalty	-0.0004	23	47.01
+nest_cross_2to1_s101	bench	nest_cross_2to1	0.5	pool	2	2	12.9,5.77	29	0.0	ecdna1=0.973,ecdna2=0.955	0.9636	False		True	species_penalty	-0.0004	23	47.01
+nest_cross_2to1_s103	bench	nest_cross_2to1	0.0	run	3	2	10,9.15,1.13	69	0.0	ecdna1=0.544,ecdna2=0.658	0.601	True	ec1 carries ecdna1+ecdna2	True	tie-break	0.0012	23	25.24
+nest_cross_2to1_s103	bench	nest_cross_2to1	0.02	pool	3	2	10,9.15,1.13	69	0.0	ecdna1=0.544,ecdna2=0.658	0.601	True	ec1 carries ecdna1+ecdna2	True	step_penalty	0.1212	23	55.79
+nest_cross_2to1_s103	bench	nest_cross_2to1	0.05	pool	2	2	19.46,9.03	27	0.0	ecdna1=0.986,ecdna2=0.973	0.9794	False		True	species_penalty	0.2976	23	55.79
+nest_cross_2to1_s103	bench	nest_cross_2to1	0.1	pool	2	2	19.46,9.03	27	0.0	ecdna1=0.986,ecdna2=0.973	0.9794	False		True	species_penalty	0.5976	23	55.79
+nest_cross_2to1_s103	bench	nest_cross_2to1	0.2	pool	2	2	19.46,9.03	27	0.0	ecdna1=0.986,ecdna2=0.973	0.9794	False		True	species_penalty	1.1976	23	55.79
+nest_cross_2to1_s103	bench	nest_cross_2to1	0.5	pool	2	2	19.46,9.03	27	0.0	ecdna1=0.986,ecdna2=0.973	0.9794	False		True	species_penalty	2.9976	23	55.79
+nest_samehap_2to1_s201	bench	nest_samehap_2to1	0.0	run	2	2	12.08,5.69	24	0.0	ecdna1=0.999,ecdna2=0.990	0.9942	False		True	species_penalty	0.0036	17	3.77
+nest_samehap_2to1_s201	bench	nest_samehap_2to1	0.02	pool	2	2	12.08,5.69	24	0.0	ecdna1=0.999,ecdna2=0.990	0.9942	False		True	species_penalty	0.5236	17	7.38
+nest_samehap_2to1_s201	bench	nest_samehap_2to1	0.05	pool	2	2	12.08,5.69	24	0.0	ecdna1=0.999,ecdna2=0.990	0.9942	False		True	species_penalty	1.3036	17	7.38
+nest_samehap_2to1_s201	bench	nest_samehap_2to1	0.1	pool	2	2	12.08,5.69	24	0.0	ecdna1=0.999,ecdna2=0.990	0.9942	False		True	species_penalty	2.6036	17	7.38
+nest_samehap_2to1_s201	bench	nest_samehap_2to1	0.2	pool	2	2	12.08,5.69	24	0.0	ecdna1=0.999,ecdna2=0.990	0.9942	False		True	species_penalty	5.2036	17	7.38
+nest_samehap_2to1_s201	bench	nest_samehap_2to1	0.5	pool	2	2	12.08,5.69	24	0.0	ecdna1=0.999,ecdna2=0.990	0.9942	False		True	species_penalty	13.0036	17	7.38
+nest_samehap_2to1_s202	bench	nest_samehap_2to1	0.0	run	2	2	9.79,1.11	74	0.0	ecdna1=0.431,ecdna2=0.559	0.4949	True	ec1 carries ecdna1+ecdna2; ec2 carries ecdna1+ecdna2	True	tie-break	0.995	26	7.1
+nest_samehap_2to1_s202	bench	nest_samehap_2to1	0.02	pool	2	2	9.79,1.11	74	0.0	ecdna1=0.431,ecdna2=0.559	0.4949	True	ec1 carries ecdna1+ecdna2; ec2 carries ecdna1+ecdna2	True	step_penalty	0.015	26	28.35
+nest_samehap_2to1_s202	bench	nest_samehap_2to1	0.05	pool	2	2	19.66,10.99	25	0.0	ecdna1=0.991,ecdna2=0.987	0.9887	False		True	step_penalty	0.8526	26	28.35
+nest_samehap_2to1_s202	bench	nest_samehap_2to1	0.1	pool	2	2	19.66,10.99	25	0.0	ecdna1=0.991,ecdna2=0.987	0.9887	False		True	step_penalty	1.7026	26	28.35
+nest_samehap_2to1_s202	bench	nest_samehap_2to1	0.2	pool	2	2	19.66,10.99	25	0.0	ecdna1=0.991,ecdna2=0.987	0.9887	False		True	step_penalty	3.4026	26	28.35
+nest_samehap_2to1_s202	bench	nest_samehap_2to1	0.5	pool	2	2	19.66,10.99	25	0.0	ecdna1=0.991,ecdna2=0.987	0.9887	False		True	step_penalty	8.5026	26	28.35
+nest_samehap_3to1_s301	bench	nest_samehap_3to1	0.0	run	3	2	10.88,2.63,1.21	30	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	True	ec2 carries ecdna1+ecdna2	True	species_penalty	0.003	19	5.94
+nest_samehap_3to1_s301	bench	nest_samehap_3to1	0.02	pool	3	2	10.88,2.63,1.21	30	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	True	ec2 carries ecdna1+ecdna2	True	species_penalty	0.543	19	15.81
+nest_samehap_3to1_s301	bench	nest_samehap_3to1	0.05	pool	3	2	10.88,2.63,1.21	30	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	True	ec2 carries ecdna1+ecdna2	True	step_penalty	0.8512	19	15.81
+nest_samehap_3to1_s301	bench	nest_samehap_3to1	0.1	pool	3	2	10.88,2.63,1.21	30	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	True	ec2 carries ecdna1+ecdna2	True	step_penalty	0.7012	19	15.81
+nest_samehap_3to1_s301	bench	nest_samehap_3to1	0.2	pool	3	2	10.88,2.63,1.21	30	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	True	ec2 carries ecdna1+ecdna2	True	step_penalty	0.4012	19	15.81
+nest_samehap_3to1_s301	bench	nest_samehap_3to1	0.5	pool	4	2	10.78,2.73,1.12,1.11	27	0.0	ecdna1=0.962,ecdna2=0.517	0.7396	True	ec2 carries ecdna1+ecdna2	True	step_penalty	0.4988	19	15.81
+nest_samehap_3to1_s304	bench	nest_samehap_3to1	0.0	run	2	2	20.07,5.22	35	0.0	ecdna1=0.998,ecdna2=0.958	0.9778	False		True	species_penalty	0.0108	15	33.15
+nest_samehap_3to1_s304	bench	nest_samehap_3to1	0.02	pool	2	2	20.07,5.22	35	0.0	ecdna1=0.998,ecdna2=0.958	0.9778	False		True	species_penalty	0.999	15	58.23
+nest_samehap_3to1_s304	bench	nest_samehap_3to1	0.05	pool	2	2	20.07,5.22	35	0.0	ecdna1=0.998,ecdna2=0.958	0.9778	False		True	species_penalty	0.999	15	58.23
+nest_samehap_3to1_s304	bench	nest_samehap_3to1	0.1	pool	2	2	20.07,5.22	35	0.0	ecdna1=0.998,ecdna2=0.958	0.9778	False		True	species_penalty	0.999	15	58.23
+nest_samehap_3to1_s304	bench	nest_samehap_3to1	0.2	pool	2	2	20.07,5.22	35	0.0	ecdna1=0.998,ecdna2=0.958	0.9778	False		True	species_penalty	0.999	15	58.23
+nest_samehap_3to1_s304	bench	nest_samehap_3to1	0.5	pool	2	2	20.07,5.22	35	0.0	ecdna1=0.998,ecdna2=0.958	0.9778	False		True	species_penalty	0.999	15	58.23
+nest_cross_3sp_s402	bench	nest_cross_3sp	0.0	run	3	3	8.15,6.75,5.28	171	0.0	ecdna1=0.624,ecdna2=0.583,ecdna3=0.580	0.5957	True	ec2 carries ecdna1+ecdna2; ec3 carries ecdna1+ecdna3	True	tie-break	0.0022	32	48.8
+nest_cross_3sp_s402	bench	nest_cross_3sp	0.02	pool	3	3	8.06,6.82,5.2	160	0.0	ecdna1=0.628,ecdna2=0.691,ecdna3=0.577	0.6322	True	ec3 carries ecdna1+ecdna3	True	step_penalty	0.0444	33	77.15
+nest_cross_3sp_s402	bench	nest_cross_3sp	0.05	pool	3	3	8.06,6.82,5.2	160	0.0	ecdna1=0.628,ecdna2=0.691,ecdna3=0.577	0.6322	True	ec3 carries ecdna1+ecdna3	True	step_penalty	0.1522	33	77.15
+nest_cross_3sp_s402	bench	nest_cross_3sp	0.1	pool	3	3	8.06,6.82,5.2	160	0.0	ecdna1=0.628,ecdna2=0.691,ecdna3=0.577	0.6322	True	ec3 carries ecdna1+ecdna3	True	step_penalty	0.7022	33	77.15
+nest_cross_3sp_s402	bench	nest_cross_3sp	0.2	pool	3	3	8.06,6.82,5.2	160	0.0	ecdna1=0.628,ecdna2=0.691,ecdna3=0.577	0.6322	True	ec3 carries ecdna1+ecdna3	True	step_penalty	1.8022	33	77.15
+nest_cross_3sp_s402	bench	nest_cross_3sp	0.5	pool	3	3	8.06,6.82,5.2	160	0.0	ecdna1=0.628,ecdna2=0.691,ecdna3=0.577	0.6322	True	ec3 carries ecdna1+ecdna3	True	step_penalty	5.1022	33	77.15
+nest_cross_1to1_s501	bench	nest_cross_1to1	0.0	run	2	2	23.05,5	44	0.0	ecdna1=0.864,ecdna2=0.568	0.716	False		True	reads or tie-break	0.0	37	62.7
+nest_cross_1to1_s501	bench	nest_cross_1to1	0.02	pool	2	2	21.06,5.02	42	0.0	ecdna1=0.893,ecdna2=0.564	0.7285	False		True	step_penalty	0.0196	37	136.18
+nest_cross_1to1_s501	bench	nest_cross_1to1	0.05	pool	2	2	21.06,5.02	42	0.0	ecdna1=0.893,ecdna2=0.564	0.7285	False		True	step_penalty	0.0496	37	136.18
+nest_cross_1to1_s501	bench	nest_cross_1to1	0.1	pool	2	2	21.06,5.02	42	0.0	ecdna1=0.893,ecdna2=0.564	0.7285	False		True	step_penalty	0.0996	37	136.18
+nest_cross_1to1_s501	bench	nest_cross_1to1	0.2	pool	2	2	21.06,5.02	42	0.0	ecdna1=0.893,ecdna2=0.564	0.7285	False		True	step_penalty	0.1996	37	136.18
+nest_cross_1to1_s501	bench	nest_cross_1to1	0.5	pool	2	2	21.06,5.02	42	0.0	ecdna1=0.893,ecdna2=0.564	0.7285	False		True	step_penalty	0.4996	37	136.18
+nest_cross_1to1_s502	bench	nest_cross_1to1	0.0	run	3	2	13.67,7.2,2.82	82	0.0	ecdna1=0.730,ecdna2=0.521	0.6259	False		True	species_penalty	-0.0001	43	487.93
+ctrl_separate_s601	bench	ctrl_separate	0.0	run	2	2	14.73,10.88	32	5.0	ecdna1=0.985,ecdna2=0.533	0.7587	False		False			0	2.06
+ctrl_separate_s601	bench	ctrl_separate	0.02	pool	2	2	14.73,10.88	32	5.0	ecdna1=0.985,ecdna2=0.533	0.7587	False		False			0	1.79
+ctrl_separate_s601	bench	ctrl_separate	0.05	pool	2	2	14.73,10.88	32	5.0	ecdna1=0.985,ecdna2=0.533	0.7587	False		False			0	1.79
+ctrl_separate_s601	bench	ctrl_separate	0.1	pool	2	2	14.73,10.88	32	5.0	ecdna1=0.985,ecdna2=0.533	0.7587	False		False			0	1.79
+ctrl_separate_s601	bench	ctrl_separate	0.2	pool	2	2	14.73,10.88	32	5.0	ecdna1=0.985,ecdna2=0.533	0.7587	False		False			0	1.79
+ctrl_separate_s601	bench	ctrl_separate	0.5	pool	2	2	14.73,10.88	32	5.0	ecdna1=0.985,ecdna2=0.533	0.7587	False		False			0	1.79
+ctrl_separate_s602	bench	ctrl_separate	0.0	run	3	1	9.16,7.16,1.08	44	0.0	ecdna1=0.581	0.5807	False		True	tie-break	0.0026	2	2.2
+ctrl_separate_s602	bench	ctrl_separate	0.02	pool	3	1	9.16,7.16,1.08	44	0.0	ecdna1=0.581	0.5807	False		True	step_penalty	0.2626	2	1.78
+ctrl_separate_s602	bench	ctrl_separate	0.05	pool	3	1	9.16,7.16,1.08	44	0.0	ecdna1=0.581	0.5807	False		True	step_penalty	0.6526	2	1.78
+ctrl_separate_s602	bench	ctrl_separate	0.1	pool	3	1	9.16,7.16,1.08	44	0.0	ecdna1=0.581	0.5807	False		True	step_penalty	1.3026	2	1.78
+ctrl_separate_s602	bench	ctrl_separate	0.2	pool	3	1	9.16,7.16,1.08	44	0.0	ecdna1=0.581	0.5807	False		True	step_penalty	2.6026	2	1.78
+ctrl_separate_s602	bench	ctrl_separate	0.5	pool	3	1	9.16,7.16,1.08	44	0.0	ecdna1=0.581	0.5807	False		True	step_penalty	6.5026	2	1.78
+ctrl_dup_s701	bench	ctrl_dup	0.0	run	1	1	19.23	14	0.0	ecdna1=0.997	0.997	False		True	species_penalty	1.0032	2	0.89
+ctrl_dup_s701	bench	ctrl_dup	0.02	pool	1	1	19.23	14	0.0	ecdna1=0.997	0.997	False		True	species_penalty	1.2432	2	0.51
+ctrl_dup_s701	bench	ctrl_dup	0.05	pool	1	1	19.23	14	0.0	ecdna1=0.997	0.997	False		True	species_penalty	1.6032	2	0.51
+ctrl_dup_s701	bench	ctrl_dup	0.1	pool	1	1	19.23	14	0.0	ecdna1=0.997	0.997	False		True	species_penalty	2.2032	2	0.51
+ctrl_dup_s701	bench	ctrl_dup	0.2	pool	1	1	19.23	14	0.0	ecdna1=0.997	0.997	False		True	species_penalty	3.4032	2	0.51
+ctrl_dup_s701	bench	ctrl_dup	0.5	pool	1	1	19.23	14	0.0	ecdna1=0.997	0.997	False		True	species_penalty	7.0032	2	0.51
+ctrl_dup_s702	bench	ctrl_dup	0.0	run	1	1	24.91	26	0.0	ecdna1=0.744	0.7436	False		True	tie-break	0.0004	1	1.62
+ctrl_dup_s702	bench	ctrl_dup	0.02	pool	1	1	24.91	26	0.0	ecdna1=0.744	0.7436	False		True	step_penalty	0.0404	1	0.99
+ctrl_dup_s702	bench	ctrl_dup	0.05	pool	1	1	24.91	26	0.0	ecdna1=0.744	0.7436	False		True	step_penalty	0.1004	1	0.99
+ctrl_dup_s702	bench	ctrl_dup	0.1	pool	1	1	24.91	26	0.0	ecdna1=0.744	0.7436	False		True	step_penalty	0.2004	1	0.99
+ctrl_dup_s702	bench	ctrl_dup	0.2	pool	1	1	24.91	26	0.0	ecdna1=0.744	0.7436	False		True	step_penalty	0.4004	1	0.99
+ctrl_dup_s702	bench	ctrl_dup	0.5	pool	1	1	24.91	26	0.0	ecdna1=0.744	0.7436	False		True	step_penalty	1.0004	1	0.99

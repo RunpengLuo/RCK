@@ -461,7 +461,9 @@ class CycleDecomposer:
         return total
 
     def solve(self) -> List[Tuple[float, List[Species]]]:
-        """Raw (objective, species) solutions, best first, deduplicated and validated."""
+        """Raw (objective, species) solutions, best first, deduplicated and validated. With
+        ``step_penalty`` > 0 the pool is the widened one; :func:`prune_pool` then drops what the
+        ranking prior cannot prefer."""
         import gurobipy as gp
 
         if not self.edges:
@@ -530,13 +532,6 @@ class CycleDecomposer:
             log.warning("discarded %d pool solution(s) that violated balance or connectivity", self.discarded)
         self.close()
         solutions.sort(key=lambda t: (round(t[0], 9), len(t[1])))
-        if p.step_penalty > 0 and len(solutions) > 1:
-            # the widened pool is for the ranking prior; keep what it can prefer: within pool_gap of
-            # the best, or cheaper in structure cost than the best by more than the objective lost
-            best, best_species = solutions[0]
-            best_cost = _step_cost(best_species, p)
-            solutions = [t for t in solutions if t[0] <= best + abs(best) * p.pool_gap + 1e-6
-                         or _step_cost(t[1], p) + t[0] - best < best_cost]
         return solutions
 
     def same_fit_alternatives(self, species: Sequence[Species]) -> List[Tuple[float, List[Species]]]:
@@ -627,15 +622,84 @@ def _structures(species: Sequence[Species]) -> FrozenSet:
 
 def _step_cost(species: Sequence[Species], params: DecompositionParams) -> float:
     """step_penalty x steps of the significant species of a raw pool solution (low_weight decided on a copy)."""
+    return params.step_penalty * _significant_steps(species, params)[1]
+
+
+def _significant_steps(species: Sequence[Species], params: DecompositionParams) -> Tuple[int, int]:
+    """(significant species, their steps) of a raw pool solution, low_weight decided on a copy."""
     flagged = [replace(s) for s in species]
     _flag_low_weight(flagged, params)
-    return params.step_penalty * _steps([s for s in flagged if not s.low_weight])
+    significant = [s for s in flagged if not s.low_weight]
+    return len(significant), _steps(significant)
 
 
 def structure_cost(species: Sequence[Species], params: DecompositionParams) -> float:
     """species_penalty x significant species + step_penalty x their steps (the ranking prior)."""
     significant = [s for s in species if not s.low_weight]
     return params.species_penalty * len(significant) + params.step_penalty * _steps(significant)
+
+
+def pool_keeps(objective: float, steps: int, best_objective: float, best_steps: int, params: DecompositionParams) -> bool:
+    """Whether the ranking keeps a widened-pool solution (``step_penalty`` > 0): within ``pool_gap``
+    of the best objective, or cheaper in steps than the best by more than the objective lost.
+    ``steps`` are the significant species' steps. With ``step_penalty`` 0 only the first test
+    remains, which is the pool a λ = 0 run keeps (up to Gurobi's own PoolGap bookkeeping)."""
+    return (objective <= best_objective + abs(best_objective) * params.pool_gap + 1e-6
+            or params.step_penalty * steps + objective - best_objective < params.step_penalty * best_steps)
+
+
+def prune_pool(solutions: List[Tuple[float, List[Species]]], params: DecompositionParams) -> List[Tuple[float, List[Species]]]:
+    """The widened pool (``step_penalty`` > 0) is for the ranking prior; keep what it can prefer
+    (:func:`pool_keeps`). Solutions are (objective, species), best first."""
+    if params.step_penalty <= 0 or len(solutions) <= 1:
+        return solutions
+    best, best_species = solutions[0]
+    best_steps = _significant_steps(best_species, params)[1]
+    return [t for t in solutions if pool_keeps(t[0], _significant_steps(t[1], params)[1], best, best_steps, params)]
+
+
+def ranking_key(residual: float, significant: int, n_species: int, steps: int, objective: float,
+                params: DecompositionParams) -> Tuple:
+    """Sort key of a decomposition: residual, structure cost (``species_penalty`` per significant
+    species plus ``step_penalty`` per step of those species), significant species, all species,
+    objective. Ties keep the pool order."""
+    cost = params.species_penalty * significant + params.step_penalty * steps
+    return round(residual, 6), round(cost, 6), significant, n_species, round(objective, 9)
+
+
+@dataclass
+class PoolRecord:
+    """Every solution of the decomposition pool, before the λ-dependent pruning, for offline
+    re-ranking at other ``step_penalty`` values (:mod:`rck.ecdna.rerank`).
+
+    ``entries`` hold, per pool solution in pool order, what the ranking and the pruning read
+    (objective, residual, species, significant species and their steps, from the integer
+    weights). ``decompositions`` are the same solutions annotated (rank = pool index + 1), to be
+    refitted and evaluated like ranked ones. ``same_fit`` maps a pool index to the raw same-fit
+    alternatives of that solution (:func:`same_fit_structures`), for every solution that is rank 1
+    at some λ of ``lambdas``."""
+    params: Dict[str, object]
+    lambdas: List[float]
+    entries: List[Dict[str, object]]
+    decompositions: List["Decomposition"]
+    same_fit: Dict[int, List[Dict[str, object]]]
+    rank1: Dict[float, int]
+
+
+def rank_pool(entries: Sequence[Dict[str, object]], params: DecompositionParams) -> List[int]:
+    """Pool indices in ranked order at ``params.step_penalty``, from the recorded entries alone:
+    :func:`pool_keeps` relative to the first (best) entry, then :func:`ranking_key`. This is what
+    :func:`decompose_with_pool` ranks for that λ when ``entries`` come from a widened pool (any
+    λ > 0 gives the same pool). At λ = 0 it keeps the solutions within ``pool_gap``, which
+    emulates the narrower pool of a λ = 0 run; ties there may come out in another order."""
+    if not entries:
+        return []
+    best = entries[0]
+    kept = [e for e in entries if len(entries) <= 1
+            or pool_keeps(e["objective"], e["steps"], best["objective"], best["steps"], params)]
+    kept = sorted(kept, key=lambda e: ranking_key(e["residual"], e["n_significant"], e["n_species"], e["steps"],
+                                                  e["objective"], params))
+    return [int(e["index"]) for e in kept]
 
 
 def decompose(graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[DecompositionParams] = None,
@@ -650,13 +714,21 @@ def decompose(graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[Decompo
     "the molecule split in two" when the solver scores them equally. The top decomposition then
     gets an ``ambiguity`` report (module docstring).
     """
+    return decompose_with_pool(graph, flow, params, paths)[0]
+
+
+def decompose_with_pool(graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[DecompositionParams] = None,
+                        paths: Optional[List[ReadPath]] = None,
+                        pool_lambdas: Optional[Sequence[float]] = None) -> Tuple[List[Decomposition], Optional[PoolRecord]]:
+    """:func:`decompose`, and with ``pool_lambdas`` also a :class:`PoolRecord` of the whole pool.
+    The ranked decompositions are the same either way."""
     params = params or DecompositionParams()
     decomposer = CycleDecomposer(graph, flow, params, paths)
     if decomposer.reads:
         log.info("read constraints: %d junction sequences (%.0f reads); %d paths off the flow",
                  len(decomposer.reads), sum(r.support for r in decomposer.reads), decomposer.reads_skipped)
     try:
-        raw = decomposer.solve()
+        pool = decomposer.solve()
     except RuntimeError:
         if not (params.path_fraction > 0 and decomposer.reads):
             raise
@@ -664,27 +736,117 @@ def decompose(graph: ECGraph, flow: Dict[EdgeKey, int], params: Optional[Decompo
                     100 * params.path_fraction)
         params = replace(params, path_fraction=0.0)
         decomposer = CycleDecomposer(graph, flow, params, paths)
-        raw = decomposer.solve()
+        pool = decomposer.solve()
+    record = _pool_record(graph, flow, params, paths, decomposer, pool, pool_lambdas) if pool_lambdas is not None else None
+    raw = prune_pool(pool, params)
     candidates = []
     for objective, species in raw:
         species = sorted(species, key=lambda s: (-s.weight, -sum(s.counts.values())))
         _flag_low_weight(species, params)
-        residual = decomposer._residual(species)
-        significant = sum(1 for s in species if not s.low_weight)
-        candidates.append((round(residual, 6), round(structure_cost(species, params), 6), significant, len(species),
-                           round(objective, 9), objective, species))
-    candidates.sort(key=lambda c: c[:5])
+        significant = [s for s in species if not s.low_weight]
+        key = ranking_key(decomposer._residual(species), len(significant), len(species), _steps(significant), objective, params)
+        candidates.append((key, objective, species))
+    candidates.sort(key=lambda c: c[0])
     result = []
-    for rank, (residual, _, _, _, _, objective, species) in enumerate(candidates[:max(1, params.num_alternatives)], start=1):
-        annotated = [_annotate(graph, s, params, paths) for s in species]
-        call, fraction = classify(annotated, params)
-        total, explained = explained_reads(graph, annotated, decomposer.reads)
-        result.append(Decomposition(rank=rank, objective=objective, residual=decomposer._residual(annotated), species=annotated,
-                                    call=call, circular_fraction=fraction, reads_total=total, reads_explained=explained,
-                                    steps=_steps([s for s in annotated if not s.low_weight])))
+    for rank, (_, objective, species) in enumerate(candidates[:max(1, params.num_alternatives)], start=1):
+        result.append(_decomposition(graph, params, paths, decomposer, rank, objective, species))
     if result and result[0].species and params.ambiguity_window > 0:
         result[0].ambiguity = ambiguity_report(graph, flow, params, paths, result)
-    return result
+    return result, record
+
+
+def _decomposition(graph, params, paths, decomposer, rank, objective, species) -> Decomposition:
+    annotated = [_annotate(graph, s, params, paths) for s in species]
+    call, fraction = classify(annotated, params)
+    total, explained = explained_reads(graph, annotated, decomposer.reads)
+    return Decomposition(rank=rank, objective=objective, residual=decomposer._residual(annotated), species=annotated,
+                         call=call, circular_fraction=fraction, reads_total=total, reads_explained=explained,
+                         steps=_steps([s for s in annotated if not s.low_weight]))
+
+
+def _pool_record(graph, flow, params, paths, decomposer, pool, lambdas) -> PoolRecord:
+    """Record the unpruned pool: entries, annotated decompositions, and the same-fit alternatives
+    of every solution that is rank 1 at some λ in ``lambdas``."""
+    entries, decompositions, species_by_index = [], [], []
+    for index, (objective, species) in enumerate(pool):
+        species = sorted((replace(s, counts=dict(s.counts)) for s in species), key=lambda s: (-s.weight, -sum(s.counts.values())))
+        _flag_low_weight(species, params)
+        significant = [s for s in species if not s.low_weight]
+        entries.append({"index": index, "objective": objective, "residual": round(decomposer._residual(species), 6),
+                        "n_species": len(species), "n_significant": len(significant), "steps": _steps(significant),
+                        "weights_int": [s.weight for s in species], "low_weight": [s.low_weight for s in species]})
+        species_by_index.append(species)
+        decompositions.append(_decomposition(graph, params, paths, decomposer, index + 1, objective,
+                                             [replace(s, counts=dict(s.counts)) for s in species]))
+    rank1 = {}
+    for lam in lambdas:
+        order = rank_pool(entries, replace(params, step_penalty=float(lam)))
+        if order:
+            rank1[float(lam)] = order[0]
+    same_fit = {}
+    if params.ambiguity_window > 0:
+        for index in sorted(set(rank1.values())):
+            if species_by_index[index]:
+                same_fit[index] = same_fit_structures(graph, flow, params, paths, species_by_index[index])
+    settings = {k: getattr(params, k) for k in ("species_penalty", "step_penalty", "pool_gap", "ambiguity_window",
+                                                "num_alternatives", "max_species", "max_multiplicity", "mode",
+                                                "min_species_weight", "min_species_weight_frac")}
+    log.info("pool kept for re-ranking: %d solutions; rank 1 by λ: %s", len(entries),
+             ", ".join("{l:g} -> {i}".format(l=l, i=i) for l, i in sorted(rank1.items())))
+    return PoolRecord(params=settings, lambdas=[float(l) for l in lambdas], entries=entries,
+                      decompositions=decompositions, same_fit=same_fit, rank1=rank1)
+
+
+def same_fit_structures(graph: ECGraph, flow: Dict[EdgeKey, int], params: DecompositionParams, paths,
+                        top_species: Sequence[Species]) -> List[Dict[str, object]]:
+    """Alternatives with exactly the same fit as ``top_species`` (module docstring), one per set of
+    significant structures other than the top one's, best objective first. Independent of
+    ``step_penalty``: :func:`ambiguity_summary` turns them into the report for a given λ."""
+    mine = _structures(top_species)
+    alts, seen = [], {mine}
+    for objective, species in CycleDecomposer(graph, flow, params, paths).same_fit_alternatives(top_species):
+        species = sorted(species, key=lambda s: (-s.weight, -sum(s.counts.values())))
+        _flag_low_weight(species, params)
+        if _structures(species) in seen:  # sorted by objective: keep each set of structures at its best
+            continue
+        seen.add(_structures(species))
+        significant = [s for s in species if not s.low_weight]
+        alts.append({"objective": objective, "n_species": len(significant), "steps": _steps(significant),
+                     "weights": [s.weight for s in significant], "structures": _structures(species)})
+    return alts
+
+
+def ambiguity_summary(top_objective: float, top_steps: int, top_n_species: int, alts: Sequence[Dict[str, object]],
+                      params: DecompositionParams, ranks: Optional[Sequence[Optional[int]]] = None,
+                      warn: bool = True) -> Dict[str, object]:
+    """The ambiguity report of a top decomposition from its same-fit alternatives
+    (:func:`same_fit_structures`) at ``params.step_penalty``; ``ranks`` gives each alternative's
+    rank in the ranked list, if listed."""
+    top_score = top_objective + params.step_penalty * top_steps
+    rows = []
+    for i, a in enumerate(alts):
+        score = a["objective"] + params.step_penalty * a["steps"]
+        rows.append({"objective": round(a["objective"], 6), "gap": round(score - top_score, 6),
+                     "n_species": a["n_species"], "steps": a["steps"], "rank": ranks[i] if ranks else None,
+                     "weights": list(a["weights"])})
+    report = {"ambiguous": bool(rows), "window": params.ambiguity_window, "n_alternatives": len(rows),
+              "n_species": top_n_species, "steps": top_steps, "alternatives": rows[:10]}
+    if rows:
+        closest = min(rows, key=lambda a: abs(a["gap"]))
+        report["gap"] = closest["gap"]
+        if closest["n_species"] != report["n_species"]:
+            report["decided_by"] = "species_penalty"
+        elif closest["steps"] != top_steps and params.step_penalty > 0:
+            report["decided_by"] = "step_penalty"
+        elif closest["steps"] != top_steps:
+            report["decided_by"] = "tie-break"
+        else:
+            report["decided_by"] = "reads or tie-break"
+        if warn:
+            log.warning("top decomposition is ambiguous: %d alternative(s) fit the flow exactly as well; the closest "
+                        "(%d species, %d steps, objective gap %+.4f) was set apart by %s", len(rows), closest["n_species"],
+                        closest["steps"], closest["gap"], report["decided_by"])
+    return report
 
 
 def ambiguity_report(graph: ECGraph, flow: Dict[EdgeKey, int], params: DecompositionParams, paths, ranked: List[Decomposition]) -> Dict[str, object]:
@@ -696,38 +858,9 @@ def ambiguity_report(graph: ECGraph, flow: Dict[EdgeKey, int], params: Decomposi
     the ranking (fewer significant species) over a lower score. ``decided_by`` names what
     separates the top decomposition from its closest alternative."""
     top = ranked[0]
-    top_score = top.objective + params.step_penalty * top.steps
-    mine = _structures(top.species)
-    alts, seen = [], {mine}
-    for objective, species in CycleDecomposer(graph, flow, params, paths).same_fit_alternatives(top.species):
-        species = sorted(species, key=lambda s: (-s.weight, -sum(s.counts.values())))
-        _flag_low_weight(species, params)
-        if _structures(species) in seen:  # sorted by objective: keep each set of structures at its best
-            continue
-        seen.add(_structures(species))
-        match = next((d.rank for d in ranked if _structures(d.species) == _structures(species)), None)
-        significant = [s for s in species if not s.low_weight]
-        score = objective + params.step_penalty * _steps(significant)
-        alts.append({"objective": round(objective, 6), "gap": round(score - top_score, 6),
-                     "n_species": len(significant), "steps": _steps(significant), "rank": match,
-                     "weights": [s.weight for s in significant]})
-    report = {"ambiguous": bool(alts), "window": params.ambiguity_window, "n_alternatives": len(alts),
-              "n_species": sum(1 for s in top.species if not s.low_weight), "steps": top.steps, "alternatives": alts[:10]}
-    if alts:
-        closest = min(alts, key=lambda a: abs(a["gap"]))
-        report["gap"] = closest["gap"]
-        if closest["n_species"] != report["n_species"]:
-            report["decided_by"] = "species_penalty"
-        elif closest["steps"] != top.steps and params.step_penalty > 0:
-            report["decided_by"] = "step_penalty"
-        elif closest["steps"] != top.steps:
-            report["decided_by"] = "tie-break"
-        else:
-            report["decided_by"] = "reads or tie-break"
-        log.warning("top decomposition is ambiguous: %d alternative(s) fit the flow exactly as well; the closest "
-                    "(%d species, %d steps, objective gap %+.4f) was set apart by %s", len(alts), closest["n_species"],
-                    closest["steps"], closest["gap"], report["decided_by"])
-    return report
+    alts = same_fit_structures(graph, flow, params, paths, top.species)
+    ranks = [next((d.rank for d in ranked if _structures(d.species) == a["structures"]), None) for a in alts]
+    return ambiguity_summary(top.objective, top.steps, sum(1 for s in top.species if not s.low_weight), alts, params, ranks)
 
 
 def explained_reads(graph: ECGraph, species: Sequence[Species], reads: Sequence[ReadConstraint]) -> Tuple[float, float]:

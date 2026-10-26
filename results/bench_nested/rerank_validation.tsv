@@ -1,0 +1,49 @@
+case	step_penalty	method	sweep_composites	composites	composites_match	sweep_decided_by	decided_by	sweep_gap	gap	ambiguity_match
+demo3	0.0	pool (λ=0 emulated)	ecdna1=0.960	ecdna1=0.959	False	species_penalty	species_penalty	-0.0008	-0.0008	True
+demo3	0.0	run	ecdna1=0.960	ecdna1=0.960	True	species_penalty	species_penalty	-0.0008	-0.0008	True
+demo3	0.02	pool	ecdna1=0.959	ecdna1=0.959	True	species_penalty	species_penalty	-0.0064	-0.0064	True
+demo3	0.05	pool	ecdna1=0.959	ecdna1=0.959	True	species_penalty	species_penalty	-0.0064	-0.0064	True
+demo3	0.1	pool	ecdna1=0.959	ecdna1=0.959	True	species_penalty	species_penalty	-0.0064	-0.0064	True
+demo3	0.2	pool	ecdna1=0.959	ecdna1=0.959	True	species_penalty	species_penalty	-0.0064	-0.0064	True
+demo4_amp0	0.0	pool (λ=0 emulated)	ecdna1=0.983	ecdna1=0.983	True					True
+demo4_amp0	0.0	run	ecdna1=0.983	ecdna1=0.983	True					False
+demo4_amp0	0.02	pool	ecdna1=0.983	ecdna1=0.983	True					True
+demo4_amp0	0.05	pool	ecdna1=0.983	ecdna1=0.983	True					True
+demo4_amp0	0.1	pool	ecdna1=0.983	ecdna1=0.983	True					True
+demo4_amp0	0.2	pool	ecdna1=0.983	ecdna1=0.983	True					True
+demo4_amp1	0.0	pool (λ=0 emulated)	ecdna2=0.997	ecdna2=0.997	True					True
+demo4_amp1	0.0	run	ecdna2=0.997	ecdna2=0.997	True					False
+demo4_amp1	0.02	pool	ecdna2=0.997	ecdna2=0.997	True					True
+demo4_amp1	0.05	pool	ecdna2=0.997	ecdna2=0.997	True					True
+demo4_amp1	0.1	pool	ecdna2=0.997	ecdna2=0.997	True					True
+demo4_amp1	0.2	pool	ecdna2=0.997	ecdna2=0.997	True					True
+demo5	0.0	pool (λ=0 emulated)	ecdna1=0.990	ecdna1=0.990	True					True
+demo5	0.0	run	ecdna1=0.990	ecdna1=0.990	True					False
+demo5	0.02	pool	ecdna1=0.990	ecdna1=0.990	True					True
+demo5	0.05	pool	ecdna1=0.990	ecdna1=0.990	True					True
+demo5	0.1	pool	ecdna1=0.990	ecdna1=0.990	True					True
+demo5	0.2	pool	ecdna1=0.990	ecdna1=0.990	True					True
+demo6_union	0.0	pool (λ=0 emulated)	ecdna1=0.984,ecdna2=0.994	ecdna1=0.984,ecdna2=0.994	True					True
+demo6_union	0.0	run	ecdna1=0.984,ecdna2=0.994	ecdna1=0.984,ecdna2=0.994	True					False
+demo6_union	0.02	pool	ecdna1=0.984,ecdna2=0.994	ecdna1=0.984,ecdna2=0.994	True					True
+demo6_union	0.05	pool	ecdna1=0.984,ecdna2=0.994	ecdna1=0.984,ecdna2=0.994	True					True
+demo6_union	0.1	pool	ecdna1=0.984,ecdna2=0.994	ecdna1=0.984,ecdna2=0.994	True					True
+demo6_union	0.2	pool	ecdna1=0.984,ecdna2=0.994	ecdna1=0.984,ecdna2=0.994	True					True
+demo7_blockflip	0.0	pool (λ=0 emulated)	ecdna1=0.994,ecdna2=1.000	ecdna1=0.994,ecdna2=1.000	True	species_penalty	species_penalty	0.0	0.0	True
+demo7_blockflip	0.0	run	ecdna1=0.994,ecdna2=1.000	ecdna1=0.994,ecdna2=1.000	True	species_penalty	species_penalty	0.0	0.0	True
+demo7_blockflip	0.02	pool	ecdna1=0.994,ecdna2=1.000	ecdna1=0.994,ecdna2=1.000	True	species_penalty	species_penalty	0.82	0.82	True
+demo7_blockflip	0.05	pool	ecdna1=0.994,ecdna2=1.000	ecdna1=0.994,ecdna2=1.000	True	species_penalty	species_penalty	0.9942	0.9942	True
+demo7_blockflip	0.1	pool	ecdna1=0.994,ecdna2=1.000	ecdna1=0.994,ecdna2=1.000	True	species_penalty	species_penalty	0.9942	0.9942	True
+demo7_blockflip	0.2	pool	ecdna1=0.994,ecdna2=1.000	ecdna1=0.994,ecdna2=1.000	True	species_penalty	species_penalty	0.9942	0.9942	True
+demo7_totalonly	0.0	pool (λ=0 emulated)	ecdna1=0.510,ecdna2=0.335	ecdna1=0.510,ecdna2=0.335	True	tie-break	tie-break	0.0102	0.0102	True
+demo7_totalonly	0.0	run	ecdna1=0.510,ecdna2=0.335	ecdna1=0.510,ecdna2=0.335	True	tie-break	tie-break	0.0102	0.0102	True
+demo7_totalonly	0.02	pool	ecdna1=0.510,ecdna2=0.335	ecdna1=0.510,ecdna2=0.335	True	step_penalty	step_penalty	0.356	0.356	True
+demo7_totalonly	0.05	pool	ecdna1=0.982,ecdna2=0.971	ecdna1=0.982,ecdna2=0.971	True	species_penalty	species_penalty	0.193	0.193	True
+demo7_totalonly	0.1	pool	ecdna1=0.982,ecdna2=0.971	ecdna1=0.982,ecdna2=0.971	True	species_penalty	species_penalty	0.393	0.393	True
+demo7_totalonly	0.2	pool	ecdna1=0.982,ecdna2=0.971	ecdna1=0.982,ecdna2=0.971	True	species_penalty	species_penalty	0.793	0.793	True
+demo8	0.0	pool (λ=0 emulated)	ecdna1=0.985,ecdna2=0.989	ecdna1=0.985,ecdna2=0.989	True	tie-break	tie-break	0.0038	0.0038	True
+demo8	0.0	run	ecdna1=0.985,ecdna2=0.989	ecdna1=0.985,ecdna2=0.989	True	tie-break	tie-break	0.0038	0.0038	True
+demo8	0.02	pool	ecdna1=0.985,ecdna2=0.989	ecdna1=0.985,ecdna2=0.989	True	step_penalty	step_penalty	0.3838	0.3838	True
+demo8	0.05	pool	ecdna1=0.985,ecdna2=0.989	ecdna1=0.985,ecdna2=0.989	True	step_penalty	step_penalty	0.9538	0.9538	True
+demo8	0.1	pool	ecdna1=0.985,ecdna2=0.989	ecdna1=0.985,ecdna2=0.989	True	step_penalty	step_penalty	1.9038	1.9038	True
+demo8	0.2	pool	ecdna1=0.985,ecdna2=0.989	ecdna1=0.985,ecdna2=0.989	True	step_penalty	step_penalty	3.8038	3.8038	True

@@ -20,10 +20,10 @@ import sys
 import time
 from typing import Dict, List, Optional
 
-from rck.ecdna.decompose import DecompositionParams, decompose
+from rck.ecdna.decompose import DecompositionParams, decompose_with_pool
 from rck.ecdna.gurobi_env import default_threads, quiet_gurobi_logger
 from rck.ecdna.ilp_circular import CircularParams, solve_flow
-from rck.ecdna.output import write_all
+from rck.ecdna.output import write_all, write_pool
 from rck.ecdna.refit import RefitParams, refit_decompositions
 from rck.ecdna.scale import ScaleParams, build_observations, load_subgraph_scale
 from rck.ecdna.subgraph_io import read_segment_blocks, read_subgraph
@@ -100,6 +100,12 @@ def build_parser() -> argparse.ArgumentParser:
     dc.add_argument("--ambiguity-window", type=float, default=2.0,
                     help="Report alternatives to the top decomposition that fit the flow exactly as well and whose objective "
                          "is within this window (summary.json ambiguity); 0 = off")
+    dc.add_argument("--keep-pool", action="store_true",
+                    help="Also write pool/: every solution of the widened pool (needs --step-penalty > 0), annotated, "
+                         "refitted and evaluated, with the same-fit alternatives of each rank-1 solution over "
+                         "--pool-lambdas, so that python -m rck.ecdna.rerank can re-rank at other step penalties offline")
+    dc.add_argument("--pool-lambdas", type=float, nargs="+", default=[0.0, 0.02, 0.05, 0.1, 0.2, 0.5],
+                    help="Step penalties whose rank-1 solutions get same-fit alternatives in pool/ (with --keep-pool)")
     dc.add_argument("--min-species-weight", type=int, default=None,
                     help="Species lighter than this are flagged low_weight (default: --min-species-weight-frac of the heaviest)")
     dc.add_argument("--min-species-weight-frac", type=float, default=0.10)
@@ -229,18 +235,29 @@ def run(args) -> Dict[str, object]:
                                      min_path_support=args.min_path_support, min_path_junctions=args.min_path_junctions,
                                      time_limit=args.time_limit, threads=args.threads, mip_gap=args.mip_gap,
                                      log_file=os.path.join(args.outdir, "gurobi_decompose.log"), log_to_console=args.verbose)
-    decompositions = decompose(graph, sol.ecdna_edges(), dec_params, paths=paths)
+    keep_pool = getattr(args, "keep_pool", False)
+    if keep_pool and dec_params.step_penalty <= 0:
+        raise SystemExit("--keep-pool needs --step-penalty > 0: re-ranking reads the widened solution pool, which "
+                         "every step penalty above 0 shares")
+    decompositions, pool = decompose_with_pool(graph, sol.ecdna_edges(), dec_params, paths=paths,
+                                               pool_lambdas=args.pool_lambdas if keep_pool else None)
     if decompositions and decompositions[0].residual > 0:
         log.warning("best decomposition leaves residual %.3f; consider raising --max-species or --max-multiplicity",
                     decompositions[0].residual)
-    refit_decompositions(decompositions, graph, obs, sol, flow_params, dec_params,
-                         RefitParams(enabled=not args.no_refit, min_copies=args.refit_min_copies))
+    refit_params = RefitParams(enabled=not args.no_refit, min_copies=args.refit_min_copies)
+    refit_decompositions(decompositions, graph, obs, sol, flow_params, dec_params, refit_params)
+    if pool is not None:
+        refit_decompositions(pool.decompositions, graph, obs, sol, flow_params, dec_params, refit_params)
     outputs = write_all(args.outdir, graph, obs, sol, decompositions,
                         extra={"inputs": inputs, "runtime_s": round(time.time() - started, 2),
                                "paths_loaded": 0 if paths is None else len(paths)})
+    if pool is not None:
+        outputs["pool"] = write_pool(os.path.join(args.outdir, "pool"), graph, pool)
     evaluation = None
     if args.truth_dir or args.truth_cycles:
         evaluation = _evaluate(args, graph, outputs)
+        if pool is not None:
+            _evaluate(args, graph, outputs["pool"], outdir=outputs["pool"]["dir"])
     if not getattr(args, "no_plots", False):
         _plot(args, outputs)
     for d in decompositions[:3]:
@@ -253,27 +270,31 @@ def run(args) -> Dict[str, object]:
             "evaluation": evaluation}
 
 
-def _evaluate(args, graph, outputs) -> Dict[str, object]:
-    """Score the run against truth. A problem with the truth files is logged and recorded in
-    evaluation.json instead of failing a run whose reconstruction already succeeded."""
+def _evaluate(args, graph, outputs, outdir: Optional[str] = None) -> Dict[str, object]:
+    """Score the run (or, with ``outdir``, the pool written there) against truth. A problem with
+    the truth files is logged and recorded in evaluation.json instead of failing a run whose
+    reconstruction already succeeded."""
     import json
     import traceback
 
     from rck.ecdna.evaluate import evaluate, load_truth, log_summary, write_evaluation, write_truth_table
 
+    pool = outdir is not None
+    outdir = outdir or args.outdir
     try:
         truth = load_truth(args.truth_dir, args.truth_cycles, args.truth_sample or args.sample)
-        write_truth_table(os.path.join(args.outdir, "truth_cycles.tsv"), truth)
+        write_truth_table(os.path.join(outdir, "truth_cycles.tsv"), truth)
         regions = None if args.all_truth_species else graph.regions()
         frame, evaluation = evaluate(outputs["decompositions"], truth, tol=args.eval_tol_bp, regions=regions,
                                      min_truth_fraction=args.min_truth_fraction)
-        outputs.update({"evaluation_" + k: v for k, v in write_evaluation(args.outdir, frame, evaluation).items()})
-        log_summary(evaluation)
+        outputs.update({"evaluation_" + k: v for k, v in write_evaluation(outdir, frame, evaluation).items()})
+        if not pool:
+            log_summary(evaluation)
         return evaluation
     except Exception as error:  # noqa: BLE001 - report, do not lose the reconstruction
         log.error("evaluation failed: %s", error)
         evaluation = {"error": str(error), "traceback": traceback.format_exc()}
-        path = os.path.join(args.outdir, "evaluation.json")
+        path = os.path.join(outdir, "evaluation.json")
         with open(path, "w") as handle:
             json.dump(evaluation, handle, indent=2)
         outputs["evaluation_summary"] = path

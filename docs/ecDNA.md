@@ -391,6 +391,27 @@ Alternatives come from Gurobi's solution pool (`--alternatives-mode pool`) or fr
 solves with a no-good cut (`--alternatives-mode nogood`), within `--pool-gap` of the
 optimum. Every alternative is re-checked and deduplicated.
 
+**Re-ranking a kept pool** (`--keep-pool`, `rck/ecdna/rerank.py`). λ acts only in the ranking,
+and every λ > 0 widens the pool to the same `--ambiguity-window`, so one run at any λ > 0 holds
+every answer a λ > 0 can give. With `--keep-pool` (it needs `--step-penalty` > 0) the run also
+writes `pool/`: every pool solution before the λ-dependent pruning, annotated, refitted and, with
+a truth, evaluated like a ranked decomposition; and, for each solution that is rank 1 at some λ of
+`--pool-lambdas` (default 0 0.02 0.05 0.1 0.2 0.5), its same-fit alternatives (the ambiguity
+MILP does not depend on λ either). The run's own outputs are unchanged.
+
+```bash
+rck-ecdna --subgraph-dir SUB --truth-dir RUN --outdir OUT --step-penalty 0.1 --keep-pool
+python -m rck.ecdna.rerank OUT --lambdas 0.02 0.05 0.1 0.2 0.5    # one row per λ
+```
+
+`rerank` applies the run's own pruning (`pool_keeps`) and ranking (`ranking_key`) to the recorded
+pool and gives, per λ, the rank-1 solution, its refitted significant species, steps, residual,
+composite per truth species and `ambiguous`, `decided_by`, `gap`, `n_alternatives` (missing for a
+λ whose rank-1 solution was not rank 1 at any `--pool-lambdas` value). λ = 0 is only emulated (the
+solutions within `--pool-gap` of the best): a λ = 0 run solves a narrower pool, whose ties can
+come out differently (demo3: 12.77 copies at λ = 0, an equivalent 12.70 at λ > 0), so run it
+instead. `results/bench_nested/` uses this to sweep λ with two runs per case.
+
 #### Long reads in the decomposition
 
 With `--paths`, every long-read path that spans at least `--min-path-junctions` (2) junctions,
@@ -447,6 +468,7 @@ order.
 | `observations.json` | scales, how each was estimated, and every observation; with `--block-flip`, also `pieces`: each piece's segment, block, span, totals, A / B in its base frame, `fixed`, `flipped` and the A / B after the flip (`a_final`, `b_final`) |
 | `block_flips.tsv` | with `--block-flip` only: one row per phase block with a piece: `phase_block`, `orientation` (from the subgraph), `flip` (1 when A and B were swapped), `status` (`fixed`, `flipped`, `kept` or `unresolved`), `n_pieces`, `n_snps` and `delta_if_reversed` |
 | `summary.json` | graph normalization log, flow status (with `linear_end_copies`), top-level `amplicon_call` and `circular_fraction`, decompositions (with `reads_total`, `reads_explained`, `data_objective` and `data_objective_int`, `pruned`: species the refit dropped, and `steps`), top-level `ambiguity` (section 4, walk complexity); with `--block-flip`, `block_flip` (mode, number of pieces and blocks, counts per status, the flipped blocks) |
+| `pool/pool.tsv`, `pool/pool.json`, `pool/decompositions.tsv`, `pool/evaluation.tsv` | with `--keep-pool` only: every solution of the decomposition pool before the λ-dependent pruning (`pool_index`, objective, residual, species, significant species and their steps, integer weights), the same solutions as decompositions (`decomposition_rank` = pool index + 1) and their evaluation; `pool.json` adds the settings, the rank-1 solution per `--pool-lambdas` value and those solutions' same-fit alternatives (section 4, re-ranking) |
 | `gurobi_flow.log`, `gurobi_decompose.log` | solver logs |
 | `evaluation.tsv`, `evaluation.json`, `truth_cycles.tsv`, `recovery_matrix.tsv` | only with `--truth-dir` or `--truth-cycles` (section 6) |
 | `plots/<name>_ecdna.pdf`, `plots/<name>_rank<r>_<species>.png`, `plots/<name>_recovery_matrix.png` | figures: one page per inferred species, then the recovery matrix (below) |
@@ -587,6 +609,17 @@ ionic schedules jobs with Slurm. `docs/examples/ecdna_ionic.sbatch` is a templat
   pip install -e /path/to/amplicon-allele-analysis/third_party/cnplot   # optional: figures
   ```
 
+- **Batch jobs:** put the environment's `bin/` on `PATH`
+  (`export PATH=$HOME/.conda/envs/<env>/bin:$PATH`), as `results/step_sweep/sweep.sbatch` does.
+  `source ~/.bashrc; conda activate` can fail on a compute node, where conda's shell setup is
+  not loaded. Keep array jobs to 2 concurrent tasks (`--array=0-N%2`) for the academic WLS licence.
+- **Nested-ecDNA benchmark** (`results/bench_nested/`): 14 simulations from amplicon-allele-analysis
+  `simulations/make_scenarios.py --set nested` and the 8 step-sweep cases, for choosing
+  `--step-penalty`. Simulations and subgraphs run as one array without Gurobi
+  (amplicon-allele-analysis `simulations/bench_nested.sbatch`), RCK as a second
+  (`results/bench_nested/bench_nested.sbatch`), and `collect.py` summarizes; the order is in
+  `results/bench_nested/README.md`.
+
 ## 8. Tests
 
 The tests are plain `unittest` modules under `tests/ecdna/`. Run them from the RCK root,
@@ -625,7 +658,7 @@ scales from the windows.
 | `test_subgraph_inputs.py` | observations: no; run: yes (small) | scales, segment and junction copy numbers and flank background read from `scale.json`, `CN_*` columns and `cn_profile.tsv`; CN columns win over the scale; `--depth-per-copy` recomputes from `WEIGHT`; `--inputs auto/subgraph/windows`; a full run from the subgraph folder alone |
 | `test_recovery.py` | no | segment recall and precision, junction F1, phasing accuracy (one haplotype wrong; every haplotype swapped, which only the swap-invariant score forgives), the composite and its copy-number term; the recovery matrix: a missed species scores 0, `best_rank` finds a better alternative, out-of-scope rows are listed but not scored or averaged, the TSV columns, strict JSON, and a run with no decompositions |
 | `test_plot.py` | no (figures: matplotlib and cnplot) | axis regions padded and merged; figures skipped when cnplot cannot be imported; a circular species with truth and recovery-matrix pages and their PNGs; a linear species without truth |
-| `test_step_penalty.py` | yes (small) | a hub segment with two 3-segment loops (nested-like). At 2:1 the merged walk wins without `--step-penalty` (ambiguous, decided by the species penalty) and the separate circles win with it. At 3:1 the answer is decided by the tie-break and, with `--step-penalty`, by the steps; the gaps match λ × extra steps. Default ranking unchanged; a single circle is not ambiguous; `--ambiguity-window 0` turns the report off |
+| `test_step_penalty.py` | yes (small) | a hub segment with two 3-segment loops (nested-like). At 2:1 the merged walk wins without `--step-penalty` (ambiguous, decided by the species penalty) and the separate circles win with it. At 3:1 the answer is decided by the tie-break and, with `--step-penalty`, by the steps; the gaps match λ × extra steps. Default ranking unchanged; a single circle is not ambiguous; `--ambiguity-window 0` turns the report off. Pool ranking (no Gurobi): λ reorders and prunes recorded entries, residual first. `--keep-pool`: the pool kept at λ = 0.1 re-ranks to the rank-1 decomposition and ambiguity fields of direct runs at λ = 0.02–0.5 (2:1 and 3:1); the command line refuses it at λ = 0, writes `pool/`, and `rerank` reproduces the run's rank 1 |
 | `test_block_flip.py` | inputs: no; flow and run: yes (small) | pieces read and mapped through phantom contraction; orientation −1 swapped and fixed; a block missing from `phase_blocks.tsv` is unoriented; low-SNP pieces total-only; a missing `segment_blocks.tsv` falls back with a warning; a circle on A whose unoriented block has swapped observations: the block is flipped, all ecDNA on A, no imputed edge, the objective of the unswapped input; `--block-flip off` unchanged; an oriented block never flipped (but flips with `--flip-oriented-penalty`); a block without evidence `unresolved`; a segment over an oriented and an unoriented block; the refit uses flipped observations; `block_flips.tsv`, `summary.json`, `observations.json` pieces, `flow_segments.tsv` and the plot points |
 | `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
 | `test_demo4.py` | yes (full license) | both demo4 subgraphs: evaluation never errors, each subgraph is scored only against its own species, per-sample truth weights; accuracy is printed, not asserted (`RCK_ECDNA_DEMO4_OBS` enables estimated scales for both samples) |

@@ -13,7 +13,11 @@ circle through ``x``, so the two species share ``x`` as nested ecDNA share seque
   A one-species walk would need ``x`` four times, above --max-multiplicity 3.
 """
 
+import json
+import os
 import unittest
+
+import pandas as pd
 
 from rck.ecdna.phased import adj_key, seg_key
 from rck.ecdna.subgraph_io import read_subgraph
@@ -124,6 +128,98 @@ class TestStepPenalty(unittest.TestCase):
     def test_ambiguity_off(self):
         best = self.decompose(self.flow(18, 6), self.g, ambiguity_window=0)[0]
         self.assertIsNone(best.ambiguity)
+
+
+class TestPoolRanking(unittest.TestCase):
+    """rank_pool on recorded entries (no Gurobi)."""
+
+    def entry(self, index, objective, n_significant, steps, residual=0.0, n_species=None):
+        return {"index": index, "objective": objective, "residual": residual, "n_significant": n_significant,
+                "n_species": n_significant if n_species is None else n_species, "steps": steps}
+
+    def test_step_penalty_reorders_and_prunes(self):
+        from rck.ecdna.decompose import DecompositionParams, rank_pool
+
+        merged = self.entry(0, 1.001, 1, 12)  # one species, merged walk
+        separate = self.entry(1, 2.000, 2, 8)  # two circles: one more species, 4 fewer steps
+        far = self.entry(2, 3.5, 2, 8)  # 2.5 worse: beyond pool_gap, and no step saving pays for it
+        entries = [merged, separate, far]
+        self.assertEqual(rank_pool(entries, DecompositionParams(step_penalty=0.0)), [0])  # λ = 0: within pool_gap only
+        self.assertEqual(rank_pool(entries, DecompositionParams(step_penalty=0.1))[0], 0)  # 0.4 < 1 species
+        self.assertEqual(rank_pool(entries, DecompositionParams(step_penalty=0.5)), [1, 0])  # 2.0 > 1 species
+
+    def test_residual_first(self):
+        from rck.ecdna.decompose import DecompositionParams, rank_pool
+
+        entries = [self.entry(0, 0.5, 1, 4, residual=0.5), self.entry(1, 0.52, 2, 30)]
+        self.assertEqual(rank_pool(entries, DecompositionParams(step_penalty=1.0))[0], 1)
+
+
+@requires_gurobi
+class TestKeepPool(unittest.TestCase):
+    """A pool kept at one λ re-ranks to what a run at another λ ranks first."""
+
+    LAMBDAS = (0.02, 0.05, 0.1, 0.2, 0.5)
+
+    def setUp(self):
+        self.tmp = temp_dir()
+        self.g, self.ends = nested_graph(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def check(self, flow):
+        from rck.ecdna.decompose import (DecompositionParams, ambiguity_summary, decompose, decompose_with_pool,
+                                         rank_pool)
+
+        base = DecompositionParams(step_penalty=0.1)
+        ranked, record = decompose_with_pool(self.g, flow, base, pool_lambdas=(0.0,) + self.LAMBDAS)
+        self.assertEqual([d.signature for d in ranked], [d.signature for d in decompose(self.g, flow, base)])
+        for lam in self.LAMBDAS:
+            params = DecompositionParams(step_penalty=lam)
+            direct = decompose(self.g, flow, params)[0]
+            index = rank_pool(record.entries, params)[0]
+            self.assertEqual(index, record.rank1[lam])
+            self.assertEqual(record.decompositions[index].signature, direct.signature, lam)
+            entry = record.entries[index]
+            report = ambiguity_summary(entry["objective"], entry["steps"], entry["n_significant"], record.same_fit[index],
+                                       params, warn=False)
+            for key in ("ambiguous", "decided_by", "gap", "n_alternatives"):
+                self.assertEqual(report.get(key), direct.ambiguity.get(key), (lam, key))
+        return record
+
+    def test_two_to_one(self):
+        record = self.check(self.flow(16, 8))
+        self.assertEqual(len({record.rank1[lam] for lam in self.LAMBDAS}), 2)  # merged at 0.02, separate from 0.5
+
+    def test_three_to_one(self):
+        self.check(self.flow(18, 6))
+
+    def flow(self, wa, wb):
+        return add(circle_flow(self.g, self.ends, "a", wa), circle_flow(self.g, self.ends, "b", wb))
+
+    def test_command_line_and_rerank(self):
+        from rck.ecdna.rerank import rerank
+        from rck.ecdna_run import main
+
+        out = os.path.join(self.tmp.name, "out")
+        argv = ["--subgraph-dir", os.path.join(self.tmp.name), "--depth-per-copy", "15", "--junction-reads-per-copy", "6",
+                "--no-plots", "--step-penalty", "0.1"]
+        with self.assertRaises(SystemExit):
+            main(argv[:-2] + ["--outdir", out, "--keep-pool"])  # needs a step penalty above 0
+        self.assertEqual(main(argv + ["--outdir", out, "--keep-pool"]), 0)
+        for name in ("pool.json", "pool.tsv", "decompositions.tsv"):
+            self.assertTrue(os.path.exists(os.path.join(out, "pool", name)), name)
+        with open(os.path.join(out, "pool", "pool.json")) as handle:
+            pool = json.load(handle)
+        self.assertEqual(len(pool["entries"]), len(pd.read_csv(os.path.join(out, "pool", "pool.tsv"), sep="\t")))
+        table = rerank(out, [0.1])
+        top = pd.read_csv(os.path.join(out, "decompositions.tsv"), sep="\t")
+        top = top[(top.decomposition_rank == 1) & (top.ordering_rank == 1) & (top.status != "low_weight")]
+        self.assertEqual(table.weights.iloc[0], ",".join("%g" % w for w in top.weight))
+        with open(os.path.join(out, "summary.json")) as handle:
+            ambiguity = json.load(handle)["ambiguity"]
+        self.assertEqual(bool(table.ambiguous.iloc[0]), ambiguity["ambiguous"])
 
 
 if __name__ == "__main__":

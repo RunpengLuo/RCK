@@ -163,3 +163,34 @@ def write_all(outdir: str, graph: ECGraph, obs: Observations, sol: FlowSolution,
     with open(paths["summary"], "w") as handle:
         json.dump(summary, handle, indent=2, default=str)
     return paths
+
+
+POOL_COLUMNS = ["pool_index", "objective", "residual", "n_species", "n_significant", "steps", "weights_int", "low_weight"]
+
+
+def write_pool(outdir: str, graph: ECGraph, record) -> Dict[str, str]:
+    """``pool/`` for offline re-ranking (``--keep-pool``; :mod:`rck.ecdna.rerank`).
+
+    * ``pool.tsv``: one row per pool solution, in pool order, with what the ranking reads
+      (integer weights; ``pool_index`` is 0-based);
+    * ``decompositions.tsv``: the same solutions as decompositions (``decomposition_rank`` =
+      pool index + 1), annotated and refitted as ranked ones are;
+    * ``pool.json``: the decomposition settings, the λ grid, the rank-1 pool index per λ, the
+      entries, and the same-fit alternatives of each of those rank-1 solutions.
+    """
+    os.makedirs(outdir, exist_ok=True)
+    paths = {"dir": outdir, "pool_table": os.path.join(outdir, "pool.tsv"),
+             "decompositions": os.path.join(outdir, "decompositions.tsv"), "pool": os.path.join(outdir, "pool.json")}
+    rows = [{"pool_index": e["index"], "objective": e["objective"], "residual": e["residual"], "n_species": e["n_species"],
+             "n_significant": e["n_significant"], "steps": e["steps"],
+             "weights_int": ",".join("%g" % w for w in e["weights_int"]),
+             "low_weight": ",".join(str(bool(f)) for f in e["low_weight"])} for e in record.entries]
+    pd.DataFrame(rows, columns=POOL_COLUMNS).to_csv(paths["pool_table"], sep="\t", index=False)
+    decomposition_table(graph, record.decompositions).to_csv(paths["decompositions"], sep="\t", index=False)
+    same_fit = {str(i): [{k: v for k, v in a.items() if k != "structures"} for a in alts]
+                for i, alts in record.same_fit.items()}
+    with open(paths["pool"], "w") as handle:
+        json.dump({"format": "rck-ecdna-pool/1", "params": record.params, "lambdas": record.lambdas,
+                   "rank1": {"%g" % lam: i for lam, i in sorted(record.rank1.items())}, "entries": record.entries,
+                   "same_fit": same_fit}, handle, indent=2, default=str)
+    return paths

@@ -226,6 +226,11 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
     (`disposeDefaultEnv`) and retries up to 5 times, 2 min apart. Sessions of finished WLS
     processes stayed counted ("5 active sessions for a baseline of 2"), and 3 tasks failed on it.
   - The runs live on scratch: `results/bench_nested/runs` is a git-ignored symlink.
+  - `run_case.py` and `collect.py` read `BENCH_NESTED_ROOT`, as amplicon-allele-analysis
+    `bench_nested.py` does, to take the bench cases from a benchmark built elsewhere
+    (`configs/seeds.tsv`, `subgraphs/<run>/union` and `runs/<run>` under it). `collect.py` also reads
+    `BENCH_NESTED_RESULTS`, which writes its tables and a results-only `README.md` to another
+    folder, so a new benchmark does not overwrite this one's. Unset, nothing changes.
 - Tests under `tests/ecdna/`, with fixtures from demo3 and demo4: subgraph reading, scale,
   flow, decomposition, walks, refit, subgraph inputs, evaluation, recovery matrix
   (`test_recovery.py`), figures (`test_plot.py`), Gurobi environment, and end-to-end demo3 and
@@ -299,6 +304,23 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
 
 ### Fixed
 
+- `evaluate`: truth haplotypes of simulator runs in which the walk traverses one junction with
+  several phasings. `truth/adjacency_clone.tsv` keeps one `PHASING` per junction, its most
+  common, and it was applied to every traversal. amplicon-allele-analysis runs made with per-step
+  haplotype labels (every run before its `hap_labels: inherit`) can carry, for example, AA on one
+  copy of a junction and BB on its duplicate.
+  - `truth_phasings` reads every phasing with copies from `truth/rck/rck.acnt.tsv`, and
+    `species_junctions` keeps them all (`PHASING` alone without that file).
+  - Each traversal takes one of its junction's phasings: the assignment with the fewest
+    haplotype conflicts along the walk, then the one that uses the most of the junction's
+    phasings. A crossing between reference neighbours may also be traversed on one haplotype,
+    as a plain reference join the truth does not list.
+  - Of the 22 bench_nested and step-sweep truth walks, only `ctrl_dup_s702` changes: 0.995 Mb of
+    its 5.37 Mb (the reverse copy of chr16:57.78–58.77 Mb) was on B, and is on A. Re-scored
+    against it, the committed λ = 0 result has phasing accuracy 1.0 (0.815 before) and haplotype
+    Jaccard 1.0 (0.687), composite 0.781 (0.744). Its remaining loss is a linear species
+    without the true order.
+  - Tests in `test_evaluate.py`; documented in `docs/ecDNA.md` (section 6).
 - `rck_run.py`: `--scnb` copy-number boundaries are read from the `--scnb` file. They were
   previously read from the `--scnt` path, so `--scnb` was silently ignored.
 - ecDNA depth-scale mode estimate: wrong results when the smoothing kernel was longer than the

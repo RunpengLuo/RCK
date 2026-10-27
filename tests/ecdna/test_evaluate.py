@@ -256,3 +256,61 @@ class TestScope(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSeveralPhasings(unittest.TestCase):
+    """Truth walks of runs simulated with per-step haplotype labels (amplicon-allele-analysis
+    l2_structures.hap_labels per_step), where copies of one junction carry different phasings
+    and truth/adjacency_clone.tsv keeps only the most common one."""
+
+    # 0-based half-open rows: s1 chr1 [0, 100), s2 chr1 [1000, 1100) and s3 chr1 [100, 200)
+    S1 = {"#CHR": "chr1", "START": 0, "END": 100}
+    S2 = {"#CHR": "chr1", "START": 1000, "END": 1100}
+    S3 = {"#CHR": "chr1", "START": 100, "END": 200}
+
+    @staticmethod
+    def labels(seglist, walk, junction_phasing):
+        from rck.ecdna.evaluate import _label_haplotypes
+
+        return "".join(s.hap for s in _label_haplotypes(seglist, walk, junction_phasing))
+
+    def test_junction_on_both_haplotypes(self):
+        """s1+ s2+ s2- s1-: the junction s1 -> s2 is traversed as AA, then (reversed) as BB."""
+        seglist, walk = [self.S1, self.S2], [(1, "+"), (2, "+"), (2, "-"), (1, "-")]
+        j = (("chr1:99+", "chr1:1000-"), ("AA", "BB"))
+        fold2 = (("chr1:1099+", "chr1:1099+"), ("AB",))
+        fold1 = (("chr1:0-", "chr1:0-"), ("BA",))
+        phasing = {frozenset(p): (p, o) for p, o in (j, fold2, fold1)}
+        with self.assertNoLogs("rck.ecdna.evaluate", level="WARNING"):
+            self.assertEqual(self.labels(seglist, walk, phasing), "AABB")
+        # one PHASING (BB) for both traversals cannot label the walk without a conflict
+        phasing[frozenset(j[0])] = (j[0], ("BB",))
+        with self.assertLogs("rck.ecdna.evaluate", level="WARNING"):
+            self.labels(seglist, walk, phasing)
+
+    def test_crossing_between_reference_neighbours(self):
+        """s1+ s3+ s3- s1-: s1 -> s3 crosses (AB) going out; coming back, s3- -> s1- on B is a
+        plain reference join, not a second copy of the crossing."""
+        seglist, walk = [self.S1, self.S3], [(1, "+"), (2, "+"), (2, "-"), (1, "-")]
+        cross = (("chr1:99+", "chr1:100-"), ("AB",))
+        fold3 = (("chr1:199+", "chr1:199+"), ("BB",))
+        fold1 = (("chr1:0-", "chr1:0-"), ("BA",))
+        phasing = {frozenset(p): (p, o) for p, o in (cross, fold3, fold1)}
+        with self.assertNoLogs("rck.ecdna.evaluate", level="WARNING"):
+            self.assertEqual(self.labels(seglist, walk, phasing), "ABBB")
+
+    def test_truth_phasings_from_acnt(self):
+        from rck.ecdna.evaluate import species_junctions, truth_phasings
+
+        with temp_dir() as tmp:
+            os.makedirs(os.path.join(tmp, "rck"))
+            cn = "{'normal': {'AA': 0, 'AB': 0, 'BA': 0, 'BB': 0}, 'clone1': {'AA': 20, 'AB': 0, 'BA': 20, 'BB': 0}}"
+            pd.DataFrame([{"aid": "sim1", "chr1": "chr1", "coord1": 100, "strand1": "+", "chr2": "chr1", "coord2": 1001,
+                           "strand2": "-", "extra": "at=N;cn=" + cn}]).to_csv(os.path.join(tmp, "rck", "rck.acnt.tsv"), sep="\t", index=False)
+            options = truth_phasings(tmp)
+        self.assertEqual(options, {"sim1": ("AA", "BA")})
+        adj_clone = pd.DataFrame({"AID": ["sim1", "sim2"], "PHASING": ["AA", "AB"], "SPECIES": ["ecdna1", "ecdna1"]})
+        adjs = pd.DataFrame({"AID": ["sim1", "sim2"], "EID-1": ["chr1:99+", "chr1:5+"], "EID-2": ["chr1:1000-", "chr1:9-"]})
+        junctions = species_junctions(adj_clone, adjs, options)["ecdna1"]
+        self.assertEqual(junctions[frozenset(("chr1:99+", "chr1:1000-"))][1], ("AA", "BA"))
+        self.assertEqual(junctions[frozenset(("chr1:5+", "chr1:9-"))][1], ("AB",))  # not in rck.acnt.tsv: PHASING

@@ -6,6 +6,8 @@
 Reads runs/<case>/lambda_0/ (a λ = 0 run) and runs/<case>/pool/ (a --keep-pool run, re-ranked
 with rck.ecdna.rerank for every λ > 0), and amplicon-allele-analysis
 simulations/subgraphs/bench_nested/ for the subgraph-stage checks. Missing runs are skipped.
+BENCH_NESTED_ROOT and BENCH_NESTED_OUT are read as in run_case.py; BENCH_NESTED_RESULTS writes the
+tables and the README results section to another folder (README.md there holds only the results).
 """
 import argparse
 import json
@@ -18,6 +20,7 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+RESULTS = os.environ.get("BENCH_NESTED_RESULTS", HERE)
 import run_case  # noqa: E402  (puts the RCK root on sys.path)
 from rck.ecdna.evaluate import junction_scores, read_inferred, read_truth_table  # noqa: E402
 from rck.ecdna.rerank import rerank  # noqa: E402
@@ -139,7 +142,7 @@ def validate(table):
                          "sweep_decided_by": s["decided_by"], "decided_by": r.get("decided_by"), "sweep_gap": s["gap"],
                          "gap": r.get("gap"), "ambiguity_match": same_amb})
     out = pd.DataFrame(rows)
-    out.to_csv(os.path.join(HERE, "rerank_validation.tsv"), sep="\t", index=False)
+    out.to_csv(os.path.join(RESULTS, "rerank_validation.tsv"), sep="\t", index=False)
     return out
 
 
@@ -230,7 +233,7 @@ def pipeline(table, chosen):
             continue
         r = r.iloc[0].to_dict()
         folder = os.path.join(run_case.OUT, case["name"], "pool")
-        sub_path = os.path.join(run_case.SIM, "subgraphs", "bench_nested", case["name"], "subgraph_check.json")
+        sub_path = os.path.join(run_case.SUBGRAPHS, case["name"], "subgraph_check.json")
         sub = json.load(open(sub_path)) if os.path.exists(sub_path) else {}
         summary = json.load(open(os.path.join(folder, "summary.json")))
         flow = {"flow_objective": round(summary["flow"]["objective"], 3), "imputed_used": ",".join(summary["flow"]["imputed_used"]),
@@ -248,7 +251,7 @@ def pipeline(table, chosen):
                      "mean_composite": r["mean_composite"], "merged": r["merged"], "ambiguous": r["ambiguous"],
                      "decided_by": r["decided_by"], "gap": r["gap"], "failure_stage": stage, "failure": why})
     out = pd.DataFrame(rows)
-    out.to_csv(os.path.join(HERE, "pipeline.tsv"), sep="\t", index=False)
+    out.to_csv(os.path.join(RESULTS, "pipeline.tsv"), sep="\t", index=False)
     return out
 
 
@@ -322,9 +325,10 @@ def results_markdown(table, choice, validation, pipe):
 
 
 def write_readme(text):
-    path = os.path.join(HERE, "README.md")
-    readme = open(path).read()
+    path = os.path.join(RESULTS, "README.md")
     start, end = "<!-- results:start -->", "<!-- results:end -->"
+    os.makedirs(RESULTS, exist_ok=True)
+    readme = open(path).read() if os.path.exists(path) else start + "\n" + end + "\n"
     readme = re.sub(re.escape(start) + ".*?" + re.escape(end), start + "\n" + text + "\n" + end, readme, flags=re.S)
     with open(path, "w") as handle:
         handle.write(readme)
@@ -345,7 +349,7 @@ def main():
         print(validation.to_string(index=False))
     if args.validate:
         return 0
-    table.to_csv(os.path.join(HERE, "bench_sweep.tsv"), sep="\t", index=False)
+    table.to_csv(os.path.join(RESULTS, "bench_sweep.tsv"), sep="\t", index=False)
     choice = choose(table)
     pipe = pipeline(table, choice["chosen"] if choice["chosen"] is not None else max(LAMBDAS))
     text = results_markdown(table, choice, validation, pipe)

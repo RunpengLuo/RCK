@@ -12,7 +12,9 @@ walks over species-local segment ids without coordinates or haplotypes
 2. the interval order (which defines the segment numbering) is the one under which every join
    of the walk is either a reference join or a junction of that species
    (``truth/adjacency_clone.tsv`` + ``obs/adjacency.tsv``);
-3. haplotypes come from the junction phasings, propagated across reference joins.
+3. haplotypes come from the junction phasings, propagated across reference joins. A junction the
+   walk traverses with several phasings (``truth/rck/rck.acnt.tsv``; ``PHASING`` keeps only the
+   most common) gives each traversal the phasing that agrees with the rest of the walk.
 
 Both truth and inferred cycles are compared after merging reference-contiguous steps into
 runs, so a different segmentation of the same molecule scores as identical:
@@ -35,6 +37,7 @@ decomposition, plus the best composite over every reported decomposition.
 from __future__ import annotations
 
 import argparse
+import ast
 import itertools
 import json
 import logging
@@ -345,11 +348,40 @@ def species_weights(props: Optional[pd.DataFrame], ecdna: Optional[pd.DataFrame]
     return weights
 
 
-def species_junctions(adj_clone: Optional[pd.DataFrame], adjs: Optional[pd.DataFrame]) -> Dict[str, Dict[frozenset, Tuple[Tuple[str, str], str]]]:
-    """{species: {frozenset(EID pair): ((EID-1, EID-2), PHASING)}} for the ecDNA junctions."""
-    result: Dict[str, Dict[frozenset, Tuple[Tuple[str, str], str]]] = {}
+PHASING_ORDER = ("AA", "AB", "BA", "BB")
+MAX_PHASING_ASSIGNMENTS = 50_000
+
+
+def truth_phasings(tdir: str) -> Dict[str, Tuple[str, ...]]:
+    """{AID: every phasing with copies in some clone} from ``truth/rck/rck.acnt.tsv``; {} if absent.
+
+    ``adjacency_clone.tsv`` keeps one PHASING per junction, the most common; a junction that the
+    walk traverses with several phasings (copies of it on both haplotypes) has them all here."""
+    path = os.path.join(tdir, "rck", "rck.acnt.tsv")
+    table = _read_csv_opt(path)
+    result: Dict[str, Tuple[str, ...]] = {}
+    if table is None or "extra" not in table:
+        return result
+    for r in table.to_dict("records"):
+        m = re.search(r"cn=(\{.*\})", str(r["extra"]))
+        if not m:
+            continue
+        present = {ph for clone in ast.literal_eval(m.group(1)).values() for ph, cn in clone.items() if cn}
+        if present:
+            result[str(r["aid"])] = tuple(ph for ph in PHASING_ORDER if ph in present)
+    return result
+
+
+def species_junctions(adj_clone: Optional[pd.DataFrame], adjs: Optional[pd.DataFrame],
+                      phasings: Optional[Dict[str, Tuple[str, ...]]] = None) -> Dict[str, Dict[frozenset, Tuple[Tuple[str, str], Tuple[str, ...]]]]:
+    """{species: {frozenset(EID pair): ((EID-1, EID-2), phasings)}} for the ecDNA junctions.
+
+    ``phasings`` (:func:`truth_phasings`) gives every phasing of a junction; without it, or for a
+    junction it does not list, the one PHASING of ``adjacency_clone.tsv``."""
+    result: Dict[str, Dict[frozenset, Tuple[Tuple[str, str], Tuple[str, ...]]]] = {}
     if adj_clone is None or adjs is None:
         return result
+    phasings = phasings or {}
     eid_pair = {str(r["AID"]): (str(r["EID-1"]), str(r["EID-2"])) for r in adjs.to_dict("records")}
     for r in adj_clone.to_dict("records"):
         species = str(r.get("SPECIES", "."))
@@ -357,16 +389,18 @@ def species_junctions(adj_clone: Optional[pd.DataFrame], adjs: Optional[pd.DataF
             continue
         pair = eid_pair.get(str(r["AID"]))
         if pair:
-            result.setdefault(species, {})[frozenset(pair)] = (pair, str(r["PHASING"]))
+            options = phasings.get(str(r["AID"])) or (str(r["PHASING"]),)
+            result.setdefault(species, {})[frozenset(pair)] = (pair, options)
     return result
 
 
 def _majority_hap(junction_phasing) -> str:
     counts: Dict[str, int] = {}
-    for _, phasing in junction_phasing.values():
-        for h in phasing:
-            if h in ("A", "B"):
-                counts[h] = counts.get(h, 0) + 1
+    for _, options in junction_phasing.values():
+        for phasing in options:
+            for h in phasing:
+                if h in ("A", "B"):
+                    counts[h] = counts.get(h, 0) + 1
     return max(sorted(counts), key=lambda h: counts[h]) if counts else "A"
 
 
@@ -424,7 +458,7 @@ def truth_from_simulation(run_dir: str, sample: Optional[str] = None, max_permut
     adjs = _read_csv_opt(os.path.join(odir, "adjacency.tsv"))
     sample = resolve_sample(props, sample)
     weights = species_weights(props, ecdna, sample)
-    junctions_by_species = species_junctions(adj_clone, adjs)
+    junctions_by_species = species_junctions(adj_clone, adjs, truth_phasings(tdir))
     aa_dir = os.path.join(tdir, "aa")
 
     names: List[str] = []
@@ -543,14 +577,22 @@ def _label_haplotypes(seglist, walk, junction_phasing, default_hap: str = "A") -
             x = parent[x]
         return x
 
-    labels: Dict[int, str] = {}
-    conflicts = unexplained = 0
-    pending = []
+    unexplained = 0
+    pending = []  # (step, haplotype) from junctions with one phasing
+    choices = []  # (exit step, entry step, exit eid, EID-1, phasings, junction) of joins with several
     for i, (exit_eid, entry_eid) in enumerate(_joins(seglist, walk)):
         j = (i + 1) % n
         key = frozenset((exit_eid, entry_eid))
         if key in junction_phasing:
-            (e1, e2), phasing = junction_phasing[key]
+            (e1, e2), options = junction_phasing[key]
+            if _concordant(exit_eid, entry_eid):
+                # a crossing between reference neighbours: a traversal on one haplotype is a plain
+                # reference join, which the truth does not list as a junction
+                options = tuple(options) + tuple(ph for ph in ("AA", "BB") if ph not in options)
+            if len(options) > 1:
+                choices.append((i, j, exit_eid, e1, options, key))
+                continue
+            phasing = options[0]
             h_exit, h_entry = (phasing[0], phasing[1]) if exit_eid == e1 else (phasing[1], phasing[0])
             pending.append((i, h_exit))
             pending.append((j, h_entry))
@@ -558,11 +600,44 @@ def _label_haplotypes(seglist, walk, junction_phasing, default_hap: str = "A") -
             parent[find(i)] = find(j)
         else:
             unexplained += 1
-    for i, h in pending:
-        root = find(i)
-        if root in labels and labels[root] != h:
-            conflicts += 1
-        labels.setdefault(root, h)
+
+    def label(assignment):
+        labels: Dict[int, str] = {}
+        conflicts = 0
+        extra = []
+        for (i, j, exit_eid, e1, _, __), phasing in zip(choices, assignment):
+            h_exit, h_entry = (phasing[0], phasing[1]) if exit_eid == e1 else (phasing[1], phasing[0])
+            extra += [(i, h_exit), (j, h_entry)]
+        for i, h in pending + extra:
+            root = find(i)
+            if root in labels and labels[root] != h:
+                conflicts += 1
+            labels.setdefault(root, h)
+        return conflicts, labels
+
+    # each traversal of a junction with several phasings takes one of them: the assignment with the
+    # fewest haplotype conflicts, then the one that uses the most of the junction's listed phasings
+    traversals: Dict[frozenset, int] = {}
+    for c in choices:
+        traversals[c[5]] = traversals.get(c[5], 0) + 1
+    most_used = sum(min(n_trav, len(junction_phasing[key][1])) for key, n_trav in traversals.items())
+    best = None
+    assignments = itertools.product(*(c[4] for c in choices))
+    for k, assignment in enumerate(assignments):
+        if k >= MAX_PHASING_ASSIGNMENTS:
+            log.warning("truth walk: more than %d phasing assignments; kept the best of the first ones", MAX_PHASING_ASSIGNMENTS)
+            break
+        conflicts, labels = label(assignment)
+        used: Dict[frozenset, set] = {}
+        for c, phasing in zip(choices, assignment):
+            if phasing in junction_phasing[c[5]][1]:
+                used.setdefault(c[5], set()).add(phasing)
+        rank = (conflicts, -sum(len(v) for v in used.values()))
+        if best is None or rank < best[0]:
+            best = (rank, labels)
+        if rank == (0, -most_used):
+            break
+    conflicts, labels = best[0][0], best[1]
     if conflicts:
         log.warning("%d haplotype label conflict(s) while labeling truth walk", conflicts)
     if unexplained:

@@ -72,6 +72,30 @@ sbatch bench_nested.sbatch            # 22 tasks, 2 at a time (academic WLS lice
 python collect.py                     # bench_sweep.tsv, pipeline.tsv, results below
 ```
 
+### Inherited haplotype labels (bench_nested_v2)
+
+The cases above were simulated with per-step haplotype labels, which give some junctions
+several phasings and some fold-backs a haplotype crossing. Neither arises from one physical
+join, and they caused part of the `ctrl_dup_s702` and `nest_cross_3sp_s402` failures. See
+amplicon-allele-analysis `CHANGELOG.md`, `hap_labels`. The benchmark has been rebuilt with
+inherited labels, outside the tracked folders:
+`/n/fs/scratch/$USER/bench_nested_v2/{configs,runs,subgraphs}`, 14 accepted seeds. Its RCK runs
+go to their own folders. The regression cases are unchanged, so their existing runs are linked
+in rather than rerun:
+
+```bash
+cd ~/RCK/results/bench_nested && mkdir -p logs
+export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2      # cases: its seeds.tsv and subgraphs
+export BENCH_NESTED_OUT=$BENCH_NESTED_ROOT/rck_runs                # runs
+export BENCH_NESTED_RESULTS=$BENCH_NESTED_ROOT/rck_results         # collect.py tables and README
+mkdir -p $BENCH_NESTED_OUT
+for c in demo3 demo4_amp0 demo4_amp1 demo5 demo6_union demo7_blockflip demo7_totalonly demo8; do
+  ln -sfn /n/fs/scratch/$USER/bench_nested/rck_runs/$c $BENCH_NESTED_OUT/$c
+done
+sbatch --array=8-21%2 bench_nested.sbatch                          # the 14 bench cases (sbatch passes the environment)
+python collect.py                                                  # afterwards, with the same three variables set
+```
+
 Both arrays skip every step whose outputs exist, so a failed or interrupted array can be
 resubmitted as is. Estimated cost: simulation about 1.5 min and subgraph about 1 min per seed
 (≈ 14–25 simulations with rejections, ≈ 0.5–1 CPU-hour in all); RCK about 10–60 s per λ = 0

@@ -17,6 +17,10 @@ Cases: the regression cases of results/step_sweep/ (same subgraphs and options),
 accepted bench_nested seed of amplicon-allele-analysis configs/bench_nested/seeds.tsv, in
 scenario order, with --block-flip unoriented. Every run has --truth-dir, --no-plots,
 --threads 4 and --time-limit 1800, and the subgraph folder as its only input.
+
+BENCH_NESTED_ROOT, as for amplicon-allele-analysis bench_nested.py, takes the bench cases from a
+benchmark built elsewhere ($BENCH_NESTED_ROOT/configs/seeds.tsv, subgraphs/<run>/union and
+runs/<run>); BENCH_NESTED_OUT puts the runs elsewhere.
 """
 import json
 import os
@@ -33,6 +37,10 @@ AAA = os.environ.get("AAA", os.path.expanduser("~/amplicon-allele-analysis"))
 SIM = os.path.join(AAA, "simulations")
 DATA = os.path.join(RCK, "tests", "ecdna", "data")
 OUT = os.environ.get("BENCH_NESTED_OUT", os.path.join(HERE, "runs"))
+BENCH_ROOT = os.environ.get("BENCH_NESTED_ROOT")
+SEEDS = os.path.join(BENCH_ROOT, "configs", "seeds.tsv") if BENCH_ROOT else os.path.join(SIM, "configs", "bench_nested", "seeds.tsv")
+SUBGRAPHS = os.path.join(BENCH_ROOT, "subgraphs") if BENCH_ROOT else os.path.join(SIM, "subgraphs", "bench_nested")
+SIM_RUNS = os.path.join(BENCH_ROOT, "runs") if BENCH_ROOT else os.path.join(SIM, "runs", "bench_nested")
 POOL_LAMBDA = "0.1"
 LAMBDAS = [0.0, 0.02, 0.05, 0.1, 0.2, 0.5]
 RETRIES = 5  # licence sessions of finished tasks can take a few minutes to free up
@@ -58,7 +66,7 @@ VALIDATION = ["demo3", "demo7_totalonly", "demo8"]
 
 def bench_cases():
     """(case, subgraph, truth dir, options, scenario) of every accepted bench_nested seed."""
-    path = os.path.join(SIM, "configs", "bench_nested", "seeds.tsv")
+    path = SEEDS
     if not os.path.exists(path):
         return []
     seeds = pd.read_csv(path, sep="\t")
@@ -68,7 +76,7 @@ def bench_cases():
 
     order = {s: i for i, s in enumerate(NESTED_SCENARIOS)}
     seeds = seeds.assign(o=seeds["scenario"].map(order)).sort_values(["o", "slot"])
-    return [(r.run, f"{SIM}/subgraphs/bench_nested/{r.run}/union", f"{SIM}/runs/bench_nested/{r.run}",
+    return [(r.run, f"{SUBGRAPHS}/{r.run}/union", f"{SIM_RUNS}/{r.run}",
              ["--block-flip", "unoriented"], r.scenario) for r in seeds.itertuples()]
 
 

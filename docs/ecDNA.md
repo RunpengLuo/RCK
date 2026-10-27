@@ -526,9 +526,17 @@ or pass `--truth-dir` (and optionally `--truth-sample`) to `rck-ecdna` itself.
    current simulator runs). This works whatever the species went through (deletions, shared
    chromosomes, several species). Older runs without `truth/aa/` fall back to rebuilding the
    walk from `truth/walks.walk` + `truth/segments.tsv`.
-2. **Haplotypes:** from the species' junction `PHASING` (`truth/adjacency_clone.tsv` +
+2. **Haplotypes:** from the species' junction phasings (`truth/adjacency_clone.tsv` +
    `obs/adjacency.tsv`), carried across reference joins. Steps no junction labels take the
-   species' majority haplotype.
+   species' majority haplotype. `PHASING` keeps one phasing per junction, its most common.
+   Runs simulated with per-step haplotype labels (amplicon-allele-analysis
+   `hap_labels: per_step`, every run before that key) can traverse one junction with several
+   phasings, such as AA on one copy and BB on its duplicate; `truth/rck/rck.acnt.tsv` lists them
+   all. Each traversal of such a junction takes one of them: the assignment with the fewest
+   haplotype conflicts along the walk, then the one that uses the most of the junction's
+   phasings. A crossing between reference neighbours may also be traversed on one haplotype,
+   as a plain reference join that the truth does not list. Applying one `PHASING` to every
+   traversal had mislabelled 0.995 Mb of the 5.37 Mb bench_nested `ctrl_dup_s702` truth walk.
 3. **Copy number:** the species' copies per cell in the evaluated sample (`ecdna_burden` rows
    of `truth/proportions.tsv`). The sample is `--truth-sample`, else `--sample`
    (`sim_tumor1` maps to `tumor1`), else the first tumor. Without proportions it falls back to
@@ -651,7 +659,7 @@ scales from the windows.
 | `test_subgraph_io.py` | no | synthetic chains; phantom contraction and edge relocation; parallel imputed merging; junction labelings; the `amplicon_0` fixture (18 segments; 20 reference, 14 novel and 12 imputed adjacencies; 4 terminals; crossings AB/BA) |
 | `test_scale.py` | no | depth mode from balanced blocks (rejecting LOH and CN 3 blocks); allele split; flank background; override and fallback; ratio mode cancelling shared bias; θ from extremities; sample selection |
 | `test_walk.py` | no | alternating Hierholzer; canonical form under rotation and reversal; a tandem-duplicated segment; a hub with three loops (2 orderings); balance checks; path parsing and ranking; linear walks from end to end (round trip, canonical form, one ordering, an unpaired end rejected) |
-| `test_evaluate.py` | no | Jaccard with multiplicity; junction scores; order match with rotation, reversal, finer segmentation and tolerance; a linear inferred walk never matches a circular truth (`topology_match`); truth table I/O; rebuilding the demo3 truth from the simulator (16 steps, 2,343,000 bp, seg4 on A and B, seg10 on B); demo4 truth from `truth/aa` (two species, per-sample weights); scoping species to a subgraph |
+| `test_evaluate.py` | no | Jaccard with multiplicity; junction scores; order match with rotation, reversal, finer segmentation and tolerance; a linear inferred walk never matches a circular truth (`topology_match`); truth table I/O; rebuilding the demo3 truth from the simulator (16 steps, 2,343,000 bp, seg4 on A and B, seg10 on B); demo4 truth from `truth/aa` (two species, per-sample weights); scoping species to a subgraph; truth walks with a junction traversed as AA and BB, and with a crossing between reference neighbours traversed back on one haplotype, labelled without conflict; every phasing read from `rck.acnt.tsv` |
 | `test_ilp_circular.py` | yes (small) | single circle (10 copies on A plus a 1+1 background); haplotype crossings; imputed closing edge used when cheap, linear flow when expensive, no flow with `--linear-ends none`; linear ends only at boundaries and flanks; a linear amplicon; `--enforce-is` |
 | `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; a linear species; a circle plus a linear piece (called ecDNA); end-to-end `rck-ecdna` for a circle (`ecDNA`) and for an amplicon with no closing junction (`linear`, and `none` with `--linear-ends none`); read constraints (merging a read and its reverse, dropping single-junction, weak and off-flow reads); a read through a>x>b choosing the merged circle (reward and `--path-fraction`); a read never adding a species, and the order post-check |
 | `test_refit.py` | LP: no; CLI: yes (small) | a fractional weight (10.4); an unsupported leftover dropped; a supported one kept; the `--refit-min-copies` threshold; the last species never dropped; observation rows use the flow background; end-to-end fractional copy number (10.4, integer 10) and `--no-refit` |

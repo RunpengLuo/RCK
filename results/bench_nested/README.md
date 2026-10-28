@@ -188,3 +188,84 @@ Subgraph stage: 2 of 12 subgraphs miss a true junction or cover under 80% of a t
 
 Compute: 754 s of RCK wall time over 20 cases (one λ = 0 run and one pool run each, 4 threads).
 <!-- results:end -->
+
+## New benchmark: bench_nested_v2 (on scratch, 2026-10-27)
+
+These are the results of the rebuilt benchmark (inherited haplotype labels, see above), run on ionic
+(Slurm 32000320, the 14 bench cases; the 8 regression cases are links to the runs above). They live
+in `/n/fs/scratch/$USER/bench_nested_v2/rck_results/` (`bench_sweep.tsv`, `pipeline.tsv`, `README.md`),
+with `comparison.md` and `comparison.tsv` against the committed tables above. Neither the tables
+above nor the tracked configs and subgraphs have been replaced. Which benchmark stands is still
+open.
+
+The two benchmarks share scenarios and seed blocks. 9 bench cases keep their name: the 4 samehap
+cases are identical, and the 5 cross and control cases have the same walks and copy numbers but
+new haplotype labels. 5 are replacement seeds, because s101, s501, s602 and s701 have no crossing
+under inherited labels and s403 now passes its read check: s104, s505, s603, s703 and s403
+(in place of s406).
+
+| λ | 0 | 0.02 | 0.05 | 0.1 | 0.2 | 0.5 |
+|---|---|---|---|---|---|---|
+| mean composite, all 22 cases | 0.8269 | 0.8600 | 0.9076 | 0.9076 | 0.9283 | 0.9304 |
+| control / demo cases below λ = 0 | none | none | none | none | none | none |
+
+- `ctrl_dup_s702` is fixed: 0.744 → 0.997 at every λ. It has no wrong junction label, no imputed
+  edge and no ecDNA block wrong after the flow.
+- `ctrl_separate_s601` is fixed by `--max-extend`: 0.759 → 0.982. Its replacement pair, s603, scores
+  0.976.
+- `nest_cross_3sp_s402` has clean labels, flips and imputed edges. It is merged at λ ≤ 0.1
+  (ecdna2 + ecdna3, 2 species for 3, 0.523), and recovered at λ ≥ 0.2 (3 species, 0.978).
+- **The λ = 0.05–0.5 plateau no longer holds**, and 0.1 is no longer on it. λ = 0.2 is the smallest
+  grid value with every real gain. The rule picks 0.5 again, for `nest_samehap_3to1_s301` alone
+  (0.693 → 0.740, still merged). The choice of 0.2 rests on one case. Re-ranking the s402 pool on a
+  0.01 grid puts its switch between 0.10 and 0.11: at 0.1, one extra species (penalty 1.0) exactly
+  ties 10 fewer steps, so 0.1 sits on the tie.
+- `nest_cross_1to1_s502` finishes (13 s + 32 s). `nest_cross_3sp_s406` is replaced by s403.
+
+Remaining failures at λ = 0.1, 6 of 14 bench cases (5 at λ = 0.2):
+
+| case | stage | why |
+|---|---|---|
+| nest_samehap_3to1_s301 | RCK | unchanged: ec2 carries ecdna1+ecdna2; 3 species for 2; 0.693 |
+| nest_cross_3sp_s402 | RCK (λ) | ec2 carries ecdna2+ecdna3; 2 species for 3; 0.523; fixed at λ ≥ 0.2 |
+| nest_cross_3sp_s403 | subgraph (scale), then RCK | `rck_inputs` ploidy fit 5.81 (depth per copy 6.51, about 13.8 elsewhere): segment CN 2× truth, flow objective 41, 181 steps; 0.592; `pipeline.tsv` says RCK. Rebuilt with `--rck-ploidy 2`, the scale is right (segment and junction CN 1.03 / 1.04× truth), but it still fails (0.545); see Follow-up checks |
+| nest_cross_1to1_s502 | RCK | 3 species for 2: a 1.48-copy species carries both species' junctions; 0.955 |
+| nest_cross_1to1_s505 | RCK | the same, with 2.84 copies; ecdna2 0.586 |
+| ctrl_dup_s703 | RCK | 2 species for 1: the B insertion's observed CN (16.1) is below the truth (19.2) |
+
+The old `nest_cross_1to1_s501`, `s502` and `nest_cross_3sp_s406` subgraphs had the same scale error
+(ploidy ≈ 4, depth per copy 7.4–7.9). s501's old failure therefore comes from the subgraph stage
+(its old segment CN was 1.81× the truth), not from RCK. `pipeline.tsv`'s stage rule checks coverage and
+missing junctions only.
+
+RCK wall time: 4349 s over 22 cases, 2860 s of it in `nest_cross_3sp_s403`.
+
+### Follow-up checks (bench_nested_v2, 2026-10-27)
+
+These are diagnostic runs on the existing outputs and subgraphs, with no new simulation, in
+`/n/fs/scratch/$USER/bench_nested_v2/diag/` (Slurm 32005476 and 32005494; scripts `rck_diag.sbatch`,
+`pool_summary.py`, `flow_vs_truth.py`, `scale_ratio.py`, `summarize.sh`, kept in `diag/` here). The plan
+that follows from them is in `NEXT_STEPS.md`. "Fitted θ" is the
+junction-reads-per-copy value `rck_inputs` fits; the bench fixes it at 6.5.
+
+| case | check | result |
+|---|---|---|
+| nest_cross_3sp_s402 | re-rank the pool, λ = 0.10–0.20 in steps of 0.01 | 3 species, 0.978, from λ = 0.11 on |
+| nest_cross_3sp_s403 | subgraph with `--rck-ploidy 2`, then RCK | scale fixed, still 0.545 at every λ; decomposition optimal; best pool solution 0.729 |
+| nest_cross_1to1_s502 | RCK with fitted θ 5.11 | **resolved**: 2 species, 0.963 at λ ≥ 0.02 (junctions observed at 0.77× truth with θ 6.5) |
+| nest_cross_1to1_s505 | RCK with fitted θ 4.93 | worse, 0.600 (θ 6.5 was right: junctions at 1.00× truth); no good pool solution with θ 6.5 (best = rank 1, 0.765) |
+| nest_samehap_3to1_s301 | pool, and RCK with fitted θ 5.09 | the pool holds a 0.973 answer (4 species, 2 of them leftovers ≤ 2.1 copies), ranked below the 3-species rank 1; fitted θ: 0.691 |
+| ctrl_dup_s703 | window depth; pool; RCK with fitted θ 4.53 | the B insertion's depth per copy is 12.0 against 12.9–16.4 elsewhere (the simulator's `sigma` 0.1 correlated depth bias); the pool holds a 0.971 answer (the full walk at 16.2 plus a 1.7 leftover), ranked below rank 1; fitted θ: 0.718 |
+
+Reading:
+
+- s402 is a λ choice: any λ ≥ 0.11 resolves it.
+- s502 is a junction-scale input error. The fitted θ fixes it here, but it is wrong in s505 (4.93
+  against a true ≈ 6.5) and s403 (2.12), so it cannot replace 6.5 as is.
+- s301, s703, s505 and s403 (with the right scale) are decomposition failures. The ecDNA flow is
+  integer and fitted to noisy observations, and the decomposition must cover it exactly: residual
+  weight 1 per copy on a segment ≥ 50 kb (`adj_residual_weight` 1.0 on junctions), against
+  `species_penalty` 1. A 1–3 copy dip from the simulated depth bias (±10% per 200 kb, so ±2 copies
+  at 20) therefore costs as much as an extra species. Exact-fit alternatives then win: extra
+  leftover species (s703, s301) or wrong merges (s505, s403). In s301 and s703 the near-correct answer
+  is in the pool but loses on the ranking. In s505 and s403 it is not in the pool at all.

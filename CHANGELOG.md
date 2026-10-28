@@ -231,6 +231,42 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
     (`configs/seeds.tsv`, `subgraphs/<run>/union` and `runs/<run>` under it). `collect.py` also reads
     `BENCH_NESTED_RESULTS`, which writes its tables and a results-only `README.md` to another
     folder, so a new benchmark does not overwrite this one's. Unset, nothing changes.
+  - **New benchmark, bench_nested_v2** (on scratch, not committed). It was rebuilt with
+    amplicon-allele-analysis `hap_labels: inherit`. Run on ionic: Slurm 32000320, the 14 bench
+    cases. The 8 regression cases are links to the runs above. Tables:
+    `/n/fs/scratch/$USER/bench_nested_v2/rck_results/`, with `comparison.md` and `comparison.tsv`
+    against the committed tables above, which are unchanged.
+    - 9 of the 14 bench cases keep their seed. Their walks and copy numbers are the same, and for
+      the 5 cross and control seeds the haplotype labels change. The other 5 are replacement
+      seeds of the same scenarios.
+    - `ctrl_dup_s702` is fixed: 0.744 → 0.997 at every λ. It has no wrong junction label, no
+      imputed edge and no block wrong after the flow.
+    - `ctrl_separate_s601` is fixed by `--max-extend`: 0.759 → 0.982.
+    - `nest_cross_1to1_s502` finishes in 45 s.
+    - `nest_cross_3sp_s402` has clean labels, flips and imputed edges. It is still merged at
+      λ ≤ 0.1 (2 species for 3, 0.523) and recovered at λ ≥ 0.2 (0.978). **The λ = 0.05–0.5
+      plateau no longer holds.**
+    - Mean composite over 22 cases: 0.827 at λ = 0, 0.908 at 0.05–0.1, 0.928 at 0.2 and 0.930 at
+      0.5. No control or demo case loses against λ = 0. The rule picks 0.5 again because of
+      `nest_samehap_3to1_s301`. λ = 0.2 is the smallest value with every real gain.
+    - Failures at λ = 0.1: 6 of 14 bench cases (5 at 0.2):
+      - `nest_samehap_3to1_s301`, unchanged;
+      - `nest_cross_3sp_s402` (λ ≤ 0.1);
+      - `nest_cross_3sp_s403`;
+      - `nest_cross_1to1_s502` and `s505`, a third low-weight species;
+      - `ctrl_dup_s703`, 2 species for 1.
+    - `nest_cross_3sp_s403`, like the old `nest_cross_1to1_s501`, `s502` and
+      `nest_cross_3sp_s406`, has a subgraph whose fitted depth per copy is half the true one
+      (ploidy 4–6 instead of 2). Its segment copy numbers are about 2× the junction-read ones.
+      `pipeline.tsv` labels these "RCK" because its stage rule does not check the scale.
+    - 4349 s of RCK wall time, 2860 s of it in `nest_cross_3sp_s403`.
+    - Follow-up checks (`results/bench_nested/README.md`):
+      - s402 switches to the right answer at λ = 0.11.
+      - s502 is resolved by the fitted junction reads per copy (5.11), which is wrong for s505
+        and s403.
+      - s403 still fails with the right scale.
+      - s301 and s703 have a near-correct answer in the pool that loses on the ranking. The exact
+        decomposition of a noisy integer flow trades one copy of residual against one species.
 - Tests under `tests/ecdna/`, with fixtures from demo3 and demo4: subgraph reading, scale,
   flow, decomposition, walks, refit, subgraph inputs, evaluation, recovery matrix
   (`test_recovery.py`), figures (`test_plot.py`), Gurobi environment, and end-to-end demo3 and

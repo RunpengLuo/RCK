@@ -115,6 +115,17 @@ def build_parser() -> argparse.ArgumentParser:
     dc.add_argument("--num-alternatives", type=int, default=10)
     dc.add_argument("--pool-gap", type=float, default=0.10)
     dc.add_argument("--alternatives-mode", choices=["pool", "nogood"], default="pool")
+    dc.add_argument("--adj-residual-weight", type=float, default=1.0,
+                    help="Cost per copy of junction (adjacency) flow left uncovered or overcovered by the species")
+    dc.add_argument("--seg-residual-scale", type=float, default=1.0,
+                    help="Multiplier on the segment residual weight (1 per copy on segments of 50 kb or more). Below 1, "
+                         "a few copies of flow noise cost less than an extra species; use with --rank-residual sum")
+    dc.add_argument("--residual-mode", choices=["absolute", "relative"], default="absolute",
+                    help="relative: divide every edge's residual weight by --residual-sigma x max(flow, 1), so the "
+                         "residual counts expected-noise units; use with --rank-residual sum")
+    dc.add_argument("--residual-sigma", type=float, default=0.1, help="Expected relative flow noise for --residual-mode relative")
+    dc.add_argument("--rank-residual", choices=["first", "sum"], default="first",
+                    help="first: rank decompositions on residual, then structure cost; sum: on residual + structure cost")
     dc.add_argument("--max-orderings", type=int, default=20, help="Alternative orderings enumerated per species")
 
     lr = parser.add_argument_group("Long reads in the decomposition (--paths)")
@@ -231,6 +242,11 @@ def run(args) -> Dict[str, object]:
                                      min_species_weight_frac=args.min_species_weight_frac, min_ecdna_copies=args.min_ecdna_copies,
                                      ecdna_call_fraction=args.ecdna_call_fraction, num_alternatives=args.num_alternatives,
                                      pool_gap=args.pool_gap, mode=args.alternatives_mode, max_orderings=args.max_orderings,
+                                     adj_residual_weight=getattr(args, "adj_residual_weight", 1.0),
+                                     seg_residual_scale=getattr(args, "seg_residual_scale", 1.0),
+                                     residual_mode=getattr(args, "residual_mode", "absolute"),
+                                     residual_sigma=getattr(args, "residual_sigma", 0.1),
+                                     rank_residual=getattr(args, "rank_residual", "first"),
                                      path_weight=args.path_weight, path_fraction=args.path_fraction,
                                      min_path_support=args.min_path_support, min_path_junctions=args.min_path_junctions,
                                      time_limit=args.time_limit, threads=args.threads, mip_gap=args.mip_gap,

@@ -1,9 +1,25 @@
 # bench_nested: next steps (written 2026-10-27)
 
-State at the end of the 2026-10-27 session, and a plan for what comes next. The evidence is in
-`README.md`: the "New benchmark: bench_nested_v2" and "Follow-up checks" sections. The full
-old-vs-new comparison is in `/n/fs/scratch/$USER/bench_nested_v2/rck_results/comparison.md` and
-`comparison.tsv`.
+State at the end of the 2026-10-27 session, and a plan for what comes next; progress of the
+2026-10-29 session is marked **[done 2026-10-29]** and in "Progress (2026-10-29)" at the end. The
+evidence is in `README.md`: the "bench_nested_v2" and "Follow-up checks" sections. The full
+old-vs-new comparison is in `comparison.md` and `comparison.tsv` here.
+
+Scratch purges files older than two weeks. Only run outputs remain there (`bench_nested_v2/runs`,
+`rck_runs`, `diag`, `subgraphs_paths`); configs, subgraphs and tables are in the repositories, and a
+copy of the v2 configs, subgraphs and `rck_results` is in `~/backups/bench_nested_v2_2026-10-29.tar.gz`.
+
+> **Check first (left running on 2026-10-29 at 15:55):** Slurm array **32025976** on ionic, the
+> step 2 diagnostic. Tasks 0–14, 16 and 17 are done and recorded. Still running or pending:
+> - 15 `nest_cross_3sp_s403_w0.25` and 18 `nest_cross_1to1_s505_w0.5`, running;
+> - 19 `nest_cross_3sp_s403_w0.5`, 20 `nest_cross_1to1_s505_w1` and 21 `nest_cross_3sp_s403_w1`,
+>   pending.
+>
+> Expected to finish at about 17:00 on 2026-10-29. Check them with
+> `sacct -j 32025976 -X -o JobID%14,State,Elapsed`, then finish `diag/rck_noise/SUMMARY.md` as its
+> status section says (`diag/noise_summary.py ... --archive`) and commit. Outputs:
+> `/n/fs/scratch/$USER/bench_nested_v2/diag/rck_noise/<name>/`, which scratch deletes after two
+> weeks (about 2026-11-12).
 
 ## Where things stand
 
@@ -13,7 +29,7 @@ old-vs-new comparison is in `/n/fs/scratch/$USER/bench_nested_v2/rck_results/com
     `/n/fs/scratch/$USER/bench_nested_v2/{configs,runs,subgraphs,rck_runs,rck_results,diag}`.
     Its configs, `seeds.tsv`, subgraphs and tables are **not** in either repo.
   - Scratch is not backed up.
-- **Whether v2 replaces the first benchmark is still undecided** (step 1).
+- **v2 replaced the first benchmark on 2026-10-29** (step 1, done).
 - Recommended `--step-penalty`: **0.2**, not 0.1. On v2, `nest_cross_3sp_s402` switches to the right
   answer only at λ ≥ 0.11, and λ = 0.1 is an exact tie. No control or demo case loses at any λ up
   to 0.5. RCK's default stays 0.
@@ -49,7 +65,7 @@ old-vs-new comparison is in `/n/fs/scratch/$USER/bench_nested_v2/rck_results/com
 
 ## Plan, in order
 
-### Step 1. Decide on the benchmark (you; no compute)
+### Step 1. Decide on the benchmark (you; no compute) [done 2026-10-29: v2 adopted]
 
 Read `comparison.md`. If v2 replaces v1:
 
@@ -63,7 +79,7 @@ Read `comparison.md`. If v2 replaces v1:
 Until then, back up the v2 inputs: `tar czf` the `configs` and `subgraphs` folders to a second
 location. The simulations can be regenerated from the configs with `bench_nested.py`.
 
-### Step 2. Test a noise-tolerant decomposition (RCK; small code change, ≈ 1 h of runs)
+### Step 2. Test a noise-tolerant decomposition (RCK; small code change, ≈ 1 h of runs) [done 2026-10-29: no setting passes; see diag/rck_noise/SUMMARY.md]
 
 1. Expose two options in `rck/ecdna_run.py` / `DecompositionParams`: `--adj-residual-weight`
    (exists as a param, not on the CLI), and a segment residual scale. The segment scale should be
@@ -83,7 +99,7 @@ If the residual weighting is not enough, the larger change is to decompose again
 observations directly: put the species weights into the flow MILP, or refit with a noise model
 before choosing among the pool's exact fits.
 
-### Step 3. Long-read paths (cheap check first)
+### Step 3. Long-read paths (cheap check first) [done 2026-10-29: a bug, fixed; paths do not help s301 or s703]
 
 - The v2 `ctrl_dup_s702` and `s703` subgraphs load **0 paths**; the v1 subgraphs loaded 3 and 4.
   Find out why `rck_inputs.py`'s `paths.tsv` came out empty. Compare `union/paths.tsv`, and the
@@ -111,7 +127,7 @@ before choosing among the pool's exact fits.
   observations.
 - Test on s502 (needs ≈ 5.0) and s505 (needs ≈ 6.5).
 
-### Step 6. Benchmark bookkeeping
+### Step 6. Benchmark bookkeeping [done 2026-10-29]
 
 - `collect.py`: add a `scale` failure stage. Flag it when `depth_per_copy` deviates more than 30%
   from the median of the cases, or when segment and junction scale disagree.
@@ -140,3 +156,87 @@ before choosing among the pool's exact fits.
 - Diagnostic outputs of this session: `/n/fs/scratch/$USER/bench_nested_v2/diag/rck/` (s403 with
   ploidy 2; s502, s505, s301 and s703 with fitted θ; Slurm 32005476 and 32005494). Their scripts
   are in `diag/` here.
+
+## Progress (2026-10-29)
+
+- **Step 1.** v2 configs (with `seeds.tsv`) and subgraphs replace the tracked ones in
+  amplicon-allele-analysis (v1-only files removed with `git rm`); v2's tables, `comparison.md`
+  and `comparison.tsv` are here; `runs` → `bench_nested_v2/rck_runs`, amplicon-allele-analysis
+  `simulations/runs/bench_nested` → `bench_nested_v2/runs`. `git gc` in both repositories (no
+  history rewrite): amplicon-allele-analysis 380 MB loose → 212 MB packed, RCK 115 MB → 3.5 MB.
+- **Step 2, code.** `rck-ecdna --adj-residual-weight`, `--seg-residual-scale`,
+  `--residual-mode relative --residual-sigma`, and `--rank-residual sum`, all off by default
+  (`docs/ecDNA.md`, "Noise-tolerant residual"). The ranking puts residual first, so lower weights
+  alone change only the pool (and `--pool-gap` pruning can then drop the exact fit), not the
+  choice among what is kept: the diagnostic runs use `--rank-residual sum`.
+  - What the existing pools say: in s301 and s703 **every** pool solution has residual 0 (exact
+    fits of the integer flow). s703's 0.971 answer (the walk at 16 + a 2-copy leftover) and its
+    rank 1 (two circles) both have 2 significant species and residual 0; they differ only in
+    steps (31 against 17) and the tie-break. s703's flow has the B insertion and both its
+    junctions at 16 against 18–19 elsewhere, so a single walk leaves about 9–11 weighted copies of
+    residual: it needs weight ≲ 0.1 to beat one species. Expect 0.5, 0.25 and relative σ 0.1 not
+    to fix s703; s301 may differ. (Confirmed by the runs, below.)
+  - **Runs** (Slurm 32025976, 22 tasks; `diag/rck_noise/`: `SUMMARY.md`, `noise_summary.tsv`, the
+    LIST files and each run's small outputs). **No setting passes.**
+    - s301 (0.693) and s703 (0.712) keep their rank 1 at every residual setting and every path
+      setting.
+    - s505 at w0.25 and rel0.1 stays at 0.765, the best in its pool: no good answer enters.
+    - s403 at rel0.1 stays at 0.545 (pool best 0.729, not picked).
+    - s403 at w0.25, w0.5 and w1, and s505 at w0.5 and w1, were still running or pending when the
+      session ended (array 32025976, tasks 15 and 18–21; see "Check first" at the top).
+  - **What was learnt:**
+    - The 0.97 answers lose on **leftovers counted as significant species**, not on residual.
+      s703's walk plus a 2-copy leftover counts 2 species, like the two circles; s301's answer
+      counts 4 against 3.
+    - **The observations cannot separate them.** Refitted to the observations, every s703 pool
+      solution has the same misfit (`data_objective` 5.097), and s301's 0.97 answer is better by
+      0.002 out of 5.1. A refit before choosing, or species weights in the flow MILP, therefore
+      cannot fix s703, so the larger change NEXT_STEPS proposed is not the next step for these
+      cases.
+    - Raising `--min-species-weight-frac` to 0.15, checked offline on the saved pools, fixes s703
+      (0.971) but not s301, and makes s505 worse (0.765 → 0.53): a global threshold is not it
+      either.
+- **Step 3.** The empty `paths.tsv` was a bug in amplicon-allele-analysis `rck_inputs.py`: a path
+  was dropped unless every simulator segment boundary on it, read ends included, was a subgraph
+  node. Under inherited labels some former haplotype-switch junctions are plain reference
+  continuations without a node, which emptied s702 and s703; most paths were dropped in every
+  case. Fixed (`clip_path`). Rebuilt s702, s703 and s301 into
+  `/n/fs/scratch/$USER/bench_nested_v2/subgraphs_paths/` (graphs byte-identical; paths with ≥ 2
+  junctions: s702 0, s703 1 (3 reads), s301 3 (5 reads)), so paths can only weakly help.
+  **The committed subgraphs predate the fix**, and paths are on by default (`--path-weight 0.5`):
+  rebuilding them changes RCK's input for every case. Do it before step 7's rerun.
+- **Step 6.** `collect.py`: `scale` failure stage (v2 s403 is now `scale`; s104 passes but is
+  flagged, junction scale 0.675) and the 2-case λ rule (v2: 0.2; the first benchmark would give
+  0.05). `verify_subgraph.py` scores segment calls against summed haplotype copies (v2: 34 wrong
+  → 0; the committed `verify_report.txt` and `subgraph_checks.tsv` still hold the old counts,
+  refreshed by the next subgraph rebuild). `plot_rck_solution.py` takes the run folder.
+- `--rck-ploidy` is a `subgraph_construct.py` / `rck_inputs.py` option, not an `rck-ecdna` one:
+  s403 at ploidy 2 uses the rebuilt subgraph `bench_nested_v2/diag/s403_ploidy2/union`.
+
+## Next steps (revised 2026-10-29)
+
+In order. Steps 4, 5 and 7 are as planned above; step 2 continues as 2b.
+
+1. **Finish the step 2 record** (array 32025976 tasks 15 and 18–21, see "Check first"). Fill the
+   pending s403 and s505 rows of `diag/rck_noise/SUMMARY.md`
+   (`python diag/noise_summary.py diag/rck_noise/ordered.list --archive diag/rck_noise/runs`).
+   If s403 or s505 at some setting gets a better answer into the pool, note it there.
+2. **Step 2b: a noise-aware leftover prior** (RCK, opt-in). Count a species as significant only if
+   its weight exceeds the copy-number noise of the species it overlaps (σ × the heaviest overlapping
+   species' weight), not 10% of the heaviest species overall.
+   - Test it offline first: recount significant species in the saved pools and re-rank them with
+     `rank_pool`, as in `SUMMARY.md`.
+   - First find out why s505 loses at a higher global threshold.
+   - Then run it on the four cases, and on the 8 regression and 10 passing bench cases (no drop
+     above 0.005).
+3. **Rebuild the 14 committed subgraphs with the `rck_inputs.py` path fix** (amplicon-allele-analysis
+   `bench_nested.sbatch`). Paths are on by default, so RCK's input changes for every case, and the
+   rebuild refreshes `verify_report.txt` and `subgraph_checks.tsv` to the new segment-call scoring.
+   Do this before step 7.
+4. **Step 4** (ploidy selection in `rck_inputs.py`) for s403, which `pipeline.tsv` now labels
+   `scale`, and **step 5** (θ) for s502 and s505.
+5. Optional: raise the long-read count in the s703 and s301 configs, to see whether paths can
+   separate their answers when there are more of them.
+6. **Step 7**: rerun all 22 cases (and the regression cases if RCK changed), `python collect.py`,
+   then update `README.md`, both CHANGELOGs and the λ recommendation.
+

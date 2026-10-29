@@ -5,6 +5,21 @@ with two uses: choosing a default for `--step-penalty` (λ), and measuring end t
 ecDNA species and haplotype-crossing junctions are recovered. It sits alongside the older
 `results/bench/` and `results/step_sweep/`, which are unchanged.
 
+**Benchmark in use: bench_nested_v2** (inherited haplotype labels; see "Inherited haplotype labels"
+and "bench_nested_v2" below). It replaced the first benchmark on 2026-10-29. The tracked configs
+(with `seeds.tsv`) and subgraphs in amplicon-allele-analysis, and this folder's `bench_sweep.tsv`,
+`pipeline.tsv` and `rerank_validation.tsv`, are v2's. `comparison.md` and `comparison.tsv` compare
+the two benchmarks. The first benchmark's results are kept below ("First benchmark"), and its
+tables in git history (9b74b87).
+
+Run outputs stay on scratch, which **purges files older than two weeks**: `runs` →
+`/n/fs/scratch/$USER/bench_nested_v2/rck_runs` (the 8 regression cases there link to
+`/n/fs/scratch/$USER/bench_nested/rck_runs`), amplicon-allele-analysis `simulations/runs/bench_nested`
+→ `/n/fs/scratch/$USER/bench_nested_v2/runs`, and the diagnostics in
+`/n/fs/scratch/$USER/bench_nested_v2/diag/`. Everything this README or `NEXT_STEPS.md` needs to
+keep is in the repositories; the simulations can be regenerated from the configs with
+`bench_nested.py`, and the RCK runs with `bench_nested.sbatch`.
+
 ## Cases
 
 Bench cases: 7 scenarios × 2 accepted seeds = 14 simulations, from amplicon-allele-analysis
@@ -77,8 +92,9 @@ python collect.py                     # bench_sweep.tsv, pipeline.tsv, results b
 The cases above were simulated with per-step haplotype labels, which give some junctions
 several phasings and some fold-backs a haplotype crossing. Neither arises from one physical
 join, and they caused part of the `ctrl_dup_s702` and `nest_cross_3sp_s402` failures. See
-amplicon-allele-analysis `CHANGELOG.md`, `hap_labels`. The benchmark has been rebuilt with
-inherited labels, outside the tracked folders:
+amplicon-allele-analysis `CHANGELOG.md`, `hap_labels`. The benchmark was rebuilt with
+inherited labels (these are now the tracked configs and subgraphs, so steps 1–3 above run it; the
+commands below are how it was first built and run, outside the tracked folders):
 `/n/fs/scratch/$USER/bench_nested_v2/{configs,runs,subgraphs}`, 14 accepted seeds. Its RCK runs
 go to their own folders. The regression cases are unchanged, so their existing runs are linked
 in rather than rerun:
@@ -117,15 +133,23 @@ time at 2 concurrent tasks).
   junctions recovered, ecDNA phase blocks oriented right, wrong or not at all, the junction reads
   per copy `rck_inputs.py` would have fitted against the 6.5 used), the flow objective, imputed
   edges used, block flips against the truth orientation, the RCK scores, and for a failing case
-  the stage that explains it (`subgraph` when the subgraph misses a true junction or covers under
-  80% of a true segment, else `RCK`).
+  the stage that explains it, the first that applies: `subgraph` when the subgraph misses a true
+  junction or covers under 80% of a true segment; `scale` when its depth per copy is more than 30%
+  from the cases' median, or the flow's segment and junction copy numbers against the truth differ
+  by more than 1.5× (`diag/scale_ratio.py`); else `RCK`. The scale columns are in the table.
 - `runs/`: every run's full output (not tracked).
 
-The chosen λ is the smallest on the plateau (within 0.001) of best mean composite over all
-cases, with no control (`ctrl_*`) or demo case more than 0.005 below its λ = 0 score. It is a
-recommendation; RCK's default `--step-penalty` stays 0.
+The chosen λ is the smallest on the plateau of best mean composite over all cases, with no
+control (`ctrl_*`) or demo case more than 0.005 below its λ = 0 score. A λ is on the plateau when
+its mean is within 0.001 of the best λ's, or when fewer than 2 cases gain more than 0.005 from it
+to the best λ, so that one case at the edge of the grid cannot pick λ (2026-10-29; before, the
+0.001 test alone picked 0.5 on both benchmarks because of `nest_samehap_3to1_s301`). It is a
+recommendation; RCK's default `--step-penalty` stays 0. `python collect.py --lambda X` reports
+another λ.
 
-## Status and reading (2026-10-25)
+## First benchmark (2026-10-25; replaced by bench_nested_v2)
+
+### Status and reading
 
 Run on ionic (Slurm 31981878/31981889 validation, 31981902/31981984 RCK). 20 of 22 cases are
 complete. `nest_cross_3sp_s406` and `nest_cross_1to1_s502` were cancelled at the session's time
@@ -141,9 +165,8 @@ gain** (mean composite 0.800 → 0.896, merges fixed on `nest_cross_2to1`, `nest
 and demo7 total-only), with no control or demo case worse than at λ = 0. The earlier
 recommendation of 0.1 sits on the same plateau.
 
-## Results
+### Results of the first benchmark
 
-<!-- results:start -->
 **Re-ranking check** (`rerank_validation.tsv`, against `results/step_sweep/sweep.tsv`): re-ranked λ > 0 composites match at 32/32 (case, λ), ambiguity fields at 32/32; the λ = 0 runs match at 8/8; λ = 0 emulated from the pool matches at 7/8.
 
 **Recommended `--step-penalty`: 0.5**, the smallest λ on the plateau of best mean composite over all 20 cases (0.5), with no control or demo case more than 0.005 below its λ = 0 score. λ giving the same rank-1 answers on every case: 0.5. The default stays 0.
@@ -187,16 +210,65 @@ Remaining failures at λ = 0.5 (mean composite < 0.95, merged, or a wrong specie
 Subgraph stage: 2 of 12 subgraphs miss a true junction or cover under 80% of a true segment (ctrl_separate_s601, ctrl_separate_s602).
 
 Compute: 754 s of RCK wall time over 20 cases (one λ = 0 run and one pool run each, 4 threads).
+
+## Results (bench_nested_v2)
+
+Written by `python collect.py` (the λ rule and failure stages of its docstring).
+
+<!-- results:start -->
+**Re-ranking check** (`rerank_validation.tsv`, against `results/step_sweep/sweep.tsv`): re-ranked λ > 0 composites match at 32/32 (case, λ), ambiguity fields at 32/32; the λ = 0 runs match at 8/8; λ = 0 emulated from the pool matches at 7/8.
+
+**Recommended `--step-penalty`: 0.2**, the smallest λ on the plateau of best mean composite over all 22 cases (0.2, 0.5; a λ whose shortfall to the best comes from fewer than 2 cases is on it), with no control or demo case more than 0.005 below its λ = 0 score. λ giving the same rank-1 answers on every case: 0.2. The default stays 0.
+
+| λ | 0 | 0.02 | 0.05 | 0.1 | 0.2 | 0.5 |
+|---|---|---|---|---|---|---|
+| mean composite, all cases | 0.8269 | 0.8600 | 0.9076 | 0.9076 | 0.9283 | 0.9304 |
+| control / demo cases below λ = 0 | none | none | none | none | none | none |
+| cases gaining from λ to the best λ | demo7_totalonly, nest_cross_2to1_s104, nest_cross_3sp_s402, nest_cross_3sp_s403, nest_samehap_2to1_s202, nest_samehap_3to1_s301 | demo7_totalonly, nest_cross_3sp_s402, nest_samehap_2to1_s202, nest_samehap_3to1_s301 | nest_cross_3sp_s402, nest_samehap_3to1_s301 | nest_cross_3sp_s402, nest_samehap_3to1_s301 | nest_samehap_3to1_s301 | none |
+
+Mean composite per scenario (mean over seeds; merged = rank-1 decompositions flagged merged):
+
+| scenario | cases | λ = 0 | λ = 0.2 | merged at 0 | merged at 0.2 |
+|---|---|---|---|---|---|
+| ctrl_dup | 2 | 0.855 | 0.855 | 0 | 0 |
+| ctrl_separate | 2 | 0.979 | 0.979 | 0 | 0 |
+| demo3 | 1 | 0.960 | 0.959 | 0 | 0 |
+| demo4_amp0 | 1 | 0.983 | 0.983 | 0 | 0 |
+| demo4_amp1 | 1 | 0.997 | 0.997 | 0 | 0 |
+| demo5 | 1 | 0.990 | 0.990 | 0 | 0 |
+| demo6_union | 1 | 0.990 | 0.990 | 0 | 0 |
+| demo7_blockflip | 1 | 0.997 | 0.997 | 0 | 0 |
+| demo7_totalonly | 1 | 0.422 | 0.976 | 1 | 0 |
+| demo8 | 1 | 0.987 | 0.987 | 0 | 0 |
+| nest_cross_1to1 | 2 | 0.860 | 0.860 | 2 | 2 |
+| nest_cross_2to1 | 2 | 0.609 | 0.967 | 1 | 0 |
+| nest_cross_3sp | 2 | 0.550 | 0.785 | 2 | 1 |
+| nest_samehap_2to1 | 2 | 0.745 | 0.991 | 1 | 0 |
+| nest_samehap_3to1 | 2 | 0.836 | 0.836 | 1 | 1 |
+
+Remaining failures at λ = 0.2 (mean composite < 0.95, merged, or a wrong species count; `pipeline.tsv`): 5 of 14 bench cases.
+
+| case | stage | why |
+|---|---|---|
+| nest_samehap_3to1_s301 | RCK | merged: ec2 carries ecdna1+ecdna2; 3 species for 2 true; composites ecdna1=0.964,ecdna2=0.423 |
+| nest_cross_3sp_s403 | scale | depth per copy 6.51 is -53% from the median 13.74; segment / junction scale 2.12 (segment CN 2.20x, junction CN 1.04x truth); composites ecdna1=0.635,ecdna2=0.483,ecdna3=0.657 |
+| nest_cross_1to1_s502 | RCK | merged: ec3 carries ecdna1+ecdna2; 3 species for 2 true; composites ecdna1=0.967,ecdna2=0.943 |
+| nest_cross_1to1_s505 | RCK | merged: ec3 carries ecdna1+ecdna2; 3 species for 2 true; composites ecdna1=0.944,ecdna2=0.586 |
+| ctrl_dup_s703 | RCK | 2 species for 1 true; composites ecdna1=0.712 |
+
+Scale: 2 of 14 cases have depth per copy more than 30% from the median or segment / junction scales apart by more than 1.5x (nest_cross_2to1_s104, nest_cross_3sp_s403).
+Subgraph stage: 0 of 14 subgraphs miss a true junction or cover under 80% of a true segment.
+
+Compute: 4349 s of RCK wall time over 22 cases (one λ = 0 run and one pool run each, 4 threads).
 <!-- results:end -->
 
-## New benchmark: bench_nested_v2 (on scratch, 2026-10-27)
+## bench_nested_v2 (2026-10-27; the benchmark since 2026-10-29)
 
 These are the results of the rebuilt benchmark (inherited haplotype labels, see above), run on ionic
-(Slurm 32000320, the 14 bench cases; the 8 regression cases are links to the runs above). They live
-in `/n/fs/scratch/$USER/bench_nested_v2/rck_results/` (`bench_sweep.tsv`, `pipeline.tsv`, `README.md`),
-with `comparison.md` and `comparison.tsv` against the committed tables above. Neither the tables
-above nor the tracked configs and subgraphs have been replaced. Which benchmark stands is still
-open.
+(Slurm 32000320, the 14 bench cases; the 8 regression cases are links to the runs above). They to `/n/fs/scratch/$USER/bench_nested_v2/rck_results/` and are now this folder's tables,
+with `comparison.md` and `comparison.tsv` against the first benchmark's. The rest of this section
+is the 2026-10-27 reading, under the old λ rule and failure stages; "Results (bench_nested_v2)"
+above is the current one.
 
 The two benchmarks share scenarios and seed blocks. 9 bench cases keep their name: the 4 samehap
 cases are identical, and the 5 cross and control cases have the same walks and copy numbers but

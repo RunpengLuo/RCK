@@ -343,3 +343,99 @@ class TestEvaluationNeverFailsTheRun(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def dipped_walk(g, ends, weight=10, dip=2):
+    """(x a x b) at ``weight`` with ``dip`` copies missing on b and its junctions: one walk with a
+    residual, or an exact fit with (x a x b) at weight - dip plus (x a) at dip."""
+    return add(loop_counts(g, ends, ["a", "b"], weight=weight - dip), loop_counts(g, ends, ["a"], weight=dip))
+
+
+class TestResidualWeights(unittest.TestCase):
+    """Edge residual weights of the noise-tolerant options (no solver needed)."""
+
+    def setUp(self):
+        from rck.ecdna.phased import adj_key, seg_key
+
+        with temp_dir() as tmp:
+            self.ends = loops_graph(tmp, loops=("a", "b"))
+            self.g = read_subgraph(tmp)
+        self.flow = dipped_walk(self.g, self.ends)
+        self.x = seg_key(self.g.nodes[self.ends["x"][0]].segment, "A")  # 1 kb, flow 18
+        self.xb = adj_key("x>b", "AA")  # flow 8
+
+    def omega(self, key, **params):
+        from rck.ecdna.decompose import CycleDecomposer, DecompositionParams
+
+        return CycleDecomposer(self.g, self.flow, DecompositionParams(**params))._omega(key)
+
+    def test_default_weights(self):
+        self.assertAlmostEqual(self.omega(self.x), 0.05)  # 1 kb segment: min_seg_weight
+        self.assertAlmostEqual(self.omega(self.xb), 1.0)
+
+    def test_scales(self):
+        self.assertAlmostEqual(self.omega(self.x, seg_residual_scale=0.5), 0.025)
+        self.assertAlmostEqual(self.omega(self.xb, seg_residual_scale=0.5), 1.0)
+        self.assertAlmostEqual(self.omega(self.xb, adj_residual_weight=0.25), 0.25)
+
+    def test_relative(self):
+        self.assertAlmostEqual(self.omega(self.x, residual_mode="relative"), 0.05 / (0.1 * 18))
+        self.assertAlmostEqual(self.omega(self.xb, residual_mode="relative", residual_sigma=0.25), 1.0 / (0.25 * 8))
+        with self.assertRaises(ValueError):
+            self.omega(self.xb, residual_mode="sqrt")
+
+    def test_ranking_key(self):
+        from rck.ecdna.decompose import DecompositionParams, ranking_key
+
+        exact = (0.0, 2, 2, 12, 2.0)  # residual, significant, species, steps, objective
+        noisy = (0.5, 1, 1, 8, 1.5)
+        first, total = DecompositionParams(), DecompositionParams(rank_residual="sum")
+        self.assertLess(ranking_key(*exact, first), ranking_key(*noisy, first))
+        self.assertLess(ranking_key(*noisy, total), ranking_key(*exact, total))
+
+
+@requires_gurobi
+class TestNoiseTolerance(unittest.TestCase):
+    """A 2-copy dip on one loop of a single walk: by default an exact two-species fit; with cheaper
+    residuals and residual + structure ranking, the one walk."""
+
+    def setUp(self):
+        self.tmp = temp_dir()
+        directory = self.tmp.__enter__()
+        self.ends = loops_graph(directory, loops=("a", "b"))
+        self.g = read_subgraph(directory)
+        self.flow = dipped_walk(self.g, self.ends)
+
+    def tearDown(self):
+        self.tmp.__exit__(None, None, None)
+
+    def run_decompose(self, **params):
+        from rck.ecdna.decompose import DecompositionParams, decompose
+
+        return decompose(self.g, self.flow, DecompositionParams(num_alternatives=10, **params))
+
+    def test_default_is_an_exact_fit(self):
+        best = self.run_decompose()[0]
+        self.assertEqual(len(best.species), 2)  # e.g. (x a x b) 8 + (x a) 2, or (x a) 10 + (x b) 8
+        self.assertAlmostEqual(best.residual, 0.0)
+
+    def test_cheap_junction_residual_gives_one_walk(self):
+        best = self.run_decompose(adj_residual_weight=0.1, rank_residual="sum")[0]
+        self.assertEqual(len(best.species), 1)
+        self.assertIn(best.species[0].weight, (8, 9, 10))
+        self.assertGreater(best.residual, 0.0)
+
+    def test_relative_residual_gives_one_walk(self):
+        best = self.run_decompose(residual_mode="relative", residual_sigma=1.0, rank_residual="sum")[0]
+        self.assertEqual(len(best.species), 1)
+
+    def test_ranking_decides_within_one_pool(self):
+        """With both answers kept for the ranking (objectives 2.0 and about 1.5, so pool_gap 1), the
+        residual-first ranking takes the exact fit and the sum ranking the walk. At the default
+        pool_gap the exact fit is pruned before the ranking."""
+        params = dict(adj_residual_weight=0.1, pool_gap=1.0)
+        first = self.run_decompose(**params)
+        self.assertEqual(len(first[0].species), 2)
+        self.assertAlmostEqual(first[0].residual, 0.0)
+        total = self.run_decompose(rank_residual="sum", **params)
+        self.assertEqual(len(total[0].species), 1)

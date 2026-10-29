@@ -1,0 +1,23 @@
+name	options	status	n_significant	n_truth	weights	steps	residual	composites	mean_composite	best_pool_composite	best_pool_rank	best_pool_significant	picked	pool_size	inexact	decided_by	paths_loaded	reads_explained	runtime_s
+nest_cross_1to1_s505_w0.25	--adj-residual-weight 0.25 --seg-residual-scale 0.25 --rank-residual sum	done	3.0	2.0	12.06,7.02,2.84	83.0	0.0	ecdna1=0.944,ecdna2=0.586	0.7648	0.7648	1.0	3.0	True	88.0	11.0	step_penalty	7.0		1244.36
+nest_samehap_3to1_s301_w1	(defaults)	done	3.0	2.0	10.88,2.63,1.21	42.0	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	0.9728	3.0	3.0	False	60.0	0.0	step_penalty	3.0		15.23
+nest_samehap_3to1_s301_w0.5	--adj-residual-weight 0.5 --seg-residual-scale 0.5 --rank-residual sum	done	3.0	2.0	10.88,2.63,1.21	42.0	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	0.9728	3.0	3.0	False	62.0	3.0	step_penalty	3.0		19.67
+nest_samehap_3to1_s301_w0.25	--adj-residual-weight 0.25 --seg-residual-scale 0.25 --rank-residual sum	done	3.0	2.0	10.88,2.63,1.21	42.0	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	0.9728	6.0	3.0	False	64.0	10.0	step_penalty	3.0		19.43
+nest_samehap_3to1_s301_rel0.1	--residual-mode relative --residual-sigma 0.1 --rank-residual sum	done	3.0	2.0	10.88,2.63,1.21	42.0	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	0.9728	3.0	3.0	False	63.0	0.0	step_penalty	3.0		13.97
+ctrl_dup_s703_w1	(defaults)	done	2.0	1.0	17.93,16.22	17.0	0.0	ecdna1=0.712	0.7116	0.9711	4.0	2.0	False	37.0	0.0	step_penalty	0.0		2.03
+ctrl_dup_s703_w0.5	--adj-residual-weight 0.5 --seg-residual-scale 0.5 --rank-residual sum	done	2.0	1.0	17.93,16.22	17.0	0.0	ecdna1=0.712	0.7116	0.9711	4.0	2.0	False	37.0	0.0	step_penalty	0.0		11.62
+ctrl_dup_s703_w0.25	--adj-residual-weight 0.25 --seg-residual-scale 0.25 --rank-residual sum	done	2.0	1.0	17.93,16.22	17.0	0.0	ecdna1=0.712	0.7116	0.9711	4.0	2.0	False	37.0	0.0	step_penalty	0.0		2.41
+ctrl_dup_s703_rel0.1	--residual-mode relative --residual-sigma 0.1 --rank-residual sum	done	2.0	1.0	17.93,16.22	17.0	0.0	ecdna1=0.712	0.7116	0.9711	4.0	2.0	False	37.0	0.0	step_penalty	0.0		2.16
+ctrl_dup_s703_paths	(defaults)	done	2.0	1.0	17.93,15.53	17.0	0.0	ecdna1=0.712	0.7116	0.9711	3.0	2.0	False	48.0	0.0	step_penalty	10.0	1.0	2.87
+ctrl_dup_s703_pw2	--path-weight 2	done	2.0	1.0	17.93,15.53	17.0	0.0	ecdna1=0.712	0.7116	0.9711	3.0	2.0	False	47.0	0.0	step_penalty	10.0	1.0	2.45
+ctrl_dup_s703_pf0.9	--path-fraction 0.9	done	2.0	1.0	17.93,15.53	17.0	0.0	ecdna1=0.712	0.7116	0.9711	3.0	2.0	False	45.0	0.0	step_penalty	10.0	1.0	2.29
+nest_samehap_3to1_s301_paths	(defaults)	done	3.0	2.0	10.88,2.63,1.21	42.0	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	0.9728	3.0	3.0	False	62.0	0.0	step_penalty	15.0	1.0	13.46
+nest_samehap_3to1_s301_pw2	--path-weight 2	done	3.0	2.0	10.88,2.63,1.21	42.0	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	0.9728	3.0	3.0	False	60.0	0.0	step_penalty	15.0	1.0	15.63
+nest_samehap_3to1_s301_pf0.9	--path-fraction 0.9	done	3.0	2.0	10.88,2.63,1.21	42.0	0.0	ecdna1=0.964,ecdna2=0.423	0.6932	0.9728	3.0	3.0	False	61.0	0.0	step_penalty	15.0	1.0	13.04
+nest_cross_3sp_s403_w0.25	--adj-residual-weight 0.25 --seg-residual-scale 0.25 --rank-residual sum	pending																	
+nest_cross_1to1_s505_rel0.1	--residual-mode relative --residual-sigma 0.1 --rank-residual sum	done	3.0	2.0	12.06,7.02,2.84	83.0	0.0	ecdna1=0.944,ecdna2=0.586	0.7648	0.7648	1.0	3.0	True	88.0	11.0	step_penalty	7.0		312.69
+nest_cross_3sp_s403_rel0.1	--residual-mode relative --residual-sigma 0.1 --rank-residual sum	done	3.0	3.0	5.75,4.06,3.33	101.0	0.0	ecdna1=0.519,ecdna2=0.593,ecdna3=0.523	0.5449	0.7286	15.0	4.0	False	81.0	0.0	step_penalty	5.0		431.5
+nest_cross_1to1_s505_w0.5	--adj-residual-weight 0.5 --seg-residual-scale 0.5 --rank-residual sum	pending																	
+nest_cross_3sp_s403_w0.5	--adj-residual-weight 0.5 --seg-residual-scale 0.5 --rank-residual sum	pending																	
+nest_cross_1to1_s505_w1	(defaults)	pending																	
+nest_cross_3sp_s403_w1	(defaults)	pending																	

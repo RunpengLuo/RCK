@@ -412,6 +412,28 @@ solutions within `--pool-gap` of the best): a λ = 0 run solves a narrower pool,
 come out differently (demo3: 12.77 copies at λ = 0, an equivalent 12.70 at λ > 0), so run it
 instead. `results/bench_nested/` uses this to sweep λ with two runs per case.
 
+#### Noise-tolerant residual (opt-in)
+
+The flow MILP rounds noisy observations to an integer flow, and the decomposition then covers
+that flow. By default one copy of residual costs 1 on a segment of 50 kb or more (less on shorter
+ones, down to 0.05) and `--adj-residual-weight` (1.0) on a junction, the same as one species.
+A dip of 1–3 copies from depth bias is therefore cheaper to cover exactly with a leftover or a
+merged species than to leave as residual. Four options, all off by default, change this:
+
+- `--seg-residual-scale S` multiplies the segment weights by S;
+- `--adj-residual-weight W` sets the junction weight;
+- `--residual-mode relative` divides every edge's weight, junctions included, by the expected noise
+  `--residual-sigma` (0.1) × max(flow, 1), so the residual counts noise units. Junctions are
+  included because the flow is balanced: a dip on a segment comes with dips on its junctions.
+  Below 1 / σ copies (10) the relative weight is above the absolute one;
+- `--rank-residual sum` ranks decompositions on residual + structure cost instead of residual
+  first. Lower weights alone only change what reaches the pool (and what `--pool-gap` keeps);
+  with the default ranking, an exact fit in the pool still ranks first.
+
+For example, `--adj-residual-weight 0.25 --seg-residual-scale 0.25 --rank-residual sum` lets a
+residual of up to 4 copies on long segments or junctions cost less than one species. `--keep-pool`
+records these settings, and `rck.ecdna.rerank` ranks with the run's `--rank-residual`.
+
 #### Long reads in the decomposition
 
 With `--paths`, every long-read path that spans at least `--min-path-junctions` (2) junctions,
@@ -661,7 +683,7 @@ scales from the windows.
 | `test_walk.py` | no | alternating Hierholzer; canonical form under rotation and reversal; a tandem-duplicated segment; a hub with three loops (2 orderings); balance checks; path parsing and ranking; linear walks from end to end (round trip, canonical form, one ordering, an unpaired end rejected) |
 | `test_evaluate.py` | no | Jaccard with multiplicity; junction scores; order match with rotation, reversal, finer segmentation and tolerance; a linear inferred walk never matches a circular truth (`topology_match`); truth table I/O; rebuilding the demo3 truth from the simulator (16 steps, 2,343,000 bp, seg4 on A and B, seg10 on B); demo4 truth from `truth/aa` (two species, per-sample weights); scoping species to a subgraph; truth walks with a junction traversed as AA and BB, and with a crossing between reference neighbours traversed back on one haplotype, labelled without conflict; every phasing read from `rck.acnt.tsv` |
 | `test_ilp_circular.py` | yes (small) | single circle (10 copies on A plus a 1+1 background); haplotype crossings; imputed closing edge used when cheap, linear flow when expensive, no flow with `--linear-ends none`; linear ends only at boundaries and flanks; a linear amplicon; `--enforce-is` |
-| `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; a linear species; a circle plus a linear piece (called ecDNA); end-to-end `rck-ecdna` for a circle (`ecDNA`) and for an amplicon with no closing junction (`linear`, and `none` with `--linear-ends none`); read constraints (merging a read and its reverse, dropping single-junction, weak and off-flow reads); a read through a>x>b choosing the merged circle (reward and `--path-fraction`); a read never adding a species, and the order post-check |
+| `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; a linear species; a circle plus a linear piece (called ecDNA); end-to-end `rck-ecdna` for a circle (`ecDNA`) and for an amplicon with no closing junction (`linear`, and `none` with `--linear-ends none`); read constraints (merging a read and its reverse, dropping single-junction, weak and off-flow reads); a read through a>x>b choosing the merged circle (reward and `--path-fraction`); a read never adding a species, and the order post-check; noise tolerance: residual weights of `--seg-residual-scale`, `--adj-residual-weight` and `--residual-mode relative` (no Gurobi), the `--rank-residual` key, and a walk with a 2-copy dip on one loop, an exact two-species fit by default and one walk with cheaper residuals (absolute or relative) and the sum ranking |
 | `test_refit.py` | LP: no; CLI: yes (small) | a fractional weight (10.4); an unsupported leftover dropped; a supported one kept; the `--refit-min-copies` threshold; the last species never dropped; observation rows use the flow background; end-to-end fractional copy number (10.4, integer 10) and `--no-refit` |
 | `test_subgraph_inputs.py` | observations: no; run: yes (small) | scales, segment and junction copy numbers and flank background read from `scale.json`, `CN_*` columns and `cn_profile.tsv`; CN columns win over the scale; `--depth-per-copy` recomputes from `WEIGHT`; `--inputs auto/subgraph/windows`; a full run from the subgraph folder alone |
 | `test_recovery.py` | no | segment recall and precision, junction F1, phasing accuracy (one haplotype wrong; every haplotype swapped, which only the swap-invariant score forgives), the composite and its copy-number term; the recovery matrix: a missed species scores 0, `best_rank` finds a better alternative, out-of-scope rows are listed but not scored or averaged, the TSV columns, strict JSON, and a run with no decompositions |

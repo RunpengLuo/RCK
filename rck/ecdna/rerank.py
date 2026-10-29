@@ -50,7 +50,8 @@ def pool_params(pool: Dict[str, object], step_penalty: float) -> DecompositionPa
     """The ranking settings of the pool's run, at ``step_penalty``."""
     p = pool["params"]
     return DecompositionParams(species_penalty=float(p["species_penalty"]), step_penalty=float(step_penalty),
-                               pool_gap=float(p["pool_gap"]), ambiguity_window=float(p["ambiguity_window"]))
+                               pool_gap=float(p["pool_gap"]), ambiguity_window=float(p["ambiguity_window"]),
+                               rank_residual=str(p.get("rank_residual", "first")))
 
 
 def _species_rows(run_dir: str) -> Optional[pd.DataFrame]:

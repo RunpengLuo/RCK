@@ -1,0 +1,1261 @@
+{
+  "graph": {
+    "name": "union",
+    "nodes": 68,
+    "segments": 33,
+    "adjacencies": {
+      "reference": 34,
+      "novel": 17,
+      "imputed": 24
+    },
+    "terminals": 2,
+    "regions": [
+      "chr3:26382001-80691999"
+    ],
+    "normalization": [
+      "contracted 9 phantom segment(s) of <= 2 bp",
+      "moved imputed imputed_adj_anchor_chr3_9 from phantom extremity to imputed_ext_chr3_3_---chr3:27218999+_+",
+      "moved imputed imputed_adj_intra_chr3_10 from phantom extremity to chr3:27788999+_+--chr3:27750000-_-",
+      "moved imputed imputed_adj_inter_chr3_11 from phantom extremity to chr3:27788999+_+--chr3:27789000-_-",
+      "moved imputed imputed_adj_anchor_chr3_15 from phantom extremity to chr3:27789000-_---chr3:27788999+_+",
+      "merged imputed imputed_adj_inter_chr3_8,imputed_adj_anchor_chr3_12 into reference ref0010",
+      "merged imputed imputed_adj_inter_chr3_14,imputed_adj_anchor_chr3_18 into reference ref0013",
+      "merged imputed imputed_adj_inter_chr3_2 into reference ref0033",
+      "merged imputed imputed_adj_inter_chr3_5 into reference ref0034",
+      "merged imputed imputed_adj_inter_chr3_17 into reference ref0035",
+      "merged imputed imputed_adj_inter_chr3_20 into reference ref0036",
+      "merged imputed imputed_adj_inter_chr3_26 into reference ref0039",
+      "merged imputed imputed_adj_inter_chr3_29 into reference ref0040",
+      "merged imputed imputed_adj_inter_chr3_32 into reference ref0041",
+      "merged imputed imputed_adj_inter_chr3_35 into reference ref0042",
+      "merged imputed imputed_adj_inter_chr3_11,imputed_adj_anchor_chr3_15 into reference ref_c004"
+    ]
+  },
+  "scale": {
+    "depth_per_copy": 13.922827432841139,
+    "junction_reads_per_copy": 6.5,
+    "baseline_cn": 1.9461169304785328,
+    "depth_method": "subgraph_scale",
+    "junction_method": "subgraph_scale",
+    "depth_mode": "tumor",
+    "ratio_baseline": null,
+    "details": {
+      "subgraph_sample": "sim_tumor1",
+      "subgraph_purity": 1.0000000000000007,
+      "subgraph_tumor_ploidy": 1.9692757863935628,
+      "subgraph_cell_ploidy": 1.9461169304785328,
+      "subgraph_ploidy_class": 2,
+      "subgraph_method": "ploidy class 2 (set with --rck-ploidy)",
+      "subgraph_junction_sample": "sim_tumor1",
+      "subgraph_alternatives": {
+        "2": {
+          "score": 0.12172668464673517,
+          "depth_per_copy": 13.922827432841139,
+          "purity": 1.0000000000000007,
+          "tumor_ploidy": 1.9692757863935628
+        },
+        "4": {
+          "score": 0.14823552859191505,
+          "depth_per_copy": 8.39213371335363,
+          "purity": 0.6600000000000004,
+          "tumor_ploidy": 3.8408924652523777
+        },
+        "6": {
+          "score": 0.11399277126914208,
+          "depth_per_copy": 6.506148847926952,
+          "purity": 0.5700000000000003,
+          "tumor_ploidy": 5.811997073884419
+        }
+      },
+      "background_flank_cn": {
+        "chr3:26382001-80691999": 2.104349622374119
+      }
+    }
+  },
+  "flow": {
+    "status": "optimal",
+    "objective": 11.235143544083797,
+    "mip_gap": 0.0,
+    "imputed_used": [],
+    "ecdna_copies_total": 1043,
+    "linear_end_copies": 2
+  },
+  "amplicon_call": "ecDNA",
+  "ambiguity": {
+    "ambiguous": true,
+    "window": 2.0,
+    "n_alternatives": 47,
+    "n_species": 4,
+    "steps": 141,
+    "alternatives": [
+      {
+        "objective": 4.0289,
+        "gap": 0.6006,
+        "n_species": 4,
+        "steps": 144,
+        "rank": 2,
+        "weights": [
+          6,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.0295,
+        "gap": 1.2012,
+        "n_species": 4,
+        "steps": 147,
+        "rank": 3,
+        "weights": [
+          6,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.0299,
+        "gap": 1.6016,
+        "n_species": 4,
+        "steps": 149,
+        "rank": 4,
+        "weights": [
+          6,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.0303,
+        "gap": 2.002,
+        "n_species": 4,
+        "steps": 151,
+        "rank": 5,
+        "weights": [
+          6,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.0305,
+        "gap": 2.2022,
+        "n_species": 4,
+        "steps": 152,
+        "rank": 6,
+        "weights": [
+          6,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.0305,
+        "gap": 2.2022,
+        "n_species": 4,
+        "steps": 152,
+        "rank": 7,
+        "weights": [
+          6,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.0309,
+        "gap": 2.6026,
+        "n_species": 4,
+        "steps": 154,
+        "rank": 9,
+        "weights": [
+          6,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.0309,
+        "gap": 2.6026,
+        "n_species": 4,
+        "steps": 154,
+        "rank": 8,
+        "weights": [
+          6,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.0311,
+        "gap": 2.8028,
+        "n_species": 4,
+        "steps": 155,
+        "rank": 10,
+        "weights": [
+          6,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.0313,
+        "gap": 3.003,
+        "n_species": 4,
+        "steps": 156,
+        "rank": null,
+        "weights": [
+          6,
+          4,
+          2,
+          1
+        ]
+      }
+    ],
+    "gap": 0.6006,
+    "decided_by": "step_penalty"
+  },
+  "circular_fraction": 1.0,
+  "decompositions": [
+    {
+      "rank": 1,
+      "objective": 4.028299999999998,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 8.886143,
+      "data_objective_int": 9.538564,
+      "pruned": [],
+      "steps": 141,
+      "ambiguity": {
+        "ambiguous": true,
+        "window": 2.0,
+        "n_alternatives": 47,
+        "n_species": 4,
+        "steps": 141,
+        "alternatives": [
+          {
+            "objective": 4.0289,
+            "gap": 0.6006,
+            "n_species": 4,
+            "steps": 144,
+            "rank": 2,
+            "weights": [
+              6,
+              4,
+              3,
+              1
+            ]
+          },
+          {
+            "objective": 4.0295,
+            "gap": 1.2012,
+            "n_species": 4,
+            "steps": 147,
+            "rank": 3,
+            "weights": [
+              6,
+              4,
+              3,
+              1
+            ]
+          },
+          {
+            "objective": 4.0299,
+            "gap": 1.6016,
+            "n_species": 4,
+            "steps": 149,
+            "rank": 4,
+            "weights": [
+              6,
+              4,
+              3,
+              1
+            ]
+          },
+          {
+            "objective": 4.0303,
+            "gap": 2.002,
+            "n_species": 4,
+            "steps": 151,
+            "rank": 5,
+            "weights": [
+              6,
+              4,
+              3,
+              1
+            ]
+          },
+          {
+            "objective": 4.0305,
+            "gap": 2.2022,
+            "n_species": 4,
+            "steps": 152,
+            "rank": 6,
+            "weights": [
+              6,
+              4,
+              3,
+              1
+            ]
+          },
+          {
+            "objective": 4.0305,
+            "gap": 2.2022,
+            "n_species": 4,
+            "steps": 152,
+            "rank": 7,
+            "weights": [
+              6,
+              4,
+              3,
+              1
+            ]
+          },
+          {
+            "objective": 4.0309,
+            "gap": 2.6026,
+            "n_species": 4,
+            "steps": 154,
+            "rank": 9,
+            "weights": [
+              6,
+              4,
+              3,
+              1
+            ]
+          },
+          {
+            "objective": 4.0309,
+            "gap": 2.6026,
+            "n_species": 4,
+            "steps": 154,
+            "rank": 8,
+            "weights": [
+              6,
+              4,
+              3,
+              1
+            ]
+          },
+          {
+            "objective": 4.0311,
+            "gap": 2.8028,
+            "n_species": 4,
+            "steps": 155,
+            "rank": 10,
+            "weights": [
+              6,
+              4,
+              3,
+              1
+            ]
+          },
+          {
+            "objective": 4.0313,
+            "gap": 3.003,
+            "n_species": 4,
+            "steps": 156,
+            "rank": null,
+            "weights": [
+              6,
+              4,
+              2,
+              1
+            ]
+          }
+        ],
+        "gap": 0.6006,
+        "decided_by": "step_penalty"
+      },
+      "species": [
+        {
+          "weight": 5.75,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 4362995,
+          "n_orderings": 11,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00004",
+            "sim00006",
+            "sim00008",
+            "sim00011",
+            "sim00014",
+            "sim00015",
+            "sim00016",
+            "sim00017",
+            "sim00018"
+          ]
+        },
+        {
+          "weight": 4.06,
+          "weight_int": 4,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3719995,
+          "n_orderings": 18,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00005",
+            "sim00007",
+            "sim00009",
+            "sim00010",
+            "sim00013",
+            "sim00014",
+            "sim00015"
+          ]
+        },
+        {
+          "weight": 3.33,
+          "weight_int": 3,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 1773000,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00004",
+            "sim00012"
+          ]
+        },
+        {
+          "weight": 0.91,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 54274999,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00007",
+            "sim00012",
+            "sim00015"
+          ]
+        }
+      ]
+    },
+    {
+      "rank": 2,
+      "objective": 4.028899999999998,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 8.904263,
+      "data_objective_int": 9.538564,
+      "pruned": [],
+      "steps": 144,
+      "ambiguity": null,
+      "species": [
+        {
+          "weight": 5.79,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 4362995,
+          "n_orderings": 11,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00004",
+            "sim00006",
+            "sim00008",
+            "sim00011",
+            "sim00014",
+            "sim00015",
+            "sim00016",
+            "sim00017",
+            "sim00018"
+          ]
+        },
+        {
+          "weight": 4.08,
+          "weight_int": 4,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3622996,
+          "n_orderings": 8,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00005",
+            "sim00007",
+            "sim00009",
+            "sim00010",
+            "sim00012",
+            "sim00013",
+            "sim00014",
+            "sim00015"
+          ]
+        },
+        {
+          "weight": 3.32,
+          "weight_int": 3,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 1869999,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00004",
+            "sim00013"
+          ]
+        },
+        {
+          "weight": 0.88,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 54371998,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00007",
+            "sim00013",
+            "sim00015"
+          ]
+        }
+      ]
+    },
+    {
+      "rank": 3,
+      "objective": 4.029499999999999,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 8.887545,
+      "data_objective_int": 9.538564,
+      "pruned": [],
+      "steps": 147,
+      "ambiguity": null,
+      "species": [
+        {
+          "weight": 5.85,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 4362995,
+          "n_orderings": 11,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00004",
+            "sim00006",
+            "sim00008",
+            "sim00011",
+            "sim00014",
+            "sim00015",
+            "sim00016",
+            "sim00017",
+            "sim00018"
+          ]
+        },
+        {
+          "weight": 4.06,
+          "weight_int": 4,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3294996,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00005",
+            "sim00007",
+            "sim00013",
+            "sim00014",
+            "sim00015"
+          ]
+        },
+        {
+          "weight": 3.3,
+          "weight_int": 3,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 2197999,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00004",
+            "sim00007",
+            "sim00009",
+            "sim00010",
+            "sim00012",
+            "sim00013"
+          ]
+        },
+        {
+          "weight": 0.86,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 54699998,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00007",
+            "sim00009",
+            "sim00010",
+            "sim00012",
+            "sim00013",
+            "sim00015"
+          ]
+        }
+      ]
+    },
+    {
+      "rank": 4,
+      "objective": 4.029899999999996,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 8.907734,
+      "data_objective_int": 9.538564,
+      "pruned": [],
+      "steps": 149,
+      "ambiguity": null,
+      "species": [
+        {
+          "weight": 5.84,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 4362995,
+          "n_orderings": 11,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00004",
+            "sim00006",
+            "sim00008",
+            "sim00011",
+            "sim00014",
+            "sim00015",
+            "sim00016",
+            "sim00017",
+            "sim00018"
+          ]
+        },
+        {
+          "weight": 4.05,
+          "weight_int": 4,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3052996,
+          "n_orderings": 4,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00005",
+            "sim00007",
+            "sim00009",
+            "sim00010",
+            "sim00013",
+            "sim00014",
+            "sim00015"
+          ]
+        },
+        {
+          "weight": 3.29,
+          "weight_int": 3,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 2439999,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00004",
+            "sim00007",
+            "sim00012",
+            "sim00013"
+          ]
+        },
+        {
+          "weight": 0.87,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 54941998,
+          "n_orderings": 4,
+          "imputed": [],
+          "junctions": [
+            "sim00007",
+            "sim00012",
+            "sim00013",
+            "sim00015"
+          ]
+        }
+      ]
+    },
+    {
+      "rank": 5,
+      "objective": 4.030299999999942,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 8.888364,
+      "data_objective_int": 9.538564,
+      "pruned": [],
+      "steps": 151,
+      "ambiguity": null,
+      "species": [
+        {
+          "weight": 5.84,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3927996,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00004",
+            "sim00006",
+            "sim00008",
+            "sim00014",
+            "sim00015",
+            "sim00016"
+          ]
+        },
+        {
+          "weight": 4.07,
+          "weight_int": 4,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 4154994,
+          "n_orderings": 20,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00005",
+            "sim00007",
+            "sim00009",
+            "sim00010",
+            "sim00011",
+            "sim00013",
+            "sim00014",
+            "sim00015",
+            "sim00017",
+            "sim00018"
+          ]
+        },
+        {
+          "weight": 3.37,
+          "weight_int": 3,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 1773000,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00004",
+            "sim00012"
+          ]
+        },
+        {
+          "weight": 0.86,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 55144997,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00007",
+            "sim00011",
+            "sim00012",
+            "sim00015",
+            "sim00017",
+            "sim00018"
+          ]
+        }
+      ]
+    },
+    {
+      "rank": 6,
+      "objective": 4.030499999999996,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 9.285869,
+      "data_objective_int": 9.538564,
+      "pruned": [],
+      "steps": 152,
+      "ambiguity": null,
+      "species": [
+        {
+          "weight": 5.85,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3254997,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00004",
+            "sim00006",
+            "sim00008",
+            "sim00014",
+            "sim00015",
+            "sim00017",
+            "sim00018"
+          ]
+        },
+        {
+          "weight": 4.06,
+          "weight_int": 4,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3719995,
+          "n_orderings": 18,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00005",
+            "sim00007",
+            "sim00009",
+            "sim00010",
+            "sim00013",
+            "sim00014",
+            "sim00015"
+          ]
+        },
+        {
+          "weight": 2.95,
+          "weight_int": 3,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3988996,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00004",
+            "sim00011",
+            "sim00012",
+            "sim00016"
+          ]
+        },
+        {
+          "weight": 0.96,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 54274999,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00007",
+            "sim00012",
+            "sim00015"
+          ]
+        }
+      ]
+    },
+    {
+      "rank": 7,
+      "objective": 4.030500000000043,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 8.893747,
+      "data_objective_int": 9.538564,
+      "pruned": [],
+      "steps": 152,
+      "ambiguity": null,
+      "species": [
+        {
+          "weight": 5.83,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 4362995,
+          "n_orderings": 11,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00004",
+            "sim00006",
+            "sim00008",
+            "sim00011",
+            "sim00014",
+            "sim00015",
+            "sim00016",
+            "sim00017",
+            "sim00018"
+          ]
+        },
+        {
+          "weight": 4.07,
+          "weight_int": 4,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 2462997,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00007",
+            "sim00013",
+            "sim00014",
+            "sim00015"
+          ]
+        },
+        {
+          "weight": 3.32,
+          "weight_int": 3,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3029998,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00004",
+            "sim00005",
+            "sim00009",
+            "sim00010",
+            "sim00012",
+            "sim00013"
+          ]
+        },
+        {
+          "weight": 0.86,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 55531997,
+          "n_orderings": 6,
+          "imputed": [],
+          "junctions": [
+            "sim00005",
+            "sim00007",
+            "sim00009",
+            "sim00010",
+            "sim00012",
+            "sim00013",
+            "sim00015"
+          ]
+        }
+      ]
+    },
+    {
+      "rank": 8,
+      "objective": 4.030899999999995,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 8.903727,
+      "data_objective_int": 9.538564,
+      "pruned": [],
+      "steps": 154,
+      "ambiguity": null,
+      "species": [
+        {
+          "weight": 5.82,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3927996,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00004",
+            "sim00006",
+            "sim00008",
+            "sim00014",
+            "sim00015",
+            "sim00016"
+          ]
+        },
+        {
+          "weight": 4.09,
+          "weight_int": 4,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 4057995,
+          "n_orderings": 12,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00005",
+            "sim00007",
+            "sim00009",
+            "sim00010",
+            "sim00011",
+            "sim00012",
+            "sim00013",
+            "sim00014",
+            "sim00015",
+            "sim00017",
+            "sim00018"
+          ]
+        },
+        {
+          "weight": 3.33,
+          "weight_int": 3,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 1869999,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00004",
+            "sim00013"
+          ]
+        },
+        {
+          "weight": 0.86,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 55241996,
+          "n_orderings": 6,
+          "imputed": [],
+          "junctions": [
+            "sim00007",
+            "sim00011",
+            "sim00013",
+            "sim00015",
+            "sim00017",
+            "sim00018"
+          ]
+        }
+      ]
+    },
+    {
+      "rank": 9,
+      "objective": 4.0308999999999955,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 8.918687,
+      "data_objective_int": 9.538564,
+      "pruned": [],
+      "steps": 154,
+      "ambiguity": null,
+      "species": [
+        {
+          "weight": 5.85,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 4362995,
+          "n_orderings": 11,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00004",
+            "sim00006",
+            "sim00008",
+            "sim00011",
+            "sim00014",
+            "sim00015",
+            "sim00016",
+            "sim00017",
+            "sim00018"
+          ]
+        },
+        {
+          "weight": 4.05,
+          "weight_int": 4,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 2220997,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00007",
+            "sim00009",
+            "sim00010",
+            "sim00013",
+            "sim00014",
+            "sim00015"
+          ]
+        },
+        {
+          "weight": 3.29,
+          "weight_int": 3,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3271998,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00004",
+            "sim00005",
+            "sim00012",
+            "sim00013"
+          ]
+        },
+        {
+          "weight": 0.86,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 55773997,
+          "n_orderings": 10,
+          "imputed": [],
+          "junctions": [
+            "sim00005",
+            "sim00007",
+            "sim00012",
+            "sim00013",
+            "sim00015"
+          ]
+        }
+      ]
+    },
+    {
+      "rank": 10,
+      "objective": 4.031099999999997,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 9.271993,
+      "data_objective_int": 9.538564,
+      "pruned": [],
+      "steps": 155,
+      "ambiguity": null,
+      "species": [
+        {
+          "weight": 5.85,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3254997,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00004",
+            "sim00006",
+            "sim00008",
+            "sim00014",
+            "sim00015",
+            "sim00017",
+            "sim00018"
+          ]
+        },
+        {
+          "weight": 4.11,
+          "weight_int": 4,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 3622996,
+          "n_orderings": 8,
+          "imputed": [],
+          "junctions": [
+            "sim00002",
+            "sim00003",
+            "sim00005",
+            "sim00007",
+            "sim00009",
+            "sim00010",
+            "sim00012",
+            "sim00013",
+            "sim00014",
+            "sim00015"
+          ]
+        },
+        {
+          "weight": 2.95,
+          "weight_int": 3,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 4085995,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00004",
+            "sim00011",
+            "sim00013",
+            "sim00016"
+          ]
+        },
+        {
+          "weight": 0.93,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 54371998,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00007",
+            "sim00013",
+            "sim00015"
+          ]
+        }
+      ]
+    }
+  ],
+  "block_flip": {
+    "mode": "unoriented",
+    "pieces": 87,
+    "blocks": 55,
+    "flipped": 0,
+    "unresolved": 50,
+    "kept": 0,
+    "fixed": 5,
+    "flipped_blocks": []
+  },
+  "inputs": {
+    "mode": "subgraph",
+    "windows": null,
+    "extremities": null,
+    "paths": "/n/fs/scratch/ym3292/bench_nested_v2/diag/s403_ploidy2/union/paths.tsv"
+  },
+  "runtime_s": 431.5,
+  "paths_loaded": 5
+}

@@ -8,6 +8,20 @@ with rck.ecdna.rerank for every λ > 0), and amplicon-allele-analysis
 simulations/subgraphs/bench_nested/ for the subgraph-stage checks. Missing runs are skipped.
 BENCH_NESTED_ROOT and BENCH_NESTED_OUT are read as in run_case.py; BENCH_NESTED_RESULTS writes the
 tables and the README results section to another folder (README.md there holds only the results).
+
+Choice of λ: the smallest λ on the plateau, with no control or demo case more than TOL_REGRESSION
+below its λ = 0 score. A λ is on the plateau when its mean composite over all cases is within
+TOL_PLATEAU of the best λ's, or when fewer than MIN_GAIN_CASES cases gain more than TOL_REGRESSION
+from it to the best λ: one case alone cannot pick λ, for example a single case that edges up at
+the end of the grid but stays a failure (v2 nest_samehap_3to1_s301, 0.693 at λ = 0.2 and 0.740 at
+0.5). ``--lambda`` reports another λ in pipeline.tsv and the README scenario table.
+
+Failure stages in pipeline.tsv, the first that applies: ``subgraph`` (a true junction missing, or
+a true segment under 80% covered), ``scale`` (the subgraph's depth per copy is more than
+SCALE_DEPTH_TOL from the bench cases' median, or the flow's segment and junction copy numbers
+against the truth, diag/scale_ratio.py, differ by more than a factor SCALE_RATIO_MAX), else
+``RCK``. SCALE_RATIO_MAX 1.5 lies between the noise seen on v2 (ratio 1.02-1.40) and the
+ploidy-class error (≈ 2, nest_cross_3sp_s403).
 """
 import argparse
 import json
@@ -29,11 +43,17 @@ sys.path.insert(0, run_case.SIM)
 import bench_nested as aaa_bench  # noqa: E402  (amplicon-allele-analysis simulations/bench_nested.py)
 import verify_subgraph  # noqa: E402
 
+sys.path.insert(0, os.path.join(HERE, "diag"))
+from scale_ratio import scales  # noqa: E402
+
 SWEEP = os.path.join(run_case.RCK, "results", "step_sweep", "sweep.tsv")
 LAMBDAS = run_case.LAMBDAS
 TOL_REGRESSION = 0.005  # a control or demo case may lose at most this much mean composite against λ = 0
 TOL_PLATEAU = 0.001  # λ within this of the best mean composite over all cases are on the plateau
 FAIL_COMPOSITE = 0.95  # a bench case below this mean composite (or merged, or a wrong species count) is a failure
+MIN_GAIN_CASES = 2  # a λ's shortfall to the best λ counts only if at least this many cases gain over TOL_REGRESSION
+SCALE_DEPTH_TOL = 0.3  # depth per copy more than this (relative) from the bench cases' median is a scale error
+SCALE_RATIO_MAX = 1.5  # segment / junction scale (observed over truth CN) beyond this factor either way is a scale error
 JUNCTION_MATCH = 0.5  # an inferred species "carries" a truth species with at least this junction recall
 COLUMNS = ["case", "kind", "scenario", "step_penalty", "source", "n_species", "n_truth", "weights", "steps", "residual",
            "composites", "mean_composite", "merged", "merged_note", "ambiguous", "decided_by", "gap", "n_alternatives",
@@ -154,10 +174,15 @@ def is_control(row):
     return row["kind"] == "regression" or str(row["scenario"]).startswith("ctrl_")
 
 
+def gain_cases(t, lam, best):
+    """Cases whose mean composite gains more than TOL_REGRESSION from ``lam`` to ``best``."""
+    by = t.pivot_table(index="case", columns="step_penalty", values="mean_composite")
+    return list(by.index[by[best] > by[lam] + TOL_REGRESSION])
+
+
 def choose(table):
-    """The smallest λ on the plateau of best mean composite over all cases with no control or
-    demo case below its λ = 0 score by more than TOL_REGRESSION; and the λ that give the same
-    rank-1 answers as it."""
+    """The smallest λ on the plateau (see the module docstring) with no control or demo case below
+    its λ = 0 score by more than TOL_REGRESSION; and the λ that give the same rank-1 answers as it."""
     complete = table.groupby("case")["step_penalty"].nunique()
     cases = list(complete[complete == len(LAMBDAS)].index)
     t = table[table["case"].isin(cases)]
@@ -168,15 +193,18 @@ def choose(table):
         rows = t[t["step_penalty"] == lam]
         regress[lam] = [r["case"] for r in rows.to_dict("records")
                         if is_control(r) and r["mean_composite"] < base[r["case"]] - TOL_REGRESSION]
-    best = overall.max()
-    plateau = [lam for lam in LAMBDAS if overall[lam] >= best - TOL_PLATEAU]
+    best = overall.idxmax()
+    gains = {lam: gain_cases(t, lam, best) for lam in LAMBDAS}
+    plateau = [lam for lam in LAMBDAS
+               if overall[lam] >= overall[best] - TOL_PLATEAU or len(gains[lam]) < MIN_GAIN_CASES]
     eligible = [lam for lam in plateau if not regress[lam]]
     chosen = min(eligible) if eligible else None
     same = []
     if chosen is not None:
         key = lambda lam: t[t["step_penalty"] == lam].set_index("case")[["n_species", "composites"]].astype(str).sort_index()
         same = [lam for lam in LAMBDAS if key(lam).equals(key(chosen))]
-    return {"cases": cases, "overall": overall, "regress": regress, "plateau": plateau, "chosen": chosen, "same": same}
+    return {"cases": cases, "overall": overall, "regress": regress, "plateau": plateau, "chosen": chosen, "same": same,
+            "gains": gains, "best": best}
 
 
 # ---------------------------------------------------------------------------------------------- #
@@ -202,9 +230,27 @@ def flip_check(folder, truth_dir):
             "ecdna_blocks_after_flow_wrong": int(((eff != flips["truth_orientation"]) & known).sum())}
 
 
+def scale_check(folder, depth, median_depth):
+    """Scale fields of a bench case: depth per copy against the bench cases' median, and the
+    flow's segment and junction scales against the truth (diag/scale_ratio.py)."""
+    seg, junc, n = scales(folder)
+    ratio = seg / junc if n and junc > 0 else float("nan")
+    rel = depth / median_depth - 1 if depth is not None and median_depth else float("nan")
+    why = []
+    if abs(rel) > SCALE_DEPTH_TOL:
+        why.append("depth per copy {d:.2f} is {r:+.0%} from the median {m:.2f}".format(d=depth, r=rel, m=median_depth))
+    if ratio > SCALE_RATIO_MAX or ratio < 1 / SCALE_RATIO_MAX:
+        why.append("segment / junction scale {r:.2f} (segment CN {s:.2f}x, junction CN {j:.2f}x truth)".format(
+            r=ratio, s=seg, j=junc))
+    return {"depth_per_copy": depth, "depth_vs_median": round(rel, 3), "segment_scale": round(seg, 3),
+            "junction_scale": round(junc, 3), "scale_ratio": round(ratio, 3), "scale_fail": bool(why),
+            "scale_note": "; ".join(why)}
+
+
 def failure_stage(row, sub):
     """Which stage explains a failing bench case: the subgraph when it misses a true junction or
-    covers under 80% of a true segment, else RCK (with what went wrong)."""
+    covers under 80% of a true segment, then the scale (scale_check), else RCK (with what went
+    wrong)."""
     bad = (row["mean_composite"] is None or row["mean_composite"] < FAIL_COMPOSITE or row["merged"]
            or row["n_species"] != row["n_truth"])
     if not bad:
@@ -212,6 +258,8 @@ def failure_stage(row, sub):
     if sub.get("subgraph_fail"):
         return "subgraph", "missing junctions {j}; min segment coverage {c}%".format(
             j=sub.get("junctions_missing") or "none", c=sub.get("segment_coverage_min"))
+    if sub.get("scale_fail"):
+        return "scale", sub["scale_note"] + "; composites " + str(row["composites"])
     why = []
     if row["merged"]:
         why.append("merged: " + row["merged_note"])
@@ -225,20 +273,28 @@ def failure_stage(row, sub):
     return "RCK", "; ".join(why)
 
 
+def subgraph_check(case):
+    path = os.path.join(run_case.SUBGRAPHS, case["name"], "subgraph_check.json")
+    return json.load(open(path)) if os.path.exists(path) else {}
+
+
 def pipeline(table, chosen):
     rows = []
-    for case in [c for c in run_case.cases() if c["kind"] == "bench"]:
+    bench = [c for c in run_case.cases() if c["kind"] == "bench"]
+    depths = [subgraph_check(c).get("depth_per_copy") for c in bench]
+    median_depth = float(np.median([d for d in depths if d is not None])) if any(d is not None for d in depths) else None
+    for case in bench:
         r = table[(table["case"] == case["name"]) & np.isclose(table["step_penalty"], chosen)]
         if not len(r):
             continue
         r = r.iloc[0].to_dict()
         folder = os.path.join(run_case.OUT, case["name"], "pool")
-        sub_path = os.path.join(run_case.SUBGRAPHS, case["name"], "subgraph_check.json")
-        sub = json.load(open(sub_path)) if os.path.exists(sub_path) else {}
+        sub = subgraph_check(case)
         summary = json.load(open(os.path.join(folder, "summary.json")))
         flow = {"flow_objective": round(summary["flow"]["objective"], 3), "imputed_used": ",".join(summary["flow"]["imputed_used"]),
                 "n_imputed_used": len(summary["flow"]["imputed_used"])}
         flow.update(flip_check(folder, case["truth"]))
+        flow.update(scale_check(folder, sub.get("depth_per_copy"), median_depth))
         stage, why = failure_stage(r, dict(sub, **flow))
         rows.append({"case": case["name"], "scenario": case["scenario"], "step_penalty": chosen,
                      "segments_covered": sub.get("segments_covered"), "segments_total": sub.get("segments_total"),
@@ -263,7 +319,7 @@ def fmt(x, digits=3):
     return "" if x is None or (isinstance(x, float) and np.isnan(x)) else ("{:.%df}" % digits).format(x)
 
 
-def results_markdown(table, choice, validation, pipe):
+def results_markdown(table, choice, validation, pipe, reported):
     L = []
     if len(validation):
         pool = validation[validation["method"] == "pool"]
@@ -279,17 +335,19 @@ def results_markdown(table, choice, validation, pipe):
         L.append("**No λ qualifies**: every λ on the plateau regresses a control or demo case (table below).")
     else:
         L.append("**Recommended `--step-penalty`: {c:g}**, the smallest λ on the plateau of best mean composite over "
-                 "all {n} cases ({p}), with no control or demo case more than {t} below its λ = 0 score. "
+                 "all {n} cases ({p}; a λ whose shortfall to the best comes from fewer than {g} cases is on it), "
+                 "with no control or demo case more than {t} below its λ = 0 score. "
                  "λ giving the same rank-1 answers on every case: {s}. The default stays 0.".format(
-                     c=choice["chosen"], n=len(choice["cases"]), p=", ".join("%g" % x for x in choice["plateau"]),
+                     c=choice["chosen"], n=len(choice["cases"]), p=", ".join("%g" % x for x in choice["plateau"]), g=MIN_GAIN_CASES,
                      t=TOL_REGRESSION, s=", ".join("%g" % x for x in choice["same"])))
     L.append("")
     L.append("| λ | " + " | ".join("%g" % x for x in LAMBDAS) + " |")
     L.append("|---|" + "---|" * len(LAMBDAS))
     L.append("| mean composite, all cases | " + " | ".join(fmt(choice["overall"].get(x), 4) for x in LAMBDAS) + " |")
     L.append("| control / demo cases below λ = 0 | " + " | ".join(", ".join(choice["regress"][x]) or "none" for x in LAMBDAS) + " |")
+    L.append("| cases gaining from λ to the best λ | " + " | ".join(", ".join(choice["gains"][x]) or "none" for x in LAMBDAS) + " |")
     L.append("")
-    chosen = choice["chosen"] if choice["chosen"] is not None else max(LAMBDAS)
+    chosen = reported
     t = table[table["case"].isin(choice["cases"])]
     by = t.groupby(["scenario", "step_penalty"])["mean_composite"].mean().unstack()
     merged = t.groupby(["scenario", "step_penalty"])["merged"].sum().unstack()
@@ -314,6 +372,10 @@ def results_markdown(table, choice, validation, pipe):
             for r in fails.itertuples():
                 L.append("| {c} | {s} | {w} |".format(c=r.case, s=r.failure_stage, w=str(r.failure).replace("|", "/")))
             L.append("")
+        scalefail = pipe[pipe["scale_fail"].astype(str) == "True"]
+        L.append("Scale: {n} of {m} cases have depth per copy more than {d:.0%} from the median or segment / junction "
+                 "scales apart by more than {r:g}x{x}.".format(n=len(scalefail), m=len(pipe), d=SCALE_DEPTH_TOL, r=SCALE_RATIO_MAX,
+                                                               x=" (" + ", ".join(scalefail["case"]) + ")" if len(scalefail) else ""))
         subfail = pipe[pipe["subgraph_fail"].astype(str) == "True"]
         L.append("Subgraph stage: {n} of {m} subgraphs miss a true junction or cover under 80% of a true segment{x}.".format(
             n=len(subfail), m=len(pipe), x=" (" + ", ".join(subfail["case"]) + ")" if len(subfail) else ""))
@@ -337,6 +399,8 @@ def write_readme(text):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--validate", action="store_true", help="only check the re-ranking against the step sweep")
+    parser.add_argument("--lambda", dest="lam", type=float, default=None,
+                        help="λ to report in pipeline.tsv and the scenario table (default: the chosen λ)")
     args = parser.parse_args()
     rows = []
     for case in run_case.cases():
@@ -351,8 +415,9 @@ def main():
         return 0
     table.to_csv(os.path.join(RESULTS, "bench_sweep.tsv"), sep="\t", index=False)
     choice = choose(table)
-    pipe = pipeline(table, choice["chosen"] if choice["chosen"] is not None else max(LAMBDAS))
-    text = results_markdown(table, choice, validation, pipe)
+    reported = args.lam if args.lam is not None else (choice["chosen"] if choice["chosen"] is not None else max(LAMBDAS))
+    pipe = pipeline(table, reported)
+    text = results_markdown(table, choice, validation, pipe, reported)
     write_readme(text)
     print(text)
     return 0

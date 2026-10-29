@@ -1,0 +1,6 @@
+phase_block	orientation	flip	status	n_pieces	n_snps	delta_if_reversed
+chr6:83	1	0	fixed	3	392	7.894625
+chr6:84	1	0	fixed	3	378	18.050526
+chr6:157	-1	0	fixed	2	121	10.21549
+chr6:158	-1	0	fixed	5	608	31.99552
+chr6:159	1	0	fixed	4	371	17.002224

@@ -62,6 +62,16 @@ they do not multiply the solution pool. Containing every junction is necessary b
 sufficient for a read to fit a walk; after solving, each read is checked against the actual
 orderings (:func:`rck.ecdna.walk.path_matches`) and the explained share is reported.
 
+**Noise tolerance (opt-in).** The flow is integer and fitted to noisy observations, and by default
+one copy of residual on a segment of at least ``seg_length_cap`` (or on a junction,
+``adj_residual_weight``) costs as much as one species. A dip of a few copies from depth bias is
+then cheaper to cover exactly with an extra or a merged species. ``seg_residual_scale`` multiplies
+the segment weights; ``residual_mode`` ``relative`` divides every edge's weight by the expected noise
+``residual_sigma`` x max(flow, 1) (junctions too: the flow is balanced, so a segment dip comes with
+dips on its junctions). Below 1 / ``residual_sigma`` copies the relative weight is above the
+absolute one. The ranking puts residual before structure cost, so a lower weight only changes
+what reaches the pool; ``rank_residual`` ``sum`` ranks on their sum instead.
+
 Species weights here are integers (the structure search). :mod:`rck.ecdna.refit` then refits
 them as fractional copy numbers against the observations.
 """
@@ -99,6 +109,10 @@ class DecompositionParams:
     min_ecdna_copies: int = 2  # circular species lighter than this do not make an amplicon ecDNA
     ecdna_call_fraction: float = 0.8  # circular share of copy-number x length for an "ecDNA" call
     adj_residual_weight: float = 1.0
+    seg_residual_scale: float = 1.0  # multiplier on the segment residual weight (noise tolerance; 1 = off)
+    residual_mode: str = "absolute"  # absolute | relative: divide each edge's residual by residual_sigma x max(flow, 1)
+    residual_sigma: float = 0.1  # expected relative noise of the flow, for residual_mode relative
+    rank_residual: str = "first"  # first: rank on residual, then structure cost | sum: on residual + structure cost
     seg_length_cap: int = 50_000
     min_seg_weight: float = 0.05
     num_alternatives: int = 10
@@ -249,11 +263,18 @@ class CycleDecomposer:
             self.reads = []
 
     def _omega(self, key: EdgeKey) -> float:
+        """Residual weight per copy of edge ``key`` (module docstring, noise tolerance)."""
         p = self.params
         if key[0] == SEG:
             s = self.graph.segments[key[1]]
-            return max(min(s.length / float(p.seg_length_cap), 1.0), p.min_seg_weight)
-        return p.adj_residual_weight
+            omega = max(min(s.length / float(p.seg_length_cap), 1.0), p.min_seg_weight) * p.seg_residual_scale
+        else:
+            omega = p.adj_residual_weight
+        if p.residual_mode == "relative":
+            omega /= p.residual_sigma * max(self.flow[key], 1)
+        elif p.residual_mode != "absolute":
+            raise ValueError("unknown residual mode {m}".format(m=p.residual_mode))
+        return omega
 
     def build(self, distinct_supports: bool = False):
         """Build the MILP. With ``distinct_supports`` no two species may use the same set of edges
@@ -662,8 +683,13 @@ def ranking_key(residual: float, significant: int, n_species: int, steps: int, o
                 params: DecompositionParams) -> Tuple:
     """Sort key of a decomposition: residual, structure cost (``species_penalty`` per significant
     species plus ``step_penalty`` per step of those species), significant species, all species,
-    objective. Ties keep the pool order."""
+    objective. Ties keep the pool order. With ``rank_residual`` ``sum`` the first key is residual
+    plus structure cost, so that a residual cheaper than a species can win (noise tolerance)."""
     cost = params.species_penalty * significant + params.step_penalty * steps
+    if params.rank_residual == "sum":
+        return round(residual + cost, 6), round(cost, 6), significant, n_species, round(objective, 9)
+    if params.rank_residual != "first":
+        raise ValueError("unknown rank_residual {m}".format(m=params.rank_residual))
     return round(residual, 6), round(cost, 6), significant, n_species, round(objective, 9)
 
 
@@ -790,7 +816,8 @@ def _pool_record(graph, flow, params, paths, decomposer, pool, lambdas) -> PoolR
                 same_fit[index] = same_fit_structures(graph, flow, params, paths, species_by_index[index])
     settings = {k: getattr(params, k) for k in ("species_penalty", "step_penalty", "pool_gap", "ambiguity_window",
                                                 "num_alternatives", "max_species", "max_multiplicity", "mode",
-                                                "min_species_weight", "min_species_weight_frac")}
+                                                "min_species_weight", "min_species_weight_frac", "adj_residual_weight",
+                                                "seg_residual_scale", "residual_mode", "residual_sigma", "rank_residual")}
     log.info("pool kept for re-ranking: %d solutions; rank 1 by λ: %s", len(entries),
              ", ".join("{l:g} -> {i}".format(l=l, i=i) for l, i in sorted(rank1.items())))
     return PoolRecord(params=settings, lambdas=[float(l) for l in lambdas], entries=entries,

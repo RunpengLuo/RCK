@@ -332,11 +332,70 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
     still trusted, unless `--flip-oriented-penalty` is set. It remains opt-in: `off` is the
     default.
 
+- `rck-ecdna` noise-tolerant decomposition, opt-in; defaults and their outputs are unchanged
+  (`docs/ecDNA.md`, "Noise-tolerant residual"). The decomposition covers a noisy integer flow at a
+  residual cost of 1 per copy, the same as one species, so a 1–3 copy dip from depth bias makes an
+  exact fit with a leftover or a merged species win.
+  - `--adj-residual-weight` (the existing `DecompositionParams.adj_residual_weight`, now on the
+    command line) and `--seg-residual-scale`, a multiplier on the segment residual weight.
+  - `--residual-mode relative` with `--residual-sigma` (0.1): every edge's residual weight is
+    divided by σ × max(flow, 1). It applies to junctions too, since a segment dip in a balanced
+    flow comes with junction dips.
+  - `--rank-residual sum`: ranks decompositions on residual + structure cost. The default ranking
+    puts residual first, so lower weights alone only change the pool.
+  - `--keep-pool` records the new settings; `rck.ecdna.rerank` uses the run's `--rank-residual`.
+  - Tests (`tests/ecdna/test_decompose.py`): the residual weights and ranking key without Gurobi,
+    and a walk with a 2-copy dip on one loop, an exact two-species fit by default and one walk
+    with cheaper residuals (absolute or relative) and the sum ranking.
+
 ### Changed
 
 - `rck_run.py`: `MIPGapAbs` is set only from the new `--run-g-mip-gap-abs` option. It was
   previously set to the relative `--run-g-mip-gap` value, which forced near-exact
   optimality.
+
+- `results/bench_nested/`: **bench_nested_v2 replaces the first benchmark** (2026-10-29).
+  - `bench_sweep.tsv`, `pipeline.tsv` and `rerank_validation.tsv` are v2's (Slurm 32000320), and
+    `comparison.md` and `comparison.tsv` (v1 against v2) are now tracked here. The configs and
+    subgraphs are in amplicon-allele-analysis. `runs` points at
+    `/n/fs/scratch/$USER/bench_nested_v2/rck_runs`. The first benchmark's numbers stay in
+    `README.md`, and its tables in git history (9b74b87).
+  - Scratch purges files older than two weeks. The remaining run outputs (`runs`, `rck_runs`,
+    `diag`) are not kept anywhere else; the v2 configs, subgraphs and tables are also in
+    `~/backups/bench_nested_v2_2026-10-29.tar.gz` on ionic.
+  - `collect.py`:
+    - a `scale` failure stage, between `subgraph` and `RCK`: depth per copy more than 30% from the
+      cases' median, or segment and junction scales against the truth more than 1.5× apart.
+      v2 `nest_cross_3sp_s403` is now `scale`. `pipeline.tsv` gains the scale columns;
+    - the λ rule: a larger λ is preferred only if at least 2 cases gain more than 0.005 from it,
+      so one case at the grid edge can no longer pick λ. v2 now gives λ = 0.2 (was 0.5) and the
+      first benchmark 0.05 (was 0.5). `--lambda` forces the reported λ.
+  - `diag/scale_ratio.py`: `scales(run)` can be imported (`collect.py` uses it); the output is the same.
+  - `diag/rck_diag.sbatch`: `DIAG_POOL_LAMBDA` sets the pool run's λ and `DIAG_LAMBDA0=0` skips the
+    λ = 0 run. `diag/summarize.sh` skips the missing λ = 0 run.
+  - **Step 2 diagnostic of the noise-tolerant decomposition** (Slurm 32025976; `diag/rck_noise/`:
+    `SUMMARY.md`, `noise_summary.tsv`, the LIST files, and each run's small outputs in `runs/`).
+    - The four decomposition failures (s301, s703, s505, s403 at ploidy 2), each at residual
+      weight 1, 0.5 and 0.25 and relative σ 0.1, at λ 0.2. Also s703 and s301 on the path-fixed
+      subgraphs at `--path-weight` 0.5 and 2 and `--path-fraction 0.9`.
+    - **No setting passes**: s301 and s703 keep their rank 1 (0.693, 0.712) at every setting, and
+      s505 stays at 0.765 (the best in its pool).
+    - The 0.97 answers of s301 and s703 lose on leftover species counted as significant, not on
+      residual; both they and rank 1 fit the integer flow exactly. Refitted to the observations,
+      every s703 pool solution fits identically (`data_objective` 5.097) and s301's differ by
+      0.002, so neither a refit nor decomposing against the observations would separate them. The
+      reads are already explained by the wrong answers.
+    - s403 at relative σ 0.1 stays at 0.545 (pool best 0.729, not picked).
+    - **Still running when committed (2026-10-29 15:55):** array 32025976 tasks 15
+      (`nest_cross_3sp_s403_w0.25`) and 18 (`nest_cross_1to1_s505_w0.5`), with 19–21 (s403 at w0.5
+      and w1, s505 at w1) pending; due by about 17:00. Their rows in `SUMMARY.md` and
+      `noise_summary.tsv` say pending. Check them with `sacct -j 32025976`, then rerun
+      `noise_summary.py --archive` and complete `SUMMARY.md` (`NEXT_STEPS.md`, "Check first").
+  - `diag/noise_summary.py`: per case and setting, the rank-1 answer, the best mean composite in
+    the pool and whether rank 1 picked it, the inexact pool fits and the runtime; `--archive` copies
+    each run's small outputs into the repository.
+  - `.gitignore`: `/runs` instead of `runs`, so that only the runs symlink is ignored and not
+    `diag/rck_noise/runs/`.
 
 ### Fixed
 

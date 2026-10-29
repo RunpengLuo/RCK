@@ -1,10 +1,17 @@
 """Observed / truth ecDNA copy number, length-weighted over segments (depth scale) and over junction
-traversals (junction-read scale), per rck-ecdna run folder."""
+traversals (junction-read scale), per rck-ecdna run folder.
+
+    python scale_ratio.py <bench_sweep.tsv> <run folder>...
+
+``scales(run)`` is also used by ../collect.py for the ``scale`` failure stage."""
 import sys
 import pandas as pd
-print("case\tseg_obs/truth\tjunc_obs/truth\tratio(seg/junc)\tmean_composite_l0.1")
-sweep = pd.read_csv(sys.argv[1], sep="\t")
-for run in sys.argv[2:]:
+
+
+def scales(run):
+    """(segment scale, junction scale, junctions compared) of the run folder ``run``: observed over
+    truth ecDNA copy number, length-weighted over ecDNA segments >= 20 kb, and summed over the novel
+    junctions that carry ecDNA flow and match a truth junction within 2 kb."""
     t = pd.read_csv(f"{run}/truth_cycles.tsv", sep="\t")
     f = pd.read_csv(f"{run}/flow_segments.tsv", sep="\t")
     f = f[((f.ecdna_A + f.ecdna_B) > 0) & f.obs_total.notna() & (f.length >= 20000)]
@@ -13,7 +20,7 @@ for run in sys.argv[2:]:
         return t[(t.chrom == r.chrom) & (t.start <= mid) & (t.end >= mid)].weight.sum()
     f = f.assign(truth=[tcn(r) for r in f.itertuples()])
     f = f[f.truth > 0]
-    seg = (f.obs_total * f.length).sum() / (f.truth * f.length).sum()
+    seg = (f.obs_total * f.length).sum() / (f.truth * f.length).sum() if len(f) else float("nan")
     # junctions: novel adjacencies carrying ecDNA flow; truth copies = flow-independent truth from the walk
     a = pd.read_csv(f"{run}/flow_adjacencies.tsv", sep="\t")
     a = a[(a.kind == "novel")].groupby("aid").agg(obs=("obs_cn", "first"), ec=("ecdna", "sum"), u=("u", "first"), v=("v", "first"))
@@ -40,6 +47,14 @@ for run in sys.argv[2:]:
     a = a.assign(truth=tj)
     a = a[a.truth > 0]
     junc = a.obs.sum() / a.truth.sum() if len(a) else float("nan")
-    name = run.rstrip("/").split("/")[-2]
-    mc = sweep[(sweep.case == name) & (sweep.step_penalty == 0.1)].mean_composite
-    print(f"{name}\t{seg:.2f}\t{junc:.2f} ({len(a)} junctions)\t{seg / junc:.2f}\t{mc.iloc[0] if len(mc) else ''}")
+    return seg, junc, len(a)
+
+
+if __name__ == "__main__":
+    print("case\tseg_obs/truth\tjunc_obs/truth\tratio(seg/junc)\tmean_composite_l0.1")
+    sweep = pd.read_csv(sys.argv[1], sep="\t")
+    for run in sys.argv[2:]:
+        seg, junc, n = scales(run)
+        name = run.rstrip("/").split("/")[-2]
+        mc = sweep[(sweep.case == name) & (sweep.step_penalty == 0.1)].mean_composite
+        print(f"{name}\t{seg:.2f}\t{junc:.2f} ({n} junctions)\t{seg / junc:.2f}\t{mc.iloc[0] if len(mc) else ''}")

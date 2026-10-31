@@ -3,30 +3,18 @@
 NEXT_STEPS.md step 2.3 (and the step 3 path runs). Slurm array 32025976 on ionic, submitted
 2026-10-29 15:12, 22 tasks at 2 concurrent tasks (WLS licence).
 
-**Status: partial, 17 of 22 runs (2026-10-29 15:55); the array was left running when the session ended.**
+**Status: complete, 22 of 22 runs (recorded 2026-10-31).** `sacct -j 32025976` shows every task
+COMPLETED, none near the 2 h Slurm limit (longest 31 min, task 15), and every run has `summary.json`,
+`evaluation.tsv` and the kept pool. One run hit a time limit inside RCK: **task 15,
+`nest_cross_3sp_s403_w0.25`**. Its first decomposition solve (the pool search) stopped at Gurobi's
+`--time-limit 1800` (`Time limit reached`, best bound = best objective, gap 0%; the run took 1866 s),
+so the optimum is proven but the pool may be incomplete. Its row below is not filled; its outputs are
+archived and described under it. The other 21 runs solved every model to optimality.
 
-| task | run | state at 15:55 |
-|---|---|---|
-| 15 | `nest_cross_3sp_s403_w0.25` | running since 15:34 |
-| 18 | `nest_cross_1to1_s505_w0.5` | running since 15:48 |
-| 19 | `nest_cross_3sp_s403_w0.5` | pending |
-| 20 | `nest_cross_1to1_s505_w1` | pending |
-| 21 | `nest_cross_3sp_s403_w1` | pending |
-
-The array should finish at about 17:00 (s403 takes 7–20 min a run, s505 5–25 min). **To finish
-this file:**
-
-```bash
-sacct -j 32025976 -X -o JobID%14,State,Elapsed           # all 22 COMPLETED?
-cd ~/RCK/results/bench_nested/diag
-python noise_summary.py rck_noise/ordered.list --archive rck_noise/runs > rck_noise/noise_summary.tsv
-```
-
-Then fill the pending rows below from `noise_summary.tsv`, and commit `rck_noise/`. Scratch
-deletes the full outputs after two weeks (about 2026-11-12). A task that failed or timed out
-(2 h limit) can be rerun alone with `LIST=$PWD/ordered.list DIAG_POOL_LAMBDA=0.2 DIAG_LAMBDA0=0
-sbatch --array=<task> --time=02:00:00 ~/RCK/results/bench_nested/diag/rck_diag.sbatch`, submitted
-from `/n/fs/scratch/$USER/bench_nested_v2/diag/rck_noise/`.
+`noise_summary.tsv` and `runs/` were refreshed with
+`python noise_summary.py rck_noise/ordered.list --archive rck_noise/runs > rck_noise/noise_summary.tsv`
+(from `diag/`). The 17 runs archived before are unchanged. Scratch deletes the full outputs (the pool's
+`decompositions.tsv` and the Gurobi logs) after two weeks, about 2026-11-12.
 
 ## Setup
 
@@ -60,6 +48,9 @@ from `/n/fs/scratch/$USER/bench_nested_v2/diag/rck_noise/`.
   - `noise_summary.tsv` is the full table, from `python ../noise_summary.py ordered.list --archive runs`.
   - `runs/<name>/` holds each run's small outputs: summary, evaluation, flow, the ranked
     decompositions (gzipped), and the pool table and evaluation.
+  - `leftover_recount.tsv` (from `../leftover_recount.py`) and `obs_vs_truth.tsv` (from
+    `../obs_vs_truth.py`) are the offline checks of 2026-10-31 on the saved pools and flows. No
+    new runs; see NEXT_STEPS.md "Assessment (2026-10-31)".
   - The pool's full `decompositions.tsv` (up to 9 MB a run) and the Gurobi logs stay in
     `/n/fs/scratch/$USER/bench_nested_v2/diag/rck_noise/`, which scratch purges after two weeks.
 
@@ -90,18 +81,23 @@ How to read the columns:
 | s703 | pf0.9 | 2 / 1 | 0.712 | 0.971 (#3) | no | 45 / 0 | 2 s |
 | s505 | w0.25 | 3 / 2 | 0.765 | 0.765 (#1) | yes | 88 / 11 | 1244 s |
 | s505 | rel0.1 | 3 / 2 | 0.765 | 0.765 (#1) | yes | 88 / 11 | 313 s |
-| s505 | w0.5 | pending | | | | | |
-| s505 | w1 | pending | | | | | |
-| s403 | w0.25 | pending | | | | | |
+| s505 | w0.5 | 3 / 2 | 0.765 | 0.765 (#1) | yes | 88 / 11 | 791 s |
+| s505 | w1 | 3 / 2 | 0.765 | 0.765 (#1) | yes | 77 / 0 | 551 s |
+| s403 | w0.25 | not filled: Gurobi time limit in the pool search (see below the table) | | | | | 1865 s |
 | s403 | rel0.1 | 3 / 3 | 0.545 | 0.729 (#15, 4 sig.) | no | 81 / 0 | 432 s |
-| s403 | w0.5 | pending | | | | | |
-| s403 | w1 | pending | | | | | |
+| s403 | w0.5 | 3 / 3 | 0.545 | 0.729 (#15, 4 sig.) | no | 82 / 0 | 1376 s |
+| s403 | w1 | 3 / 3 | 0.545 | 0.729 (#16, 4 sig.) | no | 85 / 0 | 1104 s |
+
+The s403 w0.25 row is not filled because of the time limit. For the record, its archived outputs
+give the same rank 1 as the other three s403 settings (3 / 3, 5.75 / 4.06 / 3.33, 0.545), pool best
+0.729 (#14, 4 sig., not picked), 96 / 8 pool solutions / inexact. A rerun without the limit could
+only add pool solutions, and none of the other settings' pools holds a better answer.
 
 Before this diagnostic, the composites at λ = 0.2 were:
 - s301 0.693, s703 0.712 and s505 0.765 (v2 bench runs);
 - s403 0.545 on the ploidy-2 subgraph (2026-10-27 diagnostics).
 
-## Reading (partial)
+## Reading
 
 1. **The success test fails: no setting makes s301 or s703 pick its 0.97 answer.** Rank 1 is
    the same at every setting, down to the weights.
@@ -113,13 +109,18 @@ Before this diagnostic, the composites at λ = 0.2 were:
      Even at weight 0.25 no inexact fit enters the pool: every pool objective is 3.005–4.008, so
      a single walk's weighted residual is above the window of 2.0.
    - **s301.** The 0.973 answer has 4 significant species (two leftovers of 2.1 and 1.2 copies),
-     against 3 at rank 1. Lower weights bring 3–10 inexact fits into the pool, but none ranks
+     against 3 at rank 1. (Correction, 2026-10-31: these are the counts after the weight refit.
+     The ranking counts significant species from the integer weights: rank 1, pool #0, is
+     11 / 3 / [1] with 2 significant species and 30 steps, and the 0.973 answer, pool #2, is
+     11 / 4 / 3 / [1] with 3 significant species and 30 steps. It loses by exactly one species.) Lower weights bring 3–10 inexact fits into the pool, but none ranks
      above the exact 3-species fit.
-3. **s403 (rel0.1).** Rank 1 is unchanged: 0.545, three species at 5.75 / 4.06 / 3.33, the same
-   as the 2026-10-27 ploidy-2 run. The pool's best is still 0.729 (4 significant species), and no
-   inexact fit enters. The three weight settings are pending.
-4. **s505.** At w0.25 and rel0.1 the answer is still the baseline's 0.765, and it is the best in
-   the pool. The 11 inexact fits that now enter are no better: no good answer enters the pool.
+3. **s403 (ploidy-2 subgraph).** Rank 1 is the same at w1, w0.5, rel0.1, and at the time-limited
+   w0.25: 0.545, three species at 5.75 / 4.06 / 3.33, as in the 2026-10-27 ploidy-2 run. The
+   pool's best is 0.729 at every setting (pool #14–16, 4 significant species), and rank 1 never
+   picks it. Only the time-limited w0.25 run lets inexact fits in (8), and none of them is better.
+4. **s505.** At every setting (w1, w0.5, w0.25, rel0.1) the answer is the baseline's 0.765
+   (12.06 / 7.02 / 2.84), and it is the best in the pool. w0.5 and w0.25 let 11 inexact fits in
+   (rel0.1 too); none is better. No good answer is in any s505 pool.
 5. **Long-read paths (step 3) change nothing.** With the path fix, s703 loads 10 paths (one with
    ≥ 2 junctions, 3 reads) and s301 15 (three, 5 reads). Rank 1 is unchanged at
    `--path-weight` 0.5 and 2 and at `--path-fraction 0.9`. The wrong rank-1 answers already
@@ -135,19 +136,48 @@ Before this diagnostic, the composites at λ = 0.2 were:
    | s505 w0.25 | 0.765 | 0.765 | 0.528 | 0.532 | 0.532 |
 
    - A threshold of 0.15 fixes s703, does not fix s301, and breaks s505.
-   - s505's rank 1 changes to a worse pool solution at 0.15; why has not been checked yet. Its
-     2.84-copy species is the one that carries both true species' junctions (2026-10-27 reading).
+   - Why s505 gets worse (checked 2026-10-31): the default threshold is max(1, 0.1 × heaviest),
+     which is 1 copy whenever the heaviest species has at most 10 copies, so then every 1-copy
+     species counts as significant. At 0.15, pool #56 (10 / 4 / 1 / 1, four significant species at
+     0.10) drops its two 1-copy species and wins with 2 significant species against rank 1's 3
+     (12 / 7 / 3 / [1]). Its 1-copy species are not noise: they are 7.0 and 7.5 Mb walks with 7 and
+     9 junctions, and its 10-copy species merges both true species (0.528). s502 breaks the same
+     way (pool #7, 10 / 1 / 1, 0.955 → 0.513). See NEXT_STEPS.md "Assessment (2026-10-31)".
    - So one global threshold is not the fix either. The pools were collected at 0.10, so a run
      at another threshold could also differ in what reaches the pool.
 
-## Conclusion so far
+## Open questions, answered (2026-10-31)
 
-No setting meets the success test. Per NEXT_STEPS step 2.4 there is no regression LIST; the
-next change is proposed below, not implemented. The pending s403 and s505 runs can only change the reading
-for those cases. The noise-tolerant options stay in RCK, off by default. For s505
-they let inexact fits into the pool, but no better answer so far.
+- **Does any weight setting put a better answer into the pool for s403 or s505?** No.
+  - s403 (ploidy 2): the best pool composite is 0.729 at every setting (w1 #16, w0.5 #15, rel0.1
+    #15, and #14 in the time-limited w0.25 run). Rank 1 never picks it: it stays 0.545.
+  - s505: the best pool composite is 0.765 at every setting, and it is rank 1. Nothing better
+    enters, not even among the 11 inexact fits at w0.5, w0.25 and rel0.1.
+- **Does any setting change rank 1 for either case?** No. The rank-1 weights and composites are
+  identical at every setting: s403 5.75 / 4.06 / 3.33 (0.545), s505 12.06 / 7.02 / 2.84 (0.765).
+- **Does any result change the reading that the right answers lose on how leftover species are
+  counted, not on residual?** It holds for s301 and s703, and the residual part holds for all four.
+  It needs one qualification for s505 and s403: they do not lose in the ranking at all.
+  - s505's pool has no good answer. Its flow is wrong where the observations are: over about
+    300 kb of haplotype B (chr3:121.68–121.98 Mb), depth reads 22–27 copies against a truth of
+    30.5 (12–27% low, the simulator's correlated depth bias), and the flow follows it
+    (`obs_vs_truth.tsv`; `flow_vs_truth.py`: 14 of 21 segments off by more than 1.5 copies, the
+    most of any bench case).
+  - In s403 (ploidy 2) the best pool answer is itself only 0.729.
+  - And the offline recount (NEXT_STEPS.md "Assessment (2026-10-31)", `leftover_recount.tsv`)
+    shows that no recount of leftovers picks the right s301 and s703 answers without breaking
+    s502 and s505. For s301 and s703 the choice is between exact fits that the data cannot tell
+    apart, so it is a prior-only choice.
 
-## Proposed next change (not implemented)
+## Conclusion
+
+No setting meets the success test, and none changes rank 1 in any of the four cases. Per
+NEXT_STEPS step 2.4 there is no regression LIST. The noise-tolerant options stay in RCK, off by
+default. In s505 they let inexact fits into the pool, but no better answer. The proposed next
+change below was tested offline on 2026-10-31 and is not recommended. See NEXT_STEPS.md
+"Assessment (2026-10-31)".
+
+## Proposed next change (not implemented; option 1 tested offline 2026-10-31 and not recommended)
 
 NEXT_STEPS names two larger changes: refit with a noise model before choosing among exact fits,
 or put the species weights into the flow MILP. **An offline check of the saved pools argues

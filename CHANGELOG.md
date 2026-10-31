@@ -391,9 +391,59 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
       and w1, s505 at w1) pending; due by about 17:00. Their rows in `SUMMARY.md` and
       `noise_summary.tsv` say pending. Check them with `sacct -j 32025976`, then rerun
       `noise_summary.py --archive` and complete `SUMMARY.md` (`NEXT_STEPS.md`, "Check first").
+    - **Completed 2026-10-31**: all 22 tasks COMPLETED. The 5 runs pending at commit are archived
+      in `diag/rck_noise/runs/`, and `SUMMARY.md` is complete. s505 stays at 0.765 (the best in its
+      pool) and s403 at 0.545 (pool best 0.729, not picked) at every residual setting: no setting
+      changes rank 1 or adds a better pool answer. `nest_cross_3sp_s403_w0.25` (task 15) hit
+      Gurobi's `--time-limit 1800` in its pool search (optimum proven, pool possibly incomplete),
+      so its row is described, not filled. `SUMMARY.md` also corrects the s301 species counts the
+      ranking sees (2 against 3 significant, from the integer weights).
   - `diag/noise_summary.py`: per case and setting, the rank-1 answer, the best mean composite in
     the pool and whether rank 1 picked it, the inexact pool fits and the runtime; `--archive` copies
     each run's small outputs into the repository.
+  - **Assessment of the next steps** (2026-10-31; `NEXT_STEPS.md`, "Assessment (2026-10-31)", with
+    a revised plan; the 2026-10-29 plan is kept). Offline only, with no Gurobi runs and no RCK
+    default changed.
+    - `diag/leftover_recount.py` (new): re-flags every saved pool solution's species under a
+      leftover rule and re-ranks with `rank_pool`. Rules: the global `--min-species-weight-frac`;
+      an overlap-relative rule (σ × the heaviest overlapping species; overlap on phased or
+      unphased segments, any or > 50% of the lighter species' length); a junction-novelty rule.
+      The default rule reproduces every case's rank 1 (mean 0.9283). Output:
+      `diag/rck_noise/leftover_recount.tsv`, 22 bench pools and 5 diagnostic pools.
+      - **The step 2b leftover prior does not help.** At σ 0.15 it is case for case the global
+        0.15 threshold (mean 0.928 → 0.910; s703 fixed; s502 and s505 broken), because every
+        leftover overlaps the heaviest species. At σ 0.2 the mean is 0.894.
+      - s505 and s502 break through the 1-copy floor of max(1, 0.1 × heaviest).
+      - The junction-novelty variant fixes s301 and s703 but breaks s502, s505 and s402 (0.916).
+    - `diag/obs_vs_truth.py` (new): segment-depth and junction-read errors against the truth copy
+      numbers, after the flow's background (`diag/rck_noise/obs_vs_truth.tsv`). Junction reads are
+      more accurate than depth in s703 and s502, not in general.
+    - **Findings.**
+      - RCK's same-fit alternatives already contain s703's and s301's right answers (first and
+        second alternative); `pool_keeps` drops s301's from the ranked list at λ 0.2.
+      - The paired normal's depth per copy picks the right ploidy class in 14 of 14 bench
+        subgraphs (s403's class 6 is at 0.48× the normal).
+      - The composite scores s403's 2× scale error (0.592) above the right scale (0.545).
+      - s703's answers can only be told apart by reads over ≈ 63 kb; the simulated reads average
+        15 kb.
+    - **Revised plan.**
+      1. Ambiguity reporting plus a set metric.
+      2. A σ = 0 (no depth bias) control run.
+      3. A re-baseline with the path fix and a paired-normal ploidy rule.
+      4. More seeds and a light-nested scenario before tuning any prior.
+      - Step 2b is dropped and θ deferred.
+      - The run LISTs and sbatch commands are written out; nothing was submitted.
+    - **Agreed order and step c** (2026-10-31, later; `NEXT_STEPS.md`, end of the Assessment):
+      - Order: re-baseline the 22 cases, then more seeds; the σ = 0 control is optional; ambiguity
+        reporting comes later.
+      - **Correction:** the paired-normal ploidy rule is a hidden diploid prior. Across ploidy
+        classes, depth per copy × cell ploidy is the tumour's mean depth, so a matched normal
+        cannot choose the class. The bench subgraphs use an explicit `--rck-ploidy 2` instead.
+      - The 14 bench subgraphs were rebuilt on scratch: graphs unchanged, more paths, and s403 at
+        ploidy 2.
+      - RCK on all 22 cases was submitted as Slurm 32041913 (outputs in
+        `/n/fs/scratch/$USER/bench_nested_v2/rebuild/rck_runs`); this folder's tables are
+        unchanged until it is collected.
   - `.gitignore`: `/runs` instead of `runs`, so that only the runs symlink is ignored and not
     `diag/rck_noise/runs/`.
 

@@ -1,0 +1,93 @@
+           case  step_penalty              method          sweep_composites                composites  composites_match sweep_decided_by      decided_by  sweep_gap     gap  ambiguity_match
+          demo3          0.00 pool (λ=0 emulated)              ecdna1=0.960              ecdna1=0.959             False  species_penalty species_penalty    -0.0008 -0.0008             True
+          demo3          0.00                 run              ecdna1=0.960              ecdna1=0.960              True  species_penalty species_penalty    -0.0008 -0.0008             True
+          demo3          0.02                pool              ecdna1=0.959              ecdna1=0.959              True  species_penalty species_penalty    -0.0064 -0.0064             True
+          demo3          0.05                pool              ecdna1=0.959              ecdna1=0.959              True  species_penalty species_penalty    -0.0064 -0.0064             True
+          demo3          0.10                pool              ecdna1=0.959              ecdna1=0.959              True  species_penalty species_penalty    -0.0064 -0.0064             True
+          demo3          0.20                pool              ecdna1=0.959              ecdna1=0.959              True  species_penalty species_penalty    -0.0064 -0.0064             True
+     demo4_amp0          0.00 pool (λ=0 emulated)              ecdna1=0.983              ecdna1=0.983              True              NaN             NaN        NaN     NaN             True
+     demo4_amp0          0.00                 run              ecdna1=0.983              ecdna1=0.983              True              NaN             NaN        NaN     NaN            False
+     demo4_amp0          0.02                pool              ecdna1=0.983              ecdna1=0.983              True              NaN             NaN        NaN     NaN             True
+     demo4_amp0          0.05                pool              ecdna1=0.983              ecdna1=0.983              True              NaN             NaN        NaN     NaN             True
+     demo4_amp0          0.10                pool              ecdna1=0.983              ecdna1=0.983              True              NaN             NaN        NaN     NaN             True
+     demo4_amp0          0.20                pool              ecdna1=0.983              ecdna1=0.983              True              NaN             NaN        NaN     NaN             True
+     demo4_amp1          0.00 pool (λ=0 emulated)              ecdna2=0.997              ecdna2=0.997              True              NaN             NaN        NaN     NaN             True
+     demo4_amp1          0.00                 run              ecdna2=0.997              ecdna2=0.997              True              NaN             NaN        NaN     NaN            False
+     demo4_amp1          0.02                pool              ecdna2=0.997              ecdna2=0.997              True              NaN             NaN        NaN     NaN             True
+     demo4_amp1          0.05                pool              ecdna2=0.997              ecdna2=0.997              True              NaN             NaN        NaN     NaN             True
+     demo4_amp1          0.10                pool              ecdna2=0.997              ecdna2=0.997              True              NaN             NaN        NaN     NaN             True
+     demo4_amp1          0.20                pool              ecdna2=0.997              ecdna2=0.997              True              NaN             NaN        NaN     NaN             True
+          demo5          0.00 pool (λ=0 emulated)              ecdna1=0.990              ecdna1=0.990              True              NaN             NaN        NaN     NaN             True
+          demo5          0.00                 run              ecdna1=0.990              ecdna1=0.990              True              NaN             NaN        NaN     NaN            False
+          demo5          0.02                pool              ecdna1=0.990              ecdna1=0.990              True              NaN             NaN        NaN     NaN             True
+          demo5          0.05                pool              ecdna1=0.990              ecdna1=0.990              True              NaN             NaN        NaN     NaN             True
+          demo5          0.10                pool              ecdna1=0.990              ecdna1=0.990              True              NaN             NaN        NaN     NaN             True
+          demo5          0.20                pool              ecdna1=0.990              ecdna1=0.990              True              NaN             NaN        NaN     NaN             True
+    demo6_union          0.00 pool (λ=0 emulated) ecdna1=0.984,ecdna2=0.994 ecdna1=0.984,ecdna2=0.994              True              NaN             NaN        NaN     NaN             True
+    demo6_union          0.00                 run ecdna1=0.984,ecdna2=0.994 ecdna1=0.984,ecdna2=0.994              True              NaN             NaN        NaN     NaN            False
+    demo6_union          0.02                pool ecdna1=0.984,ecdna2=0.994 ecdna1=0.984,ecdna2=0.994              True              NaN             NaN        NaN     NaN             True
+    demo6_union          0.05                pool ecdna1=0.984,ecdna2=0.994 ecdna1=0.984,ecdna2=0.994              True              NaN             NaN        NaN     NaN             True
+    demo6_union          0.10                pool ecdna1=0.984,ecdna2=0.994 ecdna1=0.984,ecdna2=0.994              True              NaN             NaN        NaN     NaN             True
+    demo6_union          0.20                pool ecdna1=0.984,ecdna2=0.994 ecdna1=0.984,ecdna2=0.994              True              NaN             NaN        NaN     NaN             True
+demo7_blockflip          0.00 pool (λ=0 emulated) ecdna1=0.994,ecdna2=1.000 ecdna1=0.994,ecdna2=1.000              True  species_penalty species_penalty     0.0000  0.0000             True
+demo7_blockflip          0.00                 run ecdna1=0.994,ecdna2=1.000 ecdna1=0.994,ecdna2=1.000              True  species_penalty species_penalty     0.0000  0.0000             True
+demo7_blockflip          0.02                pool ecdna1=0.994,ecdna2=1.000 ecdna1=0.994,ecdna2=1.000              True  species_penalty species_penalty     0.8200  0.8200             True
+demo7_blockflip          0.05                pool ecdna1=0.994,ecdna2=1.000 ecdna1=0.994,ecdna2=1.000              True  species_penalty species_penalty     0.9942  0.9942             True
+demo7_blockflip          0.10                pool ecdna1=0.994,ecdna2=1.000 ecdna1=0.994,ecdna2=1.000              True  species_penalty species_penalty     0.9942  0.9942             True
+demo7_blockflip          0.20                pool ecdna1=0.994,ecdna2=1.000 ecdna1=0.994,ecdna2=1.000              True  species_penalty species_penalty     0.9942  0.9942             True
+demo7_totalonly          0.00 pool (λ=0 emulated) ecdna1=0.510,ecdna2=0.335 ecdna1=0.510,ecdna2=0.335              True        tie-break       tie-break     0.0102  0.0102             True
+demo7_totalonly          0.00                 run ecdna1=0.510,ecdna2=0.335 ecdna1=0.510,ecdna2=0.335              True        tie-break       tie-break     0.0102  0.0102             True
+demo7_totalonly          0.02                pool ecdna1=0.510,ecdna2=0.335 ecdna1=0.510,ecdna2=0.335              True     step_penalty    step_penalty     0.3560  0.3560             True
+demo7_totalonly          0.05                pool ecdna1=0.982,ecdna2=0.971 ecdna1=0.982,ecdna2=0.971              True  species_penalty species_penalty     0.1930  0.1930             True
+demo7_totalonly          0.10                pool ecdna1=0.982,ecdna2=0.971 ecdna1=0.982,ecdna2=0.971              True  species_penalty species_penalty     0.3930  0.3930             True
+demo7_totalonly          0.20                pool ecdna1=0.982,ecdna2=0.971 ecdna1=0.982,ecdna2=0.971              True  species_penalty species_penalty     0.7930  0.7930             True
+          demo8          0.00 pool (λ=0 emulated) ecdna1=0.985,ecdna2=0.989 ecdna1=0.985,ecdna2=0.989              True        tie-break       tie-break     0.0038  0.0038             True
+          demo8          0.00                 run ecdna1=0.985,ecdna2=0.989 ecdna1=0.985,ecdna2=0.989              True        tie-break       tie-break     0.0038  0.0038             True
+          demo8          0.02                pool ecdna1=0.985,ecdna2=0.989 ecdna1=0.985,ecdna2=0.989              True     step_penalty    step_penalty     0.3838  0.3838             True
+          demo8          0.05                pool ecdna1=0.985,ecdna2=0.989 ecdna1=0.985,ecdna2=0.989              True     step_penalty    step_penalty     0.9538  0.9538             True
+          demo8          0.10                pool ecdna1=0.985,ecdna2=0.989 ecdna1=0.985,ecdna2=0.989              True     step_penalty    step_penalty     1.9038  1.9038             True
+          demo8          0.20                pool ecdna1=0.985,ecdna2=0.989 ecdna1=0.985,ecdna2=0.989              True     step_penalty    step_penalty     3.8038  3.8038             True
+**Re-ranking check** (`rerank_validation.tsv`, against `results/step_sweep/sweep.tsv`): re-ranked λ > 0 composites match at 32/32 (case, λ), ambiguity fields at 32/32; the λ = 0 runs match at 8/8; λ = 0 emulated from the pool matches at 7/8.
+
+**Recommended `--step-penalty`: 0.2**, the smallest λ on the plateau of best mean composite over all 22 cases (0.2, 0.5; a λ whose shortfall to the best comes from fewer than 2 cases is on it), with no control or demo case more than 0.005 below its λ = 0 score. λ giving the same rank-1 answers on every case: 0.2. The default stays 0.
+
+| λ | 0 | 0.02 | 0.05 | 0.1 | 0.2 | 0.5 |
+|---|---|---|---|---|---|---|
+| mean composite, all cases | 0.8253 | 0.8579 | 0.9055 | 0.9055 | 0.9262 | 0.9283 |
+| control / demo cases below λ = 0 | none | none | none | none | none | none |
+| cases gaining from λ to the best λ | demo7_totalonly, nest_cross_2to1_s104, nest_cross_3sp_s402, nest_samehap_2to1_s202, nest_samehap_3to1_s301 | demo7_totalonly, nest_cross_3sp_s402, nest_samehap_2to1_s202, nest_samehap_3to1_s301 | nest_cross_3sp_s402, nest_samehap_3to1_s301 | nest_cross_3sp_s402, nest_samehap_3to1_s301 | nest_samehap_3to1_s301 | none |
+
+Mean composite per scenario (mean over seeds; merged = rank-1 decompositions flagged merged):
+
+| scenario | cases | λ = 0 | λ = 0.2 | merged at 0 | merged at 0.2 |
+|---|---|---|---|---|---|
+| ctrl_dup | 2 | 0.855 | 0.855 | 0 | 0 |
+| ctrl_separate | 2 | 0.979 | 0.979 | 0 | 0 |
+| demo3 | 1 | 0.960 | 0.959 | 0 | 0 |
+| demo4_amp0 | 1 | 0.983 | 0.983 | 0 | 0 |
+| demo4_amp1 | 1 | 0.997 | 0.997 | 0 | 0 |
+| demo5 | 1 | 0.990 | 0.990 | 0 | 0 |
+| demo6_union | 1 | 0.990 | 0.990 | 0 | 0 |
+| demo7_blockflip | 1 | 0.997 | 0.997 | 0 | 0 |
+| demo7_totalonly | 1 | 0.422 | 0.976 | 1 | 0 |
+| demo8 | 1 | 0.987 | 0.987 | 0 | 0 |
+| nest_cross_1to1 | 2 | 0.860 | 0.860 | 2 | 2 |
+| nest_cross_2to1 | 2 | 0.609 | 0.967 | 1 | 0 |
+| nest_cross_3sp | 2 | 0.533 | 0.761 | 2 | 1 |
+| nest_samehap_2to1 | 2 | 0.745 | 0.991 | 1 | 0 |
+| nest_samehap_3to1 | 2 | 0.836 | 0.836 | 1 | 1 |
+
+Remaining failures at λ = 0.2 (mean composite < 0.95, merged, or a wrong species count; `pipeline.tsv`): 5 of 14 bench cases.
+
+| case | stage | why |
+|---|---|---|
+| nest_samehap_3to1_s301 | RCK | merged: ec2 carries ecdna1+ecdna2; 3 species for 2 true; composites ecdna1=0.964,ecdna2=0.423 |
+| nest_cross_3sp_s403 | RCK | merged: ec1 carries ecdna1+ecdna2; ec2 carries ecdna1+ecdna3; composites ecdna1=0.519,ecdna2=0.593,ecdna3=0.523 |
+| nest_cross_1to1_s502 | RCK | merged: ec3 carries ecdna1+ecdna2; 3 species for 2 true; composites ecdna1=0.967,ecdna2=0.943 |
+| nest_cross_1to1_s505 | RCK | merged: ec3 carries ecdna1+ecdna2; 3 species for 2 true; composites ecdna1=0.944,ecdna2=0.586 |
+| ctrl_dup_s703 | RCK | 2 species for 1 true; composites ecdna1=0.712 |
+
+Scale: 1 of 14 cases have depth per copy more than 30% from the median or segment / junction scales apart by more than 1.5x (nest_cross_2to1_s104).
+Subgraph stage: 0 of 14 subgraphs miss a true junction or cover under 80% of a true segment.
+
+Compute: 2762 s of RCK wall time over 22 cases (one λ = 0 run and one pool run each, 4 threads).

@@ -562,7 +562,7 @@ it rather than skipped. The order is now:
    - RCK outputs in `/n/fs/scratch/$USER/bench_nested_v2/rebuild/rck_runs/`.
    Then run RCK on all 22 cases. The 8 regression cases rerun too, so that the new baseline is one
    self-consistent set of runs.
-2. **d. More seeds. [d1 submitted 2026-11-01 (Slurm 32049944); d2 not yet; see "Job list" at the end]**
+2. **d. More seeds. [d1 done 2026-11-01 (Slurm 32049944, checks pass); d2 submitted 2026-11-01 (Slurm 32050408); see "Job list" at the end]**
    - Simulate about 4 more accepted seeds each for nest_samehap_3to1, nest_cross_1to1 and
      ctrl_dup, and add a `nest_samehap_6to1` scenario. Simulation needs no Gurobi.
    - Build their subgraphs with the same settings as in c, and run RCK on them.
@@ -657,7 +657,7 @@ right). That rule is a hidden diploid prior:
 - The local `runs` link still points at v2's `rck_runs`. Pass `BENCH_NESTED_OUT` as above, or
   repoint it.
 
-**Step d, prepared (2026-11-01; d1 submitted the same day as Slurm 32049944, see "Job list" below).**
+**Step d, prepared (2026-11-01; d1 ran the same day as Slurm 32049944, d2 submitted as Slurm 32050408; see "Job list" below).**
 
 Code (amplicon-allele-analysis `simulations/`; no default changed):
 - `make_scenarios.py`: new scenario `nest_samehap_6to1`, last in `NESTED_SCENARIOS`, so the others
@@ -772,8 +772,8 @@ prepared" and "Step b, commands" above.
 
 | step | job | Gurobi | status | needs |
 |---|---|---|---|---|
-| d1: simulate and build subgraphs, 6 accepted seeds each for nest_samehap_3to1, nest_cross_1to1, ctrl_dup and nest_samehap_6to1 (array tasks 2, 4, 6, 7) | Slurm **32049944** | no | submitted 2026-11-01; all 4 tasks started on node202 | — |
-| d2: RCK on the new cases only (`--array=<new indices>%2`) | not submitted | yes, about 1–2 licence-hours | after d1, and after the d1 checks below | d1 |
+| d1: simulate and build subgraphs, 6 accepted seeds each for nest_samehap_3to1, nest_cross_1to1, ctrl_dup and nest_samehap_6to1 (array tasks 2, 4, 6, 7) | Slurm **32049944** | no | done 2026-11-01: 4 of 4 COMPLETED (5:53–9:16); all checks pass ("Checking d1, result" below) | — |
+| d2: RCK on the 18 new cases only (`--array=14,15,16,17,22,23,24,25,30,31,32,33,34,35,36,37,38,39%2`) | Slurm **32050408** | yes, about 1–2 licence-hours | submitted 2026-11-01 ("Step d2, submitted" below) | d1 |
 | d2 collect: `collect.py` into `grow/rck_results/`, then compare the 22 existing rows with this folder's tables | — (local, CPU, about 1–2 min) | no | after d2 | d2 |
 | b: σ = 0 simulation and subgraphs (`sigma0-sim`) | not submitted | no | optional; can run any time | — |
 | b: σ = 0 RCK (`rck_diag.sbatch`, 4 runs) | not submitted | yes, about 45 min | optional; chain after d2 (`--dependency=afterany:<d2 JOBID>`): the licence allows 2 sessions | b sim, d2 |
@@ -796,3 +796,66 @@ grep -c "set with --rck-ploidy" $BENCH_NESTED_ROOT/subgraphs/*/union/scale.json 
 Also check that `subgraph_checks.tsv` has no `subgraph_fail` True. If a task timed out or failed
 for a transient reason, resubmit the same command with `--array=<that task>`: finished steps are
 skipped.
+
+**Checking d1, result (2026-11-01): all pass.**
+- `sacct -j 32049944`: tasks 2, 4, 6 and 7 COMPLETED, in 6:17, 5:53, 9:16 and 9:01.
+- `bench_nested.py seeds` and `report` re-merge (exit 0); 32 runs, subgraph-stage failures: none.
+- Accepted seeds in `grow/configs/seeds.tsv`: 6 each for nest_samehap_3to1, nest_cross_1to1,
+  ctrl_dup and nest_samehap_6to1; 2 for the other four scenarios.
+- `grow/subgraphs/subgraph_checks.tsv`: `subgraph_fail` is False in all 32 rows; the 18 new runs
+  have `verify_verdict` PASS and depth per copy 12.7–15.1.
+- All 32 `scale.json` say `set with --rck-ploidy`.
+- New accepted seeds: nest_samehap_3to1 s305–s308, nest_cross_1to1 s506–s509, ctrl_dup s706,
+  s708, s709, s710, nest_samehap_6to1 s801–s806 (18 runs).
+
+**Step d2, submitted (2026-11-01): Slurm 32050408.**
+- Submitted with the "Step d2" block unchanged (`--array="$IDX"%2`, the sbatch's defaults of 4
+  CPUs, 2 GB and 1:30), from `~/RCK/results/bench_nested`, with `BENCH_NESTED_ROOT` and
+  `BENCH_NESTED_OUT` = `grow/` and `grow/rck_runs`. Logs:
+  `/n/fs/scratch/$USER/bench_nested_v2/grow/logs/bench-nested_32050408_<index>.out`.
+- `IDX` = 14,15,16,17,22,23,24,25,30,31,32,33,34,35,36,37,38,39. **The indices of the existing
+  cases moved** (`run_case.py list` now has 40 cases), so the index numbers here are not those of
+  the c array 32041913. Case behind each index:
+
+  | index | case | index | case |
+  |---|---|---|---|
+  | 14 | nest_samehap_3to1_s305 | 30 | ctrl_dup_s706 |
+  | 15 | nest_samehap_3to1_s306 | 31 | ctrl_dup_s708 |
+  | 16 | nest_samehap_3to1_s307 | 32 | ctrl_dup_s709 |
+  | 17 | nest_samehap_3to1_s308 | 33 | ctrl_dup_s710 |
+  | 22 | nest_cross_1to1_s506 | 34 | nest_samehap_6to1_s801 |
+  | 23 | nest_cross_1to1_s507 | 35 | nest_samehap_6to1_s802 |
+  | 24 | nest_cross_1to1_s508 | 36 | nest_samehap_6to1_s803 |
+  | 25 | nest_cross_1to1_s509 | 37 | nest_samehap_6to1_s804 |
+  |  |  | 38 | nest_samehap_6to1_s805 |
+  |  |  | 39 | nest_samehap_6to1_s806 |
+
+- Checked before submitting: the 22 indices left out (0–13, 18–21, 26–29) are exactly the 8
+  regression cases and the 14 existing bench cases. Each is a link to `rebuild/rck_runs/<case>`,
+  and `run_case.done()` is True for both its `lambda_0` and `pool` runs. So none of them reruns,
+  even if submitted by mistake. All 18 new cases have `edges.tsv`. No other job of ours was
+  queued, so the array has both licence sessions.
+- The task-to-case mapping is recomputed at run time from `grow/configs/seeds.tsv`. Do not
+  re-run `bench_nested.py scenario` in `grow/` while 32050408 is queued.
+
+When it finishes:
+
+```bash
+sacct -j 32050408 -X -o JobID%14,JobName%14,State,Elapsed,MaxRSS     # 18 x COMPLETED? (once, no loop)
+grep -L "pool in" /n/fs/scratch/$USER/bench_nested_v2/grow/logs/bench-nested_32050408_*.out  # any task without a finished pool run
+cd ~/RCK/results/bench_nested && export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
+export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2/grow BENCH_NESTED_OUT=/n/fs/scratch/$USER/bench_nested_v2/grow/rck_runs
+mkdir -p $BENCH_NESTED_ROOT/rck_results
+BENCH_NESTED_RESULTS=$BENCH_NESTED_ROOT/rck_results python collect.py 2>&1 | tee $BENCH_NESTED_ROOT/rck_results/collect.log
+# the 22 existing rows must be identical to this folder's tables:
+for t in bench_sweep pipeline rerank_validation; do
+  python - "$t" <<'PY'
+import sys, pandas as pd
+t = sys.argv[1]; key = "run" if t == "pipeline" else None
+old = pd.read_csv(f"{t}.tsv", sep="\t", dtype=str)
+new = pd.read_csv(f"/n/fs/scratch/ym3292/bench_nested_v2/grow/rck_results/{t}.tsv", sep="\t", dtype=str)
+merged = old.merge(new, how="left", indicator=True)
+print(t, "old rows", len(old), "new rows", len(new), "old rows missing or changed in new:", (merged["_merge"] != "both").sum())
+PY
+done
+```

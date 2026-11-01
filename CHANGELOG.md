@@ -459,12 +459,20 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
       and its numbers in `README.md` ("v2 results before the re-baseline").
     - `rebuild_2026-10-31/comparison_vs_v2.txt` is now the row-by-row v2 comparison. 7778991
       committed a copy of `collect.log` under that name.
-  - **Step d prepared, not submitted** (`NEXT_STEPS.md`, "Step d, prepared"):
+  - **Step d prepared** (`NEXT_STEPS.md`, "Step d, prepared"):
     - more seeds for nest_samehap_3to1, nest_cross_1to1 and ctrl_dup (6 accepted each), and the
       new nest_samehap_6to1 scenario (amplicon-allele-analysis CHANGELOG);
     - root `/n/fs/scratch/$USER/bench_nested_v2/grow/` links the existing simulations and RCK runs,
       so only the new seeds are simulated and run;
     - the commands, with the updated σ = 0 control (step b, at ploidy 2), are written out.
+  - **Step d1 done, d2 submitted** (2026-11-01; `NEXT_STEPS.md`, "Checking d1, result" and
+    "Step d2, submitted"):
+    - d1 (Slurm 32049944) completed: 6 accepted seeds each for the four grown scenarios, 18 new
+      subgraphs, no subgraph-stage failure, all at `--rck-ploidy 2`.
+    - d2, RCK on the 18 new cases only, submitted as Slurm array 32050408 (indices
+      14–17, 22–25, 30–39, `%2`). The 22 existing cases are links to `rebuild/rck_runs` and count
+      as done, so none reruns. Outputs in `/n/fs/scratch/$USER/bench_nested_v2/grow/rck_runs`;
+      this folder's tables are unchanged until it is collected and reviewed.
   - `.gitignore`: `/runs` instead of `runs`, so that only the runs symlink is ignored and not
     `diag/rck_noise/runs/`.
 

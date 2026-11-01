@@ -444,6 +444,27 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
       - RCK on all 22 cases was submitted as Slurm 32041913 (outputs in
         `/n/fs/scratch/$USER/bench_nested_v2/rebuild/rck_runs`); this folder's tables are
         unchanged until it is collected.
+  - **Step c done: the re-baseline is the new baseline** (2026-11-01; `README.md`, "Re-baseline
+    (2026-10-31)"; `NEXT_STEPS.md`, "Step c, result").
+    - Slurm 32041913 completed all 22 tasks (2762 s of RCK wall time).
+    - Rank 1 at λ = 0.2 is unchanged in 21 of 22 cases; the path fix moves no composite.
+    - `nest_cross_3sp_s403` goes from 0.592 to 0.545. Its scale is now right, and `pipeline.tsv`
+      stage `scale` becomes `RCK`. Mean at λ = 0.2: 0.9283 → 0.9262. λ = 0.2 is still recommended.
+    - s403's rank 1 is the 2026-10-27 ploidy-2 diagnostic's exactly: the same observations and
+      flow, and the same rank-1 walks except the path columns. Its pool best is again 0.729 and
+      is not picked, so its failure is in the decomposition, not the scale.
+    - `bench_sweep.tsv`, `pipeline.tsv` and `rerank_validation.tsv` are the re-baseline's, copied
+      from `rebuild_2026-10-31/` (`rerank_validation.tsv` is unchanged). `collect.py` reproduces
+      them byte for byte from the adopted subgraphs. v2's tables are in git history (7778991),
+      and its numbers in `README.md` ("v2 results before the re-baseline").
+    - `rebuild_2026-10-31/comparison_vs_v2.txt` is now the row-by-row v2 comparison. 7778991
+      committed a copy of `collect.log` under that name.
+  - **Step d prepared, not submitted** (`NEXT_STEPS.md`, "Step d, prepared"):
+    - more seeds for nest_samehap_3to1, nest_cross_1to1 and ctrl_dup (6 accepted each), and the
+      new nest_samehap_6to1 scenario (amplicon-allele-analysis CHANGELOG);
+    - root `/n/fs/scratch/$USER/bench_nested_v2/grow/` links the existing simulations and RCK runs,
+      so only the new seeds are simulated and run;
+    - the commands, with the updated σ = 0 control (step b, at ploidy 2), are written out.
   - `.gitignore`: `/runs` instead of `runs`, so that only the runs symlink is ignored and not
     `diag/rck_noise/runs/`.
 

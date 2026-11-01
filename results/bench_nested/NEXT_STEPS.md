@@ -554,7 +554,7 @@ nest_samehap_2to1_s201_an1 /n/fs/scratch/ym3292/bench_nested_v2/subgraphs/nest_s
 You chose to skip ahead to more seeds, with the re-baseline (old plan steps 3 + 4) done alongside
 it rather than skipped. The order is now:
 
-1. **c. Re-baseline the existing 22 cases (run now).** Rebuild the 14 bench subgraphs with the
+1. **c. Re-baseline the existing 22 cases. [done 2026-11-01: adopted; see "Step c, result" at the end]** Rebuild the 14 bench subgraphs with the
    current `rck_inputs.py`, which has the `clip_path` fix, and the ploidy handling below. Build
    into a scratch root, so the tracked subgraphs and the v2 runs stay as they are until reviewed:
    - root `/n/fs/scratch/$USER/bench_nested_v2/rebuild/`, with `configs/` (a copy of the tracked
@@ -562,11 +562,11 @@ it rather than skipped. The order is now:
    - RCK outputs in `/n/fs/scratch/$USER/bench_nested_v2/rebuild/rck_runs/`.
    Then run RCK on all 22 cases. The 8 regression cases rerun too, so that the new baseline is one
    self-consistent set of runs.
-2. **d. More seeds.**
+2. **d. More seeds. [d1 submitted 2026-11-01 (Slurm 32049944); d2 not yet; see "Job list" at the end]**
    - Simulate about 4 more accepted seeds each for nest_samehap_3to1, nest_cross_1to1 and
      ctrl_dup, and add a `nest_samehap_6to1` scenario. Simulation needs no Gurobi.
    - Build their subgraphs with the same settings as in c, and run RCK on them.
-3. **b. σ = 0 control.** Optional; run it alongside d if licence time allows (commands above).
+3. **b. σ = 0 control.** Optional; run it alongside d if licence time allows (commands updated for the re-baseline in "Step b, commands" at the end).
 4. **a. Ambiguity reporting.** Deferred until after d.
 5. Tune nothing until c and d are both in.
 
@@ -621,3 +621,178 @@ right). That rule is a hidden diploid prior:
     folder's v2 tables) and compare the result with v2;
   - only then copy the rebuilt subgraphs into amplicon-allele-analysis
     `simulations/subgraphs/bench_nested/`, and their RCK tables here.
+
+**Step c, result (2026-11-01): done, and adopted as the baseline.**
+- Slurm 32041913: 22 of 22 tasks COMPLETED; the longest is s403 (25:41). 2762 s of RCK wall time.
+- Against v2 (`rebuild_2026-10-31/comparison_vs_v2.txt`, which now holds the real row-by-row
+  comparison; the first commit's file was a copy of `collect.log`):
+  - rank 1 at λ = 0.2 is unchanged in 21 of 22 cases. The path fix moves no composite.
+  - `nest_cross_3sp_s403`: 0.592 → 0.545. Mean at λ = 0.2: 0.9283 → 0.9262. λ = 0.2 stays the
+    recommendation.
+  - Small side effects: s402's λ = 0 run (0.5221 → 0.5206), s703's second weight (16.22 → 15.53,
+    same walks and composite), and pool sizes ±1–2 in four cases.
+- **s403 against the 2026-10-27 ploidy-2 diagnostic** (`/n/fs/scratch/$USER/bench_nested_v2/diag/rck/nest_cross_3sp_s403_ploidy2`):
+  - `observations.json`, `flow_segments.tsv` and `flow_adjacencies.tsv` are byte-identical in
+    both the λ = 0 and the pool run.
+  - The 32 rank-1 rows of `decompositions.tsv` are identical except the path columns
+    (`reads_explained`, `path_support`, `paths_matched`).
+  - Rank 1 is 5.75 / 4.06 / 3.33 (0.519 / 0.593 / 0.523), merged (ec1 carries ecdna1 + ecdna2,
+    ec2 carries ecdna1 + ecdna3).
+  - The pool's best is 0.729 (#15 of 83), as in the step 2 w1 pool (#16 of 85), and it is not
+    picked.
+  - The scale is right: depth per copy 13.92 (+1% from the median); segment and junction CN
+    1.03× and 1.04× truth (ratio 0.99). The flow objective is 11.2 (41.2 at class 6).
+    `pipeline.tsv` stage: `RCK`.
+  - **So s403's remaining failure is in the decomposition, not the scale.** It is the type (b)
+    failure of "Assessment" section 2: the pool has no good answer (best 0.729).
+- **Adopted:**
+  - the 14 rebuilt subgraphs were copied into amplicon-allele-analysis
+    `simulations/subgraphs/bench_nested/` (now identical to `rebuild/subgraphs/`);
+  - `rebuild_2026-10-31/{bench_sweep,pipeline,rerank_validation}.tsv` were copied here
+    (`rerank_validation.tsv` is unchanged);
+  - `python collect.py` with `BENCH_NESTED_OUT=/n/fs/scratch/$USER/bench_nested_v2/rebuild/rck_runs`
+    and the tracked subgraphs reproduces all three tables byte for byte;
+  - README.md has the re-baseline's results, with v2's kept under "v2 results before the
+    re-baseline".
+- The local `runs` link still points at v2's `rck_runs`. Pass `BENCH_NESTED_OUT` as above, or
+  repoint it.
+
+**Step d, prepared (2026-11-01; d1 submitted the same day as Slurm 32049944, see "Job list" below).**
+
+Code (amplicon-allele-analysis `simulations/`; no default changed):
+- `make_scenarios.py`: new scenario `nest_samehap_6to1`, last in `NESTED_SCENARIOS`, so the others
+  keep their seed blocks; its block is 801–810.
+  - It is nest_samehap_3to1 with `ecdna_proportions` [6, 1] and `num_ecdna_units` 60 (demo7: 30).
+  - At 30 units the light species would get 2.5–4.5 copies (bulk totals of the samehap seeds are
+    17.7–30.9 at 30 units). At about 6 reads per copy, its junctions would mostly fail the
+    ≥ 20-read seed check. At 60 units it gets about 5–9 copies and the heavy one 30–53.
+  - Intent: `nested`, `samehap`.
+  - The 24 tracked configs regenerate byte-identically.
+- `bench_nested.py scenario --candidates N`: the first N seeds of the scenario's block of 100
+  (default 10 = `NESTED_SEEDS`, as before).
+  - It is needed because the 10-seed blocks are too small for 6 accepted seeds. nest_cross_1to1
+    accepted 2 of 5 and has 5 candidates left; nest_samehap_3to1 accepted 2 of 4 and has 6 left.
+- `bench_nested.sbatch`:
+  - `BENCH_NESTED_ARGS` is passed to `scenario` (unset: nothing);
+  - `--array` is 0-7 (the 8th scenario).
+- Checked locally:
+  - re-checking the 12 existing seeds of the three scenarios gives their recorded `seeds.tsv`
+    fields exactly. So `--accept 6` re-derives the accepted seeds in slots 1–2 without
+    re-simulating, and adds slots 3–6.
+
+Root `/n/fs/scratch/$USER/bench_nested_v2/grow/` (set up; nothing run in it):
+- `configs/`: copies of the tracked configs and `seeds.tsv`;
+- `runs/`: one link per existing v2 simulation, plus copies of the per-scenario `*.seeds.tsv`.
+  New seeds are simulated into this folder, not into v2's;
+- `subgraphs/`: copies of the 14 adopted subgraphs (so they are not rebuilt);
+- `rck_runs/`: one link per case to `rebuild/rck_runs/<case>`. `run_case.py` sees all 22 as
+  done, so only new seeds run;
+- `logs/`.
+
+Step d1, simulation and subgraphs (CPU only, no Gurobi). Array tasks 2, 4, 6 and 7 are
+nest_samehap_3to1, nest_cross_1to1, ctrl_dup and nest_samehap_6to1.
+- Each task wants 6 accepted seeds out of up to 30 candidates.
+- About 2 min per simulation and 1–3 min per subgraph. Peak 2.4 GB in the v1 array 31981888.
+- It also re-checks the existing seeds, which takes seconds.
+
+```bash
+cd ~/amplicon-allele-analysis/simulations
+export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
+export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2/grow BENCH_NESTED_RCK_PLOIDY=2
+BENCH_NESTED_ARGS="--accept 6 --candidates 30" sbatch --array=2,4,6,7 --mem=3G --time=01:30:00 \
+  --output=$BENCH_NESTED_ROOT/logs/%x_%A_%a.out bench_nested.sbatch
+# when done (one sacct, not a polling loop):
+sacct -j <JOBID> -X -o JobID%14,State,Elapsed,MaxRSS
+python bench_nested.py seeds && python bench_nested.py report     # re-merge after concurrent tasks
+awk -F'\t' 'NR>1 && $6=="True" {print $1}' $BENCH_NESTED_ROOT/configs/seeds.tsv | sort | uniq -c
+```
+
+Before step d2, check:
+- 6 accepted per grown scenario;
+- `subgraph_checks.tsv` has no `subgraph_fail`;
+- every new `scale.json` says `ploidy class 2 (set with --rck-ploidy)`.
+
+Step d2, RCK (Gurobi), on the new cases only:
+- 16–22 cases: 4 each for nest_samehap_3to1, nest_cross_1to1 and ctrl_dup, and up to 6 for 6to1.
+- Estimated cost: nest_cross_1to1 5–25 min each, the others 1–3 min. About 1–2 licence-hours,
+  about 1 h of wall time at 2 concurrent tasks.
+
+```bash
+cd ~/RCK/results/bench_nested
+export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
+export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2/grow BENCH_NESTED_OUT=/n/fs/scratch/$USER/bench_nested_v2/grow/rck_runs
+IDX=$(python run_case.py list | while IFS=$'\t' read i name kind sub; do
+        [ -e "$BENCH_NESTED_OUT/$name/pool/pool/pool.json" ] || echo $i; done | paste -sd,)
+echo "$IDX"                                   # only the new cases
+sbatch --array="$IDX"%2 --output=$BENCH_NESTED_ROOT/logs/%x_%A_%a.out bench_nested.sbatch
+# when done:
+mkdir -p $BENCH_NESTED_ROOT/rck_results
+BENCH_NESTED_RESULTS=$BENCH_NESTED_ROOT/rck_results python collect.py
+```
+
+- Compare `rck_results/` with this folder's tables: the 22 existing rows must be identical.
+- Then decide whether to adopt, as for c: configs, `seeds.tsv` and the new subgraphs into
+  amplicon-allele-analysis; the tables here.
+- `collect.py`'s per-scenario table and λ rule then see 6 seeds per grown scenario. Its
+  "7 scenarios × 2 seeds" wording in README.md will need updating.
+
+**Step b, commands (updated 2026-11-01 for the re-baseline; optional, not submitted).**
+
+"Run A" above, with two changes:
+- the subgraphs are built with `BENCH_NESTED_RCK_PLOIDY=2`, as in c and d;
+- the comparison baseline is `rebuild/rck_runs/<case>`, not v2's `rck_runs`.
+
+The `clip_path` fix is already in `rck_inputs.py`.
+
+```bash
+cd ~/amplicon-allele-analysis/simulations
+export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
+export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_sigma0 BENCH_NESTED_RCK_PLOIDY=2
+mkdir -p $BENCH_NESTED_ROOT/configs $BENCH_NESTED_ROOT/logs
+for c in nest_samehap_3to1_s301 ctrl_dup_s703 nest_cross_1to1_s505 nest_cross_1to1_s502; do
+  sed 's/^  sigma: 0.1$/  sigma: 0.0/' configs/bench_nested/$c.yaml > $BENCH_NESTED_ROOT/configs/$c.yaml
+done
+grep -c '^  sigma: 0.0$' $BENCH_NESTED_ROOT/configs/*.yaml          # 1 each
+sbatch --job-name=sigma0-sim --cpus-per-task=1 --mem=3G --time=01:00:00 \
+  --output=$BENCH_NESTED_ROOT/logs/%x_%j.out --export=ALL --wrap 'python -c "
+import os, bench_nested as b
+for sc, seed in [(\"nest_samehap_3to1\", 301), (\"ctrl_dup\", 703), (\"nest_cross_1to1\", 505), (\"nest_cross_1to1\", 502)]:
+    b.build_subgraph(b.simulate(sc, seed), os.path.join(b.SUBGRAPHS, b.run_name(sc, seed)))"'
+# truth must match v2 (sigma only changes the counts):
+for c in nest_samehap_3to1_s301 ctrl_dup_s703 nest_cross_1to1_s505 nest_cross_1to1_s502; do
+  diff -rq $BENCH_NESTED_ROOT/runs/$c/truth /n/fs/scratch/$USER/bench_nested_v2/runs/$c/truth && echo "$c truth ok"; done
+```
+
+The RCK step is the LIST and `rck_diag.sbatch` command of "Run A" unchanged: 4 runs, s505 up to
+25 min, about 45 min of licence time. **The licence allows 2 concurrent sessions**, so do not run it
+next to the step d2 array. Chain it with `--dependency=afterany:<d2 JOBID>`, or submit it before d2.
+
+**Job list (2026-11-01): what is submitted and what is left.** All commands are in "Step d,
+prepared" and "Step b, commands" above.
+
+| step | job | Gurobi | status | needs |
+|---|---|---|---|---|
+| d1: simulate and build subgraphs, 6 accepted seeds each for nest_samehap_3to1, nest_cross_1to1, ctrl_dup and nest_samehap_6to1 (array tasks 2, 4, 6, 7) | Slurm **32049944** | no | submitted 2026-11-01; all 4 tasks started on node202 | — |
+| d2: RCK on the new cases only (`--array=<new indices>%2`) | not submitted | yes, about 1–2 licence-hours | after d1, and after the d1 checks below | d1 |
+| d2 collect: `collect.py` into `grow/rck_results/`, then compare the 22 existing rows with this folder's tables | — (local, CPU, about 1–2 min) | no | after d2 | d2 |
+| b: σ = 0 simulation and subgraphs (`sigma0-sim`) | not submitted | no | optional; can run any time | — |
+| b: σ = 0 RCK (`rck_diag.sbatch`, 4 runs) | not submitted | yes, about 45 min | optional; chain after d2 (`--dependency=afterany:<d2 JOBID>`): the licence allows 2 sessions | b sim, d2 |
+| a: ambiguity reporting; any tuning | — | — | not before d is in | d |
+
+**Checking d1 (Slurm 32049944).** Estimated 30–45 min from the start; worst case about 75 min,
+within the 1:30 limit. Logs: `/n/fs/scratch/$USER/bench_nested_v2/grow/logs/bench-nested-sim_32049944_<task>.out`.
+
+```bash
+sacct -j 32049944 -X -o JobID%14,JobName%18,State,Elapsed,MaxRSS     # COMPLETED x4? (do not loop it)
+tail -n 3 /n/fs/scratch/$USER/bench_nested_v2/grow/logs/bench-nested-sim_32049944_*.out
+# a task exits 1 when a scenario got fewer than 6 accepted seeds; its log says which slot failed
+cd ~/amplicon-allele-analysis/simulations && export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
+export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2/grow BENCH_NESTED_RCK_PLOIDY=2
+python bench_nested.py seeds && python bench_nested.py report
+awk -F'\t' 'NR>1 && $6=="True" {print $1}' $BENCH_NESTED_ROOT/configs/seeds.tsv | sort | uniq -c   # 6 for the 4 scenarios, 2 for the others
+grep -c "set with --rck-ploidy" $BENCH_NESTED_ROOT/subgraphs/*/union/scale.json | grep -v ':1$'  # empty
+```
+
+Also check that `subgraph_checks.tsv` has no `subgraph_fail` True. If a task timed out or failed
+for a transient reason, resubmit the same command with `--array=<that task>`: finished steps are
+skipped.

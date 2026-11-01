@@ -6,15 +6,20 @@ ecDNA species and haplotype-crossing junctions are recovered. It sits alongside 
 `results/bench/` and `results/step_sweep/`, which are unchanged.
 
 **Benchmark in use: bench_nested_v2** (inherited haplotype labels; see "Inherited haplotype labels"
-and "bench_nested_v2" below). It replaced the first benchmark on 2026-10-29. The tracked configs
-(with `seeds.tsv`) and subgraphs in amplicon-allele-analysis, and this folder's `bench_sweep.tsv`,
-`pipeline.tsv` and `rerank_validation.tsv`, are v2's. `comparison.md` and `comparison.tsv` compare
-the two benchmarks. The first benchmark's results are kept below ("First benchmark"), and its
-tables in git history (9b74b87).
+and "bench_nested_v2" below). It replaced the first benchmark on 2026-10-29, and was
+**re-baselined on 2026-10-31** (step c of `NEXT_STEPS.md`): the same 14 simulations, with subgraphs
+rebuilt with the long-read path fix and an explicit `--rck-ploidy 2`
+(`BENCH_NESTED_RCK_PLOIDY=2`), and RCK rerun on all 22 cases. The tracked configs (with
+`seeds.tsv`) and subgraphs in amplicon-allele-analysis, and this folder's `bench_sweep.tsv`,
+`pipeline.tsv` and `rerank_validation.tsv`, are the re-baseline's. The v2 numbers before it are
+kept below ("v2 results before the re-baseline") and its tables in git history (7778991).
+`comparison.md` and `comparison.tsv` compare the first benchmark with v2. The first benchmark's
+results are kept below ("First benchmark"), and its tables in git history (9b74b87).
 
-Run outputs stay on scratch, which **purges files older than two weeks**: `runs` →
-`/n/fs/scratch/$USER/bench_nested_v2/rck_runs` (the 8 regression cases there link to
-`/n/fs/scratch/$USER/bench_nested/rck_runs`), amplicon-allele-analysis `simulations/runs/bench_nested`
+Run outputs stay on scratch, which **purges files older than two weeks**: the re-baseline's RCK
+runs are in `/n/fs/scratch/$USER/bench_nested_v2/rebuild/rck_runs` (`BENCH_NESTED_OUT`; the local
+`runs` link still points at v2's `/n/fs/scratch/$USER/bench_nested_v2/rck_runs`, whose 8 regression
+cases link to `/n/fs/scratch/$USER/bench_nested/rck_runs`), amplicon-allele-analysis `simulations/runs/bench_nested`
 → `/n/fs/scratch/$USER/bench_nested_v2/runs`, and the diagnostics in
 `/n/fs/scratch/$USER/bench_nested_v2/diag/`. Everything this README or `NEXT_STEPS.md` needs to
 keep is in the repositories; the simulations can be regenerated from the configs with
@@ -75,8 +80,10 @@ runs cost about a quarter of the pool runs (demo8: 8 s against 31 s).
 ## How to run (Princeton ionic)
 
 ```bash
-# 1. simulations, seed checks, subgraphs and their checks (no Gurobi; 7 tasks, one per scenario)
-cd ~/amplicon-allele-analysis/simulations && mkdir -p logs && sbatch bench_nested.sbatch
+# 1. simulations, seed checks, subgraphs and their checks (no Gurobi; 7 tasks, one per scenario).
+#    The tracked subgraphs are built at ploidy class 2 (re-baseline, 2026-10-31); without the
+#    variable, rck_inputs.py fits the class, as before.
+cd ~/amplicon-allele-analysis/simulations && mkdir -p logs && BENCH_NESTED_RCK_PLOIDY=2 sbatch bench_nested.sbatch
 
 # 2. first check the re-ranking on the step sweep's hardest cases (demo3, demo7_totalonly, demo8)
 cd ~/RCK/results/bench_nested && mkdir -p logs && sbatch --array=0,6,7%2 bench_nested.sbatch
@@ -211,11 +218,65 @@ Subgraph stage: 2 of 12 subgraphs miss a true junction or cover under 80% of a t
 
 Compute: 754 s of RCK wall time over 20 cases (one λ = 0 run and one pool run each, 4 threads).
 
-## Results (bench_nested_v2)
+## Results (bench_nested_v2, re-baseline of 2026-10-31)
 
-Written by `python collect.py` (the λ rule and failure stages of its docstring).
+Written by `python collect.py` (the λ rule and failure stages of its docstring), from RCK Slurm
+array 32041913 on the rebuilt subgraphs (the `clip_path` fix and `--rck-ploidy 2`; see
+"Re-baseline (2026-10-31)" below). The v2 results before the re-baseline follow the block.
 
 <!-- results:start -->
+**Re-ranking check** (`rerank_validation.tsv`, against `results/step_sweep/sweep.tsv`): re-ranked λ > 0 composites match at 32/32 (case, λ), ambiguity fields at 32/32; the λ = 0 runs match at 8/8; λ = 0 emulated from the pool matches at 7/8.
+
+**Recommended `--step-penalty`: 0.2**, the smallest λ on the plateau of best mean composite over all 22 cases (0.2, 0.5; a λ whose shortfall to the best comes from fewer than 2 cases is on it), with no control or demo case more than 0.005 below its λ = 0 score. λ giving the same rank-1 answers on every case: 0.2. The default stays 0.
+
+| λ | 0 | 0.02 | 0.05 | 0.1 | 0.2 | 0.5 |
+|---|---|---|---|---|---|---|
+| mean composite, all cases | 0.8253 | 0.8579 | 0.9055 | 0.9055 | 0.9262 | 0.9283 |
+| control / demo cases below λ = 0 | none | none | none | none | none | none |
+| cases gaining from λ to the best λ | demo7_totalonly, nest_cross_2to1_s104, nest_cross_3sp_s402, nest_samehap_2to1_s202, nest_samehap_3to1_s301 | demo7_totalonly, nest_cross_3sp_s402, nest_samehap_2to1_s202, nest_samehap_3to1_s301 | nest_cross_3sp_s402, nest_samehap_3to1_s301 | nest_cross_3sp_s402, nest_samehap_3to1_s301 | nest_samehap_3to1_s301 | none |
+
+Mean composite per scenario (mean over seeds; merged = rank-1 decompositions flagged merged):
+
+| scenario | cases | λ = 0 | λ = 0.2 | merged at 0 | merged at 0.2 |
+|---|---|---|---|---|---|
+| ctrl_dup | 2 | 0.855 | 0.855 | 0 | 0 |
+| ctrl_separate | 2 | 0.979 | 0.979 | 0 | 0 |
+| demo3 | 1 | 0.960 | 0.959 | 0 | 0 |
+| demo4_amp0 | 1 | 0.983 | 0.983 | 0 | 0 |
+| demo4_amp1 | 1 | 0.997 | 0.997 | 0 | 0 |
+| demo5 | 1 | 0.990 | 0.990 | 0 | 0 |
+| demo6_union | 1 | 0.990 | 0.990 | 0 | 0 |
+| demo7_blockflip | 1 | 0.997 | 0.997 | 0 | 0 |
+| demo7_totalonly | 1 | 0.422 | 0.976 | 1 | 0 |
+| demo8 | 1 | 0.987 | 0.987 | 0 | 0 |
+| nest_cross_1to1 | 2 | 0.860 | 0.860 | 2 | 2 |
+| nest_cross_2to1 | 2 | 0.609 | 0.967 | 1 | 0 |
+| nest_cross_3sp | 2 | 0.533 | 0.761 | 2 | 1 |
+| nest_samehap_2to1 | 2 | 0.745 | 0.991 | 1 | 0 |
+| nest_samehap_3to1 | 2 | 0.836 | 0.836 | 1 | 1 |
+
+Remaining failures at λ = 0.2 (mean composite < 0.95, merged, or a wrong species count; `pipeline.tsv`): 5 of 14 bench cases.
+
+| case | stage | why |
+|---|---|---|
+| nest_samehap_3to1_s301 | RCK | merged: ec2 carries ecdna1+ecdna2; 3 species for 2 true; composites ecdna1=0.964,ecdna2=0.423 |
+| nest_cross_3sp_s403 | RCK | merged: ec1 carries ecdna1+ecdna2; ec2 carries ecdna1+ecdna3; composites ecdna1=0.519,ecdna2=0.593,ecdna3=0.523 |
+| nest_cross_1to1_s502 | RCK | merged: ec3 carries ecdna1+ecdna2; 3 species for 2 true; composites ecdna1=0.967,ecdna2=0.943 |
+| nest_cross_1to1_s505 | RCK | merged: ec3 carries ecdna1+ecdna2; 3 species for 2 true; composites ecdna1=0.944,ecdna2=0.586 |
+| ctrl_dup_s703 | RCK | 2 species for 1 true; composites ecdna1=0.712 |
+
+Scale: 1 of 14 cases have depth per copy more than 30% from the median or segment / junction scales apart by more than 1.5x (nest_cross_2to1_s104).
+Subgraph stage: 0 of 14 subgraphs miss a true junction or cover under 80% of a true segment.
+
+Compute: 2762 s of RCK wall time over 22 cases (one λ = 0 run and one pool run each, 4 threads).
+<!-- results:end -->
+
+### v2 results before the re-baseline (2026-10-29; kept for reference)
+
+From Slurm 32000320 on the v2 subgraphs before the rebuild (no long-read path fix; ploidy class
+fitted, 6 for `nest_cross_3sp_s403`). The tables are in git history (7778991). Mean composite at
+λ = 0.2: 0.9283, against 0.9262 after the re-baseline; the whole difference is s403.
+
 **Re-ranking check** (`rerank_validation.tsv`, against `results/step_sweep/sweep.tsv`): re-ranked λ > 0 composites match at 32/32 (case, λ), ambiguity fields at 32/32; the λ = 0 runs match at 8/8; λ = 0 emulated from the pool matches at 7/8.
 
 **Recommended `--step-penalty`: 0.2**, the smallest λ on the plateau of best mean composite over all 22 cases (0.2, 0.5; a λ whose shortfall to the best comes from fewer than 2 cases is on it), with no control or demo case more than 0.005 below its λ = 0 score. λ giving the same rank-1 answers on every case: 0.2. The default stays 0.
@@ -260,7 +321,33 @@ Scale: 2 of 14 cases have depth per copy more than 30% from the median or segmen
 Subgraph stage: 0 of 14 subgraphs miss a true junction or cover under 80% of a true segment.
 
 Compute: 4349 s of RCK wall time over 22 cases (one λ = 0 run and one pool run each, 4 threads).
-<!-- results:end -->
+
+
+### Re-baseline (2026-10-31)
+
+Step c of `NEXT_STEPS.md`. The 14 subgraphs were rebuilt from the unchanged v2 simulations, from
+amplicon-allele-analysis `simulations/`, with
+`BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2/rebuild BENCH_NESTED_RCK_PLOIDY=2 python bench_nested.py rebuild`,
+and RCK was run on all 22 cases (Slurm 32041913, outputs in `rebuild/rck_runs`). The run record and
+the comparison with v2 are in `rebuild_2026-10-31/` (`comparison_vs_v2.txt`).
+
+- Graphs: `nodes`, `edges`, `segment_blocks`, `phase_blocks` and `cn_profile` byte-identical in 13
+  of 14 cases; `paths.tsv` grows in all 14 (0–10 → 6–23 paths). s403 changes copy numbers only
+  (ploidy class 6 → 2).
+- Rank 1 at λ = 0.2: 21 of 22 cases unchanged. The path fix moves no composite.
+- `nest_cross_3sp_s403`: 0.592 → 0.545. Its scale is now right (depth per copy 13.92, 1% from the
+  median; segment and junction CN 1.03× and 1.04× truth), so `pipeline.tsv` puts its failure at
+  the `RCK` stage, not `scale`. Rank 1 is exactly the 2026-10-27 `--rck-ploidy 2` diagnostic's
+  (same flow and observations; 5.75 / 4.06 / 3.33; ec1 carries ecdna1 + ecdna2, ec2 carries
+  ecdna1 + ecdna3), and the pool's best is again 0.729 (#15 of 83; #16 of 85 in the step 2 w1
+  pool), not picked. The failure is in the decomposition, not the scale. The composite scores the
+  2× scale error (0.592) above the right scale (0.545); read the `scale` stage, not that drop.
+- Mean composite at λ = 0.2: 0.9283 → 0.9262 (−0.0021, all from s403). λ = 0.2 is still the
+  recommendation. `collect.py` with `BENCH_NESTED_OUT=.../rebuild/rck_runs` and the tracked
+  subgraphs reproduces the three tables byte for byte.
+- `subgraph_checks.tsv` gains `seg_calls_borderline`, and all 14 `verify_subgraph.py` verdicts are
+  PASS (6 were CHECK: s103, s104, s402, s403, s502, s505). Segment calls are now scored against
+  summed haplotype copies (amplicon-allele-analysis CHANGELOG, `verify_subgraph.py`).
 
 ## bench_nested_v2 (2026-10-27; the benchmark since 2026-10-29)
 

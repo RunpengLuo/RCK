@@ -473,6 +473,30 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
       14–17, 22–25, 30–39, `%2`). The 22 existing cases are links to `rebuild/rck_runs` and count
       as done, so none reruns. Outputs in `/n/fs/scratch/$USER/bench_nested_v2/grow/rck_runs`;
       this folder's tables are unchanged until it is collected and reviewed.
+  - **Step d done; the grown bench adopted** (2026-11-01; `NEXT_STEPS.md`, "Step d2, result"):
+    - Slurm 32050408: 18 of 18 COMPLETED. Over 40 cases (32 bench, 8 regression), the mean
+      composite at λ = 0.2 is 0.8531 (0.9262 over the 22-case re-baseline). λ = 0.2 stays the
+      recommendation. Failures: 17 of 32 bench cases.
+    - The 22 existing cases are unchanged: `bench_sweep.tsv` and `rerank_validation.tsv` are
+      identical row for row. In `pipeline.tsv` only `depth_vs_median` moves (≤ 0.005), because
+      the bench median depth per copy now spans 32 cases.
+    - `bench_sweep.tsv`, `pipeline.tsv` and `rerank_validation.tsv` are the grown bench's (the
+      run record is in `grow_2026-11-01/`). `README.md`: 8 scenarios, 6 seeds for the 4 grown
+      ones, 40 cases; the 22-case results are kept. The local `runs` link points at
+      `bench_nested_v2/grow/rck_runs`.
+  - **Failure analysis of the grown bench and a revised plan** (`NEXT_STEPS.md`, "Grown bench:
+    failure analysis and revised plan (2026-11-01)"). It uses the saved pools only; no new runs.
+    - New offline scripts `diag/grow_failures.py` (per-case anatomy of rank 1 against the pool's
+      best) and `diag/grow_rules.py` (re-ranks all pools under candidate rules with
+      `rank_pool`). Outputs are in `grow_2026-11-01/`.
+    - nest_samehap_6to1: the nested species is split into 2–3 sub-threshold low_weight walks,
+      so rank 1 has one significant species; the data cannot tell this from the right answer.
+    - ctrl_dup s708 and s710: the truth traverses a segment 4 times, above `--max-multiplicity`
+      3, so it cannot be expressed as one species.
+    - The output re-flags low_weight on refitted weights, while the ranking uses integer
+      weights. They disagree in 8 of 40 rank-1 answers, both ways.
+    - Plan: ambiguity reporting first (set metric 0.923 at k = 2, no case down), then a
+      `--max-multiplicity 4` check, then the extended σ = 0 control.
   - `.gitignore`: `/runs` instead of `runs`, so that only the runs symlink is ignored and not
     `diag/rck_noise/runs/`.
 

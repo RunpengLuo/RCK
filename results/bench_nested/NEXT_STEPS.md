@@ -9,6 +9,10 @@ Scratch purges files older than two weeks. Only run outputs remain there (`bench
 `rck_runs`, `diag`, `subgraphs_paths`); configs, subgraphs and tables are in the repositories, and a
 copy of the v2 configs, subgraphs and `rck_results` is in `~/backups/bench_nested_v2_2026-10-29.tar.gz`.
 
+> **2026-11-01:** steps c and d are done and the grown bench (40 cases) is adopted. The current
+> plan is "Grown bench: failure analysis and revised plan (2026-11-01)" at the end; it replaces the
+> "Agreed order" for everything after d.
+
 > **Done 2026-10-31:** array 32025976 finished (all 22 tasks COMPLETED). `diag/rck_noise/SUMMARY.md`
 > is complete, except the s403 w0.25 row, which hit Gurobi's `--time-limit` in its pool search and is
 > described rather than filled. The 2026-10-31 assessment of the plan is "Assessment (2026-10-31)"
@@ -562,13 +566,13 @@ it rather than skipped. The order is now:
    - RCK outputs in `/n/fs/scratch/$USER/bench_nested_v2/rebuild/rck_runs/`.
    Then run RCK on all 22 cases. The 8 regression cases rerun too, so that the new baseline is one
    self-consistent set of runs.
-2. **d. More seeds. [d1 done 2026-11-01 (Slurm 32049944, checks pass); d2 submitted 2026-11-01 (Slurm 32050408); see "Job list" at the end]**
+2. **d. More seeds. [done 2026-11-01: d1 Slurm 32049944, d2 Slurm 32050408; adopted; see "Step d2, result" and "Grown bench: failure analysis and revised plan (2026-11-01)" at the end]**
    - Simulate about 4 more accepted seeds each for nest_samehap_3to1, nest_cross_1to1 and
      ctrl_dup, and add a `nest_samehap_6to1` scenario. Simulation needs no Gurobi.
    - Build their subgraphs with the same settings as in c, and run RCK on them.
 3. **b. σ = 0 control.** Optional; run it alongside d if licence time allows (commands updated for the re-baseline in "Step b, commands" at the end).
 4. **a. Ambiguity reporting.** Deferred until after d.
-5. Tune nothing until c and d are both in.
+5. Tune nothing until c and d are both in. [both in since 2026-11-01; the plan after d is "Grown bench: failure analysis and revised plan (2026-11-01)" at the end]
 
 **Correction: the paired normal cannot choose the ploidy class.** The "Assessment" section above
 recommends choosing the class whose depth per copy is closest to the paired normal's (14 of 14
@@ -773,11 +777,11 @@ prepared" and "Step b, commands" above.
 | step | job | Gurobi | status | needs |
 |---|---|---|---|---|
 | d1: simulate and build subgraphs, 6 accepted seeds each for nest_samehap_3to1, nest_cross_1to1, ctrl_dup and nest_samehap_6to1 (array tasks 2, 4, 6, 7) | Slurm **32049944** | no | done 2026-11-01: 4 of 4 COMPLETED (5:53–9:16); all checks pass ("Checking d1, result" below) | — |
-| d2: RCK on the 18 new cases only (`--array=14,15,16,17,22,23,24,25,30,31,32,33,34,35,36,37,38,39%2`) | Slurm **32050408** | yes, about 1–2 licence-hours | submitted 2026-11-01 ("Step d2, submitted" below) | d1 |
-| d2 collect: `collect.py` into `grow/rck_results/`, then compare the 22 existing rows with this folder's tables | — (local, CPU, about 1–2 min) | no | after d2 | d2 |
+| d2: RCK on the 18 new cases only (`--array=14,15,16,17,22,23,24,25,30,31,32,33,34,35,36,37,38,39%2`) | Slurm **32050408** | yes, about 1–2 licence-hours | done 2026-11-01: 18 of 18 COMPLETED ("Step d2, result" below) | d1 |
+| d2 collect: `collect.py` into `grow/rck_results/`, then compare the 22 existing rows with this folder's tables | — (local, CPU, about 1–2 min) | no | done 2026-11-01; adopted ("Step d2, result") | d2 |
 | b: σ = 0 simulation and subgraphs (`sigma0-sim`) | not submitted | no | optional; can run any time | — |
-| b: σ = 0 RCK (`rck_diag.sbatch`, 4 runs) | not submitted | yes, about 45 min | optional; chain after d2 (`--dependency=afterany:<d2 JOBID>`): the licence allows 2 sessions | b sim, d2 |
-| a: ambiguity reporting; any tuning | — | — | not before d is in | d |
+| b: σ = 0 RCK (`rck_diag.sbatch`, 4 runs) | not submitted | yes, about 45 min | optional; d2 is done, so both licence sessions are free | b sim |
+| a: ambiguity reporting; any tuning | — | — | d is in: see "Grown bench: failure analysis and revised plan (2026-11-01)" | — |
 
 **Checking d1 (Slurm 32049944).** Estimated 30–45 min from the start; worst case about 75 min,
 within the 1:30 limit. Logs: `/n/fs/scratch/$USER/bench_nested_v2/grow/logs/bench-nested-sim_32049944_<task>.out`.
@@ -859,3 +863,287 @@ print(t, "old rows", len(old), "new rows", len(new), "old rows missing or change
 PY
 done
 ```
+
+**Step d2, result (2026-11-01): done, and adopted.**
+- `sacct -j 32050408`: 18 of 18 tasks COMPLETED (elapsed 6:56–27:07, including licence waits).
+  RCK wall time over all 40 cases is 7030 s (2762 s for the 22 existing ones).
+- `collect.py` into `grow/rck_results/` (copied to `grow_2026-11-01/` here): mean composite at
+  λ = 0.2 is 0.8531 over 40 cases (0.9262 over 22). λ = 0.2 stays the recommendation.
+- **The 22 existing cases are unchanged:**
+  - `bench_sweep.tsv` (132 rows) and `rerank_validation.tsv` (48 rows) are identical row for row.
+  - `compare_existing.txt` checked `bench_sweep.tsv` only. In `pipeline.tsv` all 14 existing rows
+    differ, in `depth_vs_median` alone (by 0.000–0.005). That column is relative to the bench
+    cases' median depth per copy, which moves from 13.762 to 13.7065 with the 18 new cases.
+    `depth_per_copy` and `scale_fail` are unchanged in every row, and recomputing the column
+    from the new median reproduces it exactly.
+- **Adopted** as for c:
+  - into amplicon-allele-analysis `simulations/`: the 21 new configs (including the rejected
+    s704, s705 and s707, as the existing scenarios keep theirs), `seeds.tsv` (rows added, none
+    changed), the 18 new subgraph folders and `subgraph_checks.tsv`, now identical to
+    `grow/configs` and `grow/subgraphs` (23 MB in all);
+  - the three tables here, from `grow_2026-11-01/`;
+  - the untracked links: `runs` → `grow/rck_runs`, and amplicon-allele-analysis
+    `simulations/runs/bench_nested` → `grow/runs`;
+  - `python collect.py` with no `BENCH_NESTED_*` variables then reproduces the three tables and
+    the README results block byte for byte.
+- **Two traps for the next full rebuild or rerun** (README "How to run" now says so; no file
+  changed):
+  - RCK `bench_nested.sbatch` still has `#SBATCH --array=0-21%2`, so a plain `sbatch` misses
+    the 18 new cases: pass `--array=0-39%2`.
+  - amplicon-allele-analysis `bench_nested.sbatch` defaults to `--accept 2`. Rerun on the grown
+    scenarios, it rewrites their seed records to 2 slots and re-merges `seeds.tsv` without
+    s305–s308, s506–s509, s706–s710 and s801–s806. Pass `BENCH_NESTED_ARGS="--accept 6 --candidates 30"`
+    for tasks 2, 4, 6 and 7.
+
+## Grown bench: failure analysis and revised plan (2026-11-01)
+
+Steps c and d are in, so the "tune nothing until c and d are in" hold is lifted. This section reads
+the 17 failures of the 40-case bench from the saved pools alone: no new runs and no Gurobi.
+
+**Scripts** (offline, in `diag/`):
+- `grow_failures.py` gives, per case at λ = 0.2:
+  - rank 1, with its integer weights and low_weight flags and its refit drops;
+  - its composites with and without low_weight species, and which rank-1 species overlap
+    which truth species;
+  - the pool's best solution: its structure cost against rank 1's, whether the λ pruning keeps
+    it, and whether it is a recorded same-fit alternative.
+- `grow_rules.py` re-ranks all 40 pools with RCK's own `rank_pool` under candidate rules. Its
+  `default` column reproduces `bench_sweep.tsv` at λ = 0.2 (0.8531) and the 17 failures.
+
+**Outputs** are in `grow_2026-11-01/`: `grow_failures.tsv`, `grow_failures_species.tsv` and
+`grow_rules_lambda{0.2,0}.{tsv,txt}`. λ = 0 there is emulated from the pool (0.7714 against 0.7713
+run).
+
+A correction to the counts in the brief: nest_cross_1to1 fails in **4** of 6 seeds (s502, s505,
+s507, s508), not 3. nest_samehap_6to1 fails in all 6: in 5 the nested species scores 0, and s804
+scores 0.841. ctrl_dup fails in 3 of 6 (s703, s708, s710), and nest_samehap_3to1 in 3 of 6 (s301,
+s307, s308).
+
+### 1. nest_samehap_6to1: the nested species is split into low_weight pieces
+
+It is not absent from the flow, not dropped by the refit, and not absorbed into the outer species.
+
+| seed | truth | rank 1 (integer; L = low_weight) | threshold max(1, 0.1 × heaviest) | ecdna2 with low_weight included | pool solutions with ecdna2 ≥ 0.9 | pool best (rank at λ 0.2) | refit misfit, best − rank 1 |
+|---|---|---|---|---|---|---|---|
+| s801 | 36.4 / 6.1 | 33, 3L, 2L, 2L | 3.3 | 0.675 (`ec2`, 3 copies, Jaccard 0.97 to ecdna2) | 4 of 87 | 0.972: 32 / 5 (#32) | +0.007 |
+| s802 | 36.9 / 6.1 | 36, 2L, 1L | 3.6 | 0.520 | 10 of 61 | 0.971: 35 / 4 (pruned at λ 0.2) | +0.005 |
+| s803 | 37.6 / 6.3 | 35, 3L, 2L, 2L | 3.5 | 0.591 | **0** of 70 | 0.755: 33 / 4 (#62) | +0.007 |
+| s804 | 40.8 / 6.8 | 38, 6, 2L, 1L | 3.8 | 0.695 (nested found, wrong walk) | **0** of 19 | 0.842 = rank 1 | +0.015 |
+| s805 | 41.9 / 7.0 | 40, 3L, 2L, 2L | 4.0 | 0.584 (`ec2` Jaccard 0.78) | 4 of 55 | 0.955: 40 / 4 (#35) | +0.013 |
+| s806 | 43.0 / 7.2 | 42, 3L, 2L, 1L | 4.2 | 0.578 | 16 of 72 | 0.978: 42 / 6 (#56) | −0.166 |
+
+- **Flagged low_weight.** In the 5 seeds that score 0, rank 1 has one significant species (33–42
+  copies, composite 0.98–0.996). The nested species' copies are spread over 2–3 walks of 1–3
+  copies, each below max(1, 0.1 × heaviest) = 3.3–4.2. In s801 one of them *is* the nested walk
+  (3 copies, Jaccard 0.97); the others are chimeras of outer and nested segments. The evaluation
+  leaves low_weight species out, so ecdna2 gets 0. Scored with them, it gets 0.52–0.675.
+- **Not dropped by the refit.** No 6to1 rank 1 has a refit drop; the only drops are 1-copy species
+  at ranks 3–4 of s803.
+- **Not absorbed.** The outer species is at or below its true weight (33–42 against 36–43).
+- **The data cannot decide.** The 2-species answers fit the observations as well as rank 1:
+  refit misfit within 0.015 in 5 seeds, and s806's is better by 0.17 of 12.
+- **Why rank 1 wins.**
+  - The ranking puts residual first (all 0), then species_penalty × significant species
+    + λ × steps.
+  - Splitting the nested species below the threshold makes it free: 1 significant species
+    against 2.
+  - At λ = 0.2 the right answer also pays for its 7–16 extra significant steps (1.4–3.2), more
+    than a species.
+  - At λ = 0 the leftover rule alone already decides: the 6to1 mean at λ = 0 is the same 0.553.
+- **Two seeds also fail before the ranking.** s803 and s804 have no ≥ 0.9 answer for the nested
+  species in their pools. s804's flow has chr3:41.12–41.52 Mb at 62 copies against a truth of
+  47.65 (depth reads 64), and it uses an imputed edge (`imputed_adj_intra_chr3_10`). This is
+  the s505 type (b) failure.
+- **Same mechanism in nest_samehap_3to1_s307 (new).** Rank 1 is 15, 1L, 1L, with the nested species
+  (5.3) gone. Its 0.977 answer (16 / 4 / 1) is rank 1's first same-fit alternative.
+
+So 6to1 is s703/s301's identifiability problem, made systematic. It is the risk "Assessment"
+section 4 predicted for a leftover-type prior, and the *default* rule (10% of the heaviest
+species) already has it.
+
+### 2. ctrl_dup and nest_cross_1to1 (and the new 3to1 failures): old causes or new?
+
+| case | new? | composite | cause | same as s703 / s505 / s502? |
+|---|---|---|---|---|
+| ctrl_dup_s703 | old | 0.712 | indistinguishable exact fits; 2-copy leftover counted (unchanged) | — |
+| **ctrl_dup_s708** | new | 0.732 | **multiplicity cap**: the truth traverses a segment 4 times, and `--max-multiplicity` is 3. No pool solution has 1 species (pool: 15 with 2, 54 with 3) | **no: new cause** |
+| **ctrl_dup_s710** | new | 0.723 | **multiplicity cap**, as s708 (pool: none below 3 species). Also an imputed edge in the flow and depth +40% on chr2:103.76–104.03 Mb (163.8 against 117.0) | **no: new cause** |
+| nest_cross_1to1_s502 | old | 0.955 | θ (junction scale 0.77); fails only on the label (see the refit re-flag below) | — |
+| nest_cross_1to1_s505 | old | 0.765 | biased flow; no good answer in the pool (unchanged) | — |
+| **nest_cross_1to1_s507** | new | **0.961** | composites 0.969 / 0.952, above the 0.95 line. Fails only on the label: two 1-copy leftovers, low_weight in the ranking, refit to 1.23 and 1.09, which is ≥ max(1, 0.1 × 10.77), so the output counts them, "4 species for 2", and `ec3` carries both junction sets | **leftover**, but in the report, not the ranking |
+| **nest_cross_1to1_s508** | new | 0.672 | indistinguishable exact fits: the 0.988 answer has the same significant weights (13 / 12) and steps (41) as rank 1. It is a same-fit alternative (within the first 5), but outside `pool_gap` at λ 0.2; the refit misfit differs by 0.105 of 5.5. θ is right (junction scale 0.98) | **s703 type** |
+| nest_samehap_3to1_s301 | old | 0.693 | indistinguishable; 0.973 answer is the 2nd same-fit alternative (unchanged) | — |
+| **nest_samehap_3to1_s307** | new | 0.493 | the 6to1 mechanism (section 1) | s301 / 6to1 type |
+| **nest_samehap_3to1_s308** | new | 0.949 | nested weight 3.6 against 5.8; junction scale 0.75, like s502's 0.77, so θ may contribute; the 0.980 answer is ranked 2nd | marginal; possibly θ |
+
+- **θ** explains none of the new failures outright. The junction scale is 0.98–1.06 in s507, s508
+  and every 6to1 seed. s708 (0.77) and s710 (0.85) are decided by the multiplicity cap.
+- **Multiplicity.** s708 and s710 are the only accepted cases with `segment_max_traversals` 4
+  (`seeds.tsv`); every other case has ≤ 3. The cap is per edge and per species (`decompose.py`,
+  `mult <= max_multiplicity`), so the true single species cannot be expressed.
+  - The bench's seed check does not compare traversals with RCK's cap.
+  - The 22-case bench never hit it: s703 has 3.
+- **The refit re-flag.** The ranking flags low_weight on integer weights. `refit_decompositions`
+  re-flags on refitted weights, and the output, `collect.py` and the failure rule read the
+  latter. Rank 1's significant-species count differs between the two in 8 of 40 cases, both ways:
+  - the output counts *more* in s502, s507, s508 and s301: a 1-copy leftover refits to 1.2–1.5;
+  - it counts *fewer* in s603, s506 and s509: 1-copy species refit to < 1 or are dropped. Those
+    three pass because of this.
+  - Aligning the report with the ranking would swap 2 failures for 3.
+  - Ranking on the refitted flags (`grow_rules.py` `refit`) gives 0.828, with 2 cases up and 5
+    down (s502 0.955 → 0.572).
+  - So neither direction is a fix. Read s502 and s507 as composite passes with a reported 1-copy
+    leftover.
+
+### 3. Candidate rules, offline (40 pools; λ = 0.2, λ = 0 in brackets)
+
+| rule | mean composite | up / down (> 0.005) | breaks |
+|---|---|---|---|
+| default | **0.8531** (0.7714) | — | — |
+| leftover mass (low_weight copies that add up to the threshold count as species) | 0.8442 (0.8081) | 0 / 2 (4 / 1) | demo3, demo7_totalonly. At λ 0 it fixes s801, s806 and s307, and λ 0.2's step cost undoes it |
+| rank on refitted flags | 0.8281 (0.7125) | 2 / 5 (0 / 7) | s502, s403, s301, s305, s804 |
+| global 0.05 | 0.8546 | 5 / 4 | s706, demo3, s507, s305 |
+| global 0.075 | 0.8308 | 1 / 3 | s706, demo3, s507 |
+| global 0.15 | 0.8914 | 7 / 5 | s502, s505, s403, s308, s804 |
+| **set metric, rank 1 + first k same-fit alternatives** (not a ranking) | k = 1: 0.9113; **k = 2: 0.9229**; k = 5: 0.9373 | 6 / 0; 8 / 0; 10 / 0 | none (rank 1 is unchanged) |
+| pool best (ceiling) | 0.9470 | | |
+
+Every ranking rule trades cases, as step 2b did. With 6 seeds per scenario the trade is now seen
+in more than one seed: each rule that fixes 6to1 seeds (global 0.15: s802, s805, s806) breaks
+s502, s505 or s403. The set metric is the only change with no loss.
+
+### Revised plan (2026-11-01), in order
+
+Δ is the change in the 40-case mean composite at λ = 0.2. One case moving by d moves it by d/40.
+Licence time is Gurobi time at the WLS limit of 2 sessions.
+
+| # | step | cases it targets | expected Δ | risk to passing cases | licence time |
+|---|---|---|---|---|---|
+| 1 | **a. Ambiguity reporting** (RCK output, opt-in; `collect.py` set metric) | s703, s301, s307, s802, s805, s806 (≥ 0.955 at k = 2); s801 (0.813) and s403 (0.606) partly; k = 5 adds s508 (0.987) and s803 (0.755) | rank-1 mean **0** (unchanged); set metric **+0.070** (k = 2, 0.923) or **+0.084** (k = 5, 0.937) | **none**: rank 1 unchanged, 0 cases down offline | **0**: offline from `pool.json`; code + tests only |
+| 2 | **Multiplicity check** for ctrl_dup s708 and s710: `rck_diag.sbatch` at `--max-multiplicity 4` (opt-in option, no default change) | s708, s710 | if both reach about 0.97: **+0.012** rank-1 and set metric | none as a 2-case diagnostic. Adopting it bench-wide changes every pool (3 bits per edge and species instead of 2) and needs the 40-case rerun (about 2 licence-hours). A bench seed rule "traversals ≤ `--max-multiplicity`" instead needs no licence, but changes the case set | **< 10 min** (their runs take 2 s each now; allow 10× for the larger MILP) |
+| 3 | **b. σ = 0 control**, extended | as planned: s301, s703, s505, s502; added: **s801** (does the 6to1 split survive noise-free data? If so the prior alone causes it), **s803** and **s804** (no good answer in the pool: noise or model?), **s508** | **0** (diagnostic). It decides whether A2 (depth-bias-aware flow) or a nested-species prior is worth building | none | about **45–50 min** (s505 is 13 min of the 40-case total; the 4 added cases about 5 min) |
+| 4 | **6to1 decision (yours; no compute).** After 1–3, decide whether RCK should prefer "outer + a light nested species" over "outer + leftovers" when the data tie. Lead to test then: the leftover-mass rule at λ 0 (fixes s801, s806, s307; costs demo3), which means revisiting λ = 0.2. λ = 0.2 was chosen on a bench without a light nested species, and its step cost is what blocks the fix | s801, s802, s805, s806, s307 | up to +0.06 if all 5 were fixed, but no rule tested gets there without losses (section 3) | high: every rule tested breaks 2–5 cases | offline first (0); a rerun only after a rule passes offline |
+| 5 | Bookkeeping (no licence; independent) | — | 0 | none | 0 |
+
+Step 5's items:
+- extend `compare_existing.txt`'s check to all three tables;
+- decide whether RCK `bench_nested.sbatch`'s `--array` becomes 0-39 (your call; README says
+  pass it);
+- note in `collect.py`'s failure rule that the species count includes refitted 1-copy leftovers
+  (s502 and s507 fail only on that). Do not change the rule to hide them: the same re-flag
+  makes s506, s509 and s603 pass.
+
+**Order rationale.**
+- Step 1 is the largest gain, with no risk and no licence time, and the evidence for it got
+  stronger: 6 of the new failures are same-fit ties the data cannot decide.
+- Step 2 is the one rank-1 fix with a clear mechanism and almost no cost.
+- Step 3 rises in value because it can now separate prior from noise in 6to1, too.
+- Step 4 waits for 1–3, because every ranking rule tested trades cases.
+
+**Deferred or dropped.**
+- Dropped:
+  - global threshold changes (all trade cases);
+  - ranking on refitted flags;
+  - leftover mass at λ = 0.2;
+  - step 2b (as before).
+- Deferred:
+  - θ fit, for s502 and possibly s308;
+  - A2, until step 3 reports.
+
+### How steps 1–3 would be carried out (2026-11-01; nothing submitted)
+
+**Step 1, ambiguity reporting.** Code and tests only; no Gurobi needed to judge it.
+1. RCK `rck/ecdna/decompose.py`:
+   - `same_fit_structures` keeps only each alternative's weights. Make it keep the walks too.
+   - Add an opt-in `rck-ecdna --report-alternatives K` (default 0, so outputs are unchanged).
+     When rank 1's choice is `decided_by` a prior (`species_penalty` or `step_penalty`), it writes
+     the first K same-fit alternatives to `alternatives.tsv`, in the `decompositions.tsv` layout:
+     walks, integer and refitted weights, status.
+   - Document it in `docs/ecDNA.md` and add a test in `tests/ecdna/` (a small graph with two
+     same-fit decompositions).
+2. `collect.py`: add `set_composite` (best of rank 1 and its first k = 2 alternatives, as
+   `diag/grow_rules.py` `set 2` computes it from `pool.json`) to `bench_sweep.tsv`, `pipeline.tsv`
+   and the README scenario table, next to the rank-1 composite. The rank-1 columns, the λ rule and
+   the failure rule stay as they are.
+3. Check: `python collect.py` must leave every existing column byte-identical, and give a
+   set-metric mean of 0.9229 at λ = 0.2 (0.8944 at λ = 0, emulated).
+   - `--report-alternatives` itself is first exercised by the step 2 runs below (add
+     `--report-alternatives 2` to their lines once it exists).
+   - Its walks must match the pool entries `grow_rules.py` matched.
+
+**Step 2, multiplicity check** (Gurobi, < 10 min). ctrl_dup s708 and s710, plus two guards:
+- s703, which has 3 traversals and fails;
+- s709, which has 3 traversals and passes.
+
+The option changes only the decomposition MILP's per-edge cap. LIST file
+`/n/fs/scratch/$USER/bench_nested_v2/diag/rck_mult/mult4.list`:
+
+```
+ctrl_dup_s708_m4 /n/fs/scratch/ym3292/bench_nested_v2/grow/subgraphs/ctrl_dup_s708/union /n/fs/scratch/ym3292/bench_nested_v2/grow/runs/ctrl_dup_s708 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_mult/ctrl_dup_s708_m4 --max-multiplicity 4
+ctrl_dup_s710_m4 /n/fs/scratch/ym3292/bench_nested_v2/grow/subgraphs/ctrl_dup_s710/union /n/fs/scratch/ym3292/bench_nested_v2/grow/runs/ctrl_dup_s710 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_mult/ctrl_dup_s710_m4 --max-multiplicity 4
+ctrl_dup_s703_m4 /n/fs/scratch/ym3292/bench_nested_v2/grow/subgraphs/ctrl_dup_s703/union /n/fs/scratch/ym3292/bench_nested_v2/grow/runs/ctrl_dup_s703 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_mult/ctrl_dup_s703_m4 --max-multiplicity 4
+ctrl_dup_s709_m4 /n/fs/scratch/ym3292/bench_nested_v2/grow/subgraphs/ctrl_dup_s709/union /n/fs/scratch/ym3292/bench_nested_v2/grow/runs/ctrl_dup_s709 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_mult/ctrl_dup_s709_m4 --max-multiplicity 4
+```
+
+```bash
+cd /n/fs/scratch/$USER/bench_nested_v2/diag/rck_mult && mkdir -p logs   # write mult4.list here first
+LIST=$PWD/mult4.list DIAG_POOL_LAMBDA=0.2 sbatch --array=0-3%2 --time=00:30:00 ~/RCK/results/bench_nested/diag/rck_diag.sbatch
+# when done (one sacct, no loop):
+python ~/RCK/results/bench_nested/diag/noise_summary.py mult4.list
+python ~/RCK/results/bench_nested/diag/grow_failures.py . ctrl_dup_s708_m4 ctrl_dup_s710_m4 ctrl_dup_s703_m4 ctrl_dup_s709_m4
+```
+
+Reading the result:
+- **s708 and s710 reach about 0.97 with 1 species.** The cap is the whole cause. Then choose
+  between two fixes:
+  - (i) a seed rule in amplicon-allele-analysis `check_seed`: reject `segment_max_traversals`
+    above 3. No licence time, but it changes the case set: s708 and s710 are replaced by new
+    seeds, and the mean is not comparable;
+  - (ii) `--max-multiplicity 4` for every bench case. Every pool changes (3 bits per edge and
+    species instead of 2), so it needs the 40-case rerun, about 2 licence-hours.
+  - RCK's default stays 3 either way.
+- **They gain a 1-species answer that still loses.** It is then a ranking question, like s703.
+- **s703 or s709 change.** The larger MILP alone moves answers, and (ii) needs the full rerun
+  before it can be judged.
+
+**Step 3, σ = 0 control, extended** (simulation on CPU, then about 45–50 min of Gurobi). It is
+"Step b, commands" with 4 more cases:
+- nest_samehap_6to1 s801 (the prior on noise-free data);
+- s803 and s804 (no good answer in the pool);
+- nest_cross_1to1 s508 (a same-fit tie).
+
+Their configs are now tracked, so the `sed` loop takes all 8:
+
+```bash
+cd ~/amplicon-allele-analysis/simulations
+export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
+export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_sigma0 BENCH_NESTED_RCK_PLOIDY=2
+mkdir -p $BENCH_NESTED_ROOT/configs $BENCH_NESTED_ROOT/logs
+CASES="nest_samehap_3to1_s301 ctrl_dup_s703 nest_cross_1to1_s505 nest_cross_1to1_s502 nest_samehap_6to1_s801 nest_samehap_6to1_s803 nest_samehap_6to1_s804 nest_cross_1to1_s508"
+for c in $CASES; do sed 's/^  sigma: 0.1$/  sigma: 0.0/' configs/bench_nested/$c.yaml > $BENCH_NESTED_ROOT/configs/$c.yaml; done
+grep -c '^  sigma: 0.0$' $BENCH_NESTED_ROOT/configs/*.yaml          # 1 each, 8 files
+sbatch --job-name=sigma0-sim --cpus-per-task=1 --mem=3G --time=01:30:00 \
+  --output=$BENCH_NESTED_ROOT/logs/%x_%j.out --export=ALL --wrap 'python -c "
+import os, bench_nested as b
+for sc, seed in [(\"nest_samehap_3to1\", 301), (\"ctrl_dup\", 703), (\"nest_cross_1to1\", 505), (\"nest_cross_1to1\", 502),
+                 (\"nest_samehap_6to1\", 801), (\"nest_samehap_6to1\", 803), (\"nest_samehap_6to1\", 804), (\"nest_cross_1to1\", 508)]:
+    b.build_subgraph(b.simulate(sc, seed), os.path.join(b.SUBGRAPHS, b.run_name(sc, seed)))"'
+# truth must match the bench's (sigma only changes the counts):
+for c in $CASES; do diff -rq $BENCH_NESTED_ROOT/runs/$c/truth /n/fs/scratch/$USER/bench_nested_v2/grow/runs/$c/truth && echo "$c truth ok"; done
+```
+
+The RCK step uses the "Run A" LIST, extended to 8 lines of the same form
+(`<case>_sigma0 $ROOT/subgraphs/<case>/union $ROOT/runs/<case> .../diag/rck_sigma0/<case>_sigma0`):
+
+```bash
+cd /n/fs/scratch/$USER/bench_nested_v2/diag/rck_sigma0 && mkdir -p logs
+LIST=$PWD/sigma0.list DIAG_POOL_LAMBDA=0.2 DIAG_LAMBDA0=0 sbatch --array=0-7%2 --time=02:00:00 ~/RCK/results/bench_nested/diag/rck_diag.sbatch
+```
+
+- Do not run it next to the step 2 array (licence: 2 sessions). Chain it with
+  `--dependency=afterany:<step 2 JOBID>`.
+- Reading:
+  - s801 still splitting its nested species at σ = 0 means the prior alone causes it, which
+    feeds step 4;
+  - s803 and s804 gaining a good pool answer means their failure is the simulated depth bias;
+  - s301, s703, s505 and s502 are read as in "Run A".

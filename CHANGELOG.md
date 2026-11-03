@@ -378,7 +378,8 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
     pool's entry. It writes the low_weight status, the other orderings, the first k same-fit
     alternatives (as `diag/grow_rules.py`'s set metric), the graph and allele copy numbers.
     Positions are the walk's + 1, so the scorer reads exactly the steps `rck-ecdna-eval` reads.
-  - Tests: `tests/ecdna/test_aa_eval.py` (24, no Gurobi).
+  - Tests: `tests/ecdna/test_aa_eval.py` (24, no Gurobi; 27 since `error_free_merged` and the
+    CoRAL-code headline).
 - **bench_nested: method-agnostic metrics, opt-in** (`collect.py --aa-metrics`). The flag
   re-scores every case and λ through the AA-format path, appends the main columns (`strict.*`,
   `best_of.*`, `aa_path_matches`) to `bench_sweep.tsv` after the existing ones, and writes
@@ -396,9 +397,36 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
     - breakpoint-graph accuracy 1.000, novel-adjacency FDR 0.007;
     - 1 of 42 amplicons AA error-free: all 532 unmatched inferred segment boundaries are
       imputed extremities of the subgraph.
+- **`aa_eval`: `error_free_merged`** (graph level, next to `error_free`, which stays the
+  headline and is unchanged). Before AA's rule is applied, `merge_benign_splits` merges, in the
+  truth and in the method's graph, neighbouring segments joined by a concordant edge with no
+  discordant or source edge at the boundary: AA and CoRAL graphs, like `rck-ecdna`'s, also split
+  segments at copy-number changes without a breakpoint. New columns `error_free_merged` and
+  `n_{true,inferred,false}_segments_merged`, `n_segments_found_merged`; sample level
+  `error_free_merged`. On the bench at λ = 0.2, 38 of 42 truth amplicons pass it (1 of 42
+  `error_free`). Tests: a benign copy-number split passes it and fails `error_free`, the same
+  split with a discordant edge at the boundary fails both, and `merge_benign_splits` on its own.
+- **`aa_eval`: `aa_eval.json` `info.mixture_graphs`**, the truth mixture graph files a run was
+  scored against.
 
 ### Changed
 
+- **`aa_eval`: CoRAL's code versions are the headline cycle metrics.** `cycle_overlap_coral_code`
+  and `cyclic_lcs_coral_code` (what produced CoRAL's published numbers; the code's LCS
+  normaliser penalises merged walks) now come first in `aa_species_metrics.tsv`. The
+  supplementary-methods versions are renamed `cycle_overlap` → `cycle_overlap_supp` and
+  `cyclic_lcs` → `cyclic_lcs_supp` (values unchanged). Sample level: `mean_cycle_overlap` and
+  `mean_cyclic_lcs` become `mean_cycle_overlap_supp` and `mean_cyclic_lcs_supp`, and
+  `mean_cycle_overlap_coral_code` and `mean_cyclic_lcs_coral_code` are added. `collect.py
+  --aa-metrics` reports the code versions first and the supplement's as "secondary"; at
+  λ = 0.2 the code's cyclic LCS is 0.871 strict and 0.958 best-of (supplement 0.901 and 0.986).
+  Re-scoring all 240 (case, λ) left every other column of `aa_metrics.tsv` and
+  `bench_sweep.tsv` identical.
+- **bench_nested: demo5–demo8 truth mixtures from the repository.** `diag/aa_regression.py`
+  uses `truth/aa/mixture_amplicons.tsv` wherever it exists, so demo5–demo8 read
+  amplicon-allele-analysis's tracked copies instead of
+  `/n/fs/scratch/$USER/bench_nested_aa/mixtures/` (demo4's is still built there). The copies are
+  byte-identical, and the re-scored demo cases changed only in their paths.
 - `evaluate.read_aa_cycles` parses with `rck.ecdna.aa_format`. Its output is unchanged; an
   unlisted segment or an AA path (`0+ … 0-`) still raises `ValueError`, with a reworded message.
 

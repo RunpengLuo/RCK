@@ -321,13 +321,17 @@ Compute: 7030 s of RCK wall time over 40 cases (one λ = 0 run and one pool run 
 | composite-H0, best-of | 0.806 | 0.827 | 0.897 | 0.914 |
 | exact cycles (100 bp), strict | 32 / 60 | 42 / 72 | 43 / 60 | 55 / 72 |
 | exact cycles (100 bp), best-of | 38 / 60 | 48 / 72 | 49 / 60 | 61 / 72 |
-| CoRAL cycle-interval overlap, strict | 0.821 | 0.846 | 0.872 | 0.898 |
-| CoRAL cyclic LCS, strict | 0.836 | 0.858 | 0.877 | 0.901 |
-| CoRAL cyclic LCS, best-of | 0.983 | 0.986 | 0.983 | 0.986 |
+| CoRAL cycle-interval overlap (CoRAL code), strict | 0.737 | 0.772 | 0.839 | 0.871 |
+| CoRAL cyclic LCS (CoRAL code), strict | 0.730 | 0.766 | 0.839 | 0.871 |
+| CoRAL cyclic LCS (CoRAL code), best-of | 0.845 | 0.861 | 0.948 | 0.958 |
+| secondary: cycle-interval overlap (CoRAL supplementary methods), strict | 0.821 | 0.846 | 0.872 | 0.898 |
+| secondary: cyclic LCS (CoRAL supplementary methods), strict | 0.836 | 0.858 | 0.877 | 0.901 |
+| secondary: cyclic LCS (CoRAL supplementary methods), best-of | 0.983 | 0.986 | 0.983 | 0.986 |
 | species-count error (mean absolute, inferred − true) | 0.531 | 0.425 | 0.500 | 0.400 |
 | missed species | 8 | 8 | 6 | 6 |
 | false species | 9 | 9 | 10 | 10 |
 | AA error-free reconstruction (share of cases, every amplicon, 100 bp) | 0.000 | 0.000 | 0.000 | 0.000 |
+| AA error-free, benign copy-number splits merged (share of cases) | 0.906 | 0.897 | 0.906 | 0.897 |
 | CoRAL breakpoint-graph accuracy | 1.000 | 1.000 | 1.000 | 1.000 |
 | novel-adjacency FNR | 0.000 | 0.000 | 0.000 | 0.000 |
 | novel-adjacency FDR | 0.008 | 0.007 | 0.008 | 0.007 |
@@ -344,8 +348,12 @@ The scorer for the comparison with AmpliconArchitect, CoRAL and the original RCK
 (`rck.ecdna.aa_eval`, docs/ecDNA.md section 6) reads AA-format files only. The block above is
 `collect.py --aa-metrics` on the 40 cases; no run was repeated. Its graph truth is the mixture
 graph of amplicon-allele-analysis `simulations/truth_mixture.py`, written to `truth/aa/` of the 32
-bench simulations on scratch, and to `/n/fs/scratch/$USER/bench_nested_aa/mixtures/` for the
-tracked demo runs, so their repository folders stay unchanged.
+bench simulations on scratch. For the tracked demo runs it is in amplicon-allele-analysis
+(`simulations/runs/demo{5,6,7,8}_*/truth/aa/mixture_*`, since 2026-11-03), and demo4's (RCK's
+`tests/ecdna/data/demo4_truth`) is still built under `/n/fs/scratch/$USER/bench_nested_aa/mixtures/`.
+Moving demo5–demo8 to the repository copies changed only the paths in `aa_eval.json`: the copies
+are byte-identical to the scratch ones, and every graph and species table of those cases is
+unchanged.
 
 - **Regression.** `diag/aa_regression.py` exports each answer to AA format, scores it with
   `aa_eval`, and compares it with today's scores: λ = 0 (the λ = 0 run's rank 1) and λ = 0.2 (the
@@ -359,7 +367,11 @@ tracked demo runs, so their repository folders stay unchanged.
   `aa/` files leave out. Second, reading the old tables with `float_precision="round_trip"`:
   pandas' default parser reads some stored values one ulp off.
 - **Graph level (100 bp).** Only 1 of the 42 truth amplicons is an AA error-free
-  reconstruction (demo6's chr17 amplicon). In 40 of the 42 every true discordant edge is found
+  reconstruction (demo6's chr17 amplicon), but 38 of 42 are once benign splits are merged
+  (`error_free_merged`, added 2026-11-03: neighbouring segments joined only by a concordant edge,
+  with no discordant edge at the boundary, merged in both graphs). Of the 4 left, two use an
+  imputed edge (below) and two (`demo4_amp0`, `nest_samehap_6to1_s803`) miss a copy-number-2
+  flank segment inside the truth interval that the subgraph shortens. In 40 of the 42 every true discordant edge is found
   and none is false. The other two are `ctrl_dup_s710` and `nest_samehap_6to1_s804`, which use
   one imputed edge each (novel-adjacency FDR 0.007 overall). Every failure therefore comes from
   segments, and all 532 inferred segment boundaries that match no true boundary are imputed
@@ -374,9 +386,12 @@ and up to 17% on demo4. RCK's graphs have 25
   them including `low_weight` ones) gives 0.931 at λ = 0.2, against 0.853 strict. That is above
   the decomposition-level set metric of NEXT_STEPS (k = 2: 0.923), as it should be: best-of picks
   per truth species. composite-H0 is 0.02 below the composite, so nothing in the composite rests
-  on phasing alone. Strict, 55 of 72 truth species are exact cycles at 100 bp (61 best-of). Best-of
-  cyclic LCS is lenient by construction (0.986): CoRAL normalises by the true cycle's length, so a
-  merged walk that contains a nested species scores 1 for it.
+  on phasing alone. Strict, 55 of 72 truth species are exact cycles at 100 bp (61 best-of). The CoRAL
+  cycle metrics are reported as CoRAL's code computes them (headline since 2026-11-03): cyclic
+  LCS 0.871 strict and 0.958 best-of at λ = 0.2. The supplementary-methods version (secondary,
+  `*_supp`) is lenient by construction (0.986 best-of): it normalises by the true cycle's length,
+  so a merged walk that contains a nested species scores 1 for it, where the code's normaliser
+  (the bins' total with multiplicity) charges the merged walk's extra bases.
 - **Sample level.** At λ = 0.2 the rank-1 answers miss 6 truth species and add 10 false ones (the
   6to1 and ctrl_dup failures of the table above). The heaviest cycle explains 0.70 of the graph's
   length-weighted copy number, the three heaviest 0.88. 83% of the multi-junction long-read paths

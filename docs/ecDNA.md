@@ -678,6 +678,10 @@ background. The simulator writes only one AA graph per species, so amplicon-alle
   coverage. Discordant edges carry Σ_species PHI × traversals, plus background junctions with an
   end inside (Σ_clones U × copies). Concordant edges carry what node balance leaves.
 - **Alleles** are known for the first tumor sample only (`segments.tsv` describes that sample).
+- **Where they are:** the tracked demo5–demo8 runs carry theirs in amplicon-allele-analysis
+  (`simulations/runs/demo*/truth/aa/mixture_*`); the bench simulations on scratch carry theirs in
+  place; `results/bench_nested/diag/aa_regression.py` uses a `truth/aa/mixture_amplicons.tsv`
+  wherever it exists and otherwise builds one (demo4: under `/n/fs/scratch/$USER/bench_nested_aa/mixtures/`).
 
 **Tolerances.** `--graph-tol` (100 bp, the AA and CoRAL convention) applies to the graph-level
 metrics and `exact_cycle`. `--species-tol` (10 kb) applies to the existing species metrics, so
@@ -716,11 +720,23 @@ in either direction.
 | Column | Definition | Source |
 |---|---|---|
 | `error_free` | 1 when every true segment (both ends within tolerance) and every true discordant edge is found, with no false segment and no false discordant edge. `rck-ecdna`'s imputed breakpoints (the subgraph's 10 kb grid) count as false segments | AA (Deshpande et al. 2019), simulation benchmark |
+| `error_free_merged` | the same rule after removing benign splits in both graphs (`merge_benign_splits`): neighbouring segments (end + 1 = start) joined by a concordant edge, with no discordant or source edge at either side of the boundary (breakends within 1 bp), become one segment. `n_*_segments_merged` count the merged segments. `error_free` stays the headline; see below | this work, on AA's rule |
 | `bp_accuracy` | true discordant edges recovered / true discordant edges | CoRAL (Zhu et al.), breakpoint-graph accuracy; `score_simulation.py` `breakpoint_accuracy` |
 | `novel_adjacency_fnr`, `novel_adjacency_fdr` | 1 − `bp_accuracy`; false inferred edges / inferred edges. FDR, not FPR, which would need a negative set | RCK (Aganezov & Raphael 2020), novel-adjacency recovery |
 | `segment_cn_mae`, `segment_cn_rel_err`, `cn_error_mode` | length-weighted mean of \|ΔA\| + \|ΔB\| per base (`allele`, with `--segment-cn`), else of \|Δ total\| (`total`); `_rel_err` divides the summed error by the summed truth copy number. Bases without an inferred segment count as copy number 0. `segment_cn_mae_total` is always the total-CN error | this work |
 | `is_violations` (`is_violations_truth`) | extremities used by more than one distinct novel adjacency: breakends of one chromosome and strand within the tolerance form one extremity | infinite-sites assumption, RCK `--enforce-is` |
 
+
+**`error_free` against `error_free_merged`.** AA's rule asks for every segment boundary. AA and
+CoRAL graphs, like `rck-ecdna`'s, also cut segments where the copy number changes without a
+breakpoint (and `rck-ecdna`'s subgraphs on a 10 kb imputed grid), so the strict column can score
+every method near 0 for boundaries no breakpoint explains. `error_free_merged` merges those
+boundaries first, in the truth and in the method's graph, and so tests the breakpoints and the
+segments they delimit. A boundary carrying a discordant (or source) edge is never merged, so a
+missed or false breakpoint still fails it. On the bench (λ = 0.2), 1 of 42 truth amplicons is
+`error_free` and 38 of 42 `error_free_merged`: two fail on an imputed edge (`ctrl_dup_s710`,
+`nest_samehap_6to1_s804`), two on a copy-number-2 flank segment inside the truth interval that the
+subgraph shortens (`demo4_amp0`, `nest_samehap_6to1_s803`).
 **Species-level metrics** (`aa_species_metrics.tsv`, one row per truth species and mode).
 
 - The `rck-ecdna-eval` columns at `--species-tol`, unchanged: segment and haplotype Jaccard,
@@ -733,10 +749,10 @@ in either direction.
 | Column | Definition | Source |
 |---|---|---|
 | `composite_h0` | mean of `segment_jaccard_h0`, `junction_f1_h0`, `order_match_h0` and max(0, 1 − `cn_rel_err_h0`): the composite without phasing accuracy, its order match haplotype-blind | this work, for methods that do not phase |
-| `cycle_overlap` | bases in both cycles' interval sets over bases in either, without multiplicity; intervals on different chromosomes never overlap | CoRAL supplementary methods, cycle-interval overlap |
-| `cycle_overlap_coral_code` | 1 − Σ\|e1 − e2\| × L / Σ max(e1, e2) × L over the joint bins, e1 and e2 the multiplicities: what CoRAL's code computes (`get_fragments_similarity_unweighted`). It equals `cycle_overlap` when no interval is used twice | CoRAL code |
-| `cyclic_lcs` | both cycles cut into the bins of their joint breakpoints, as (bin, orientation) sequences of the bins both cover. The longest common subsequence, each match weighted by the bin's length, maximised over every rotation of the inferred cycle and of its reverse, over the true cycle's length (with multiplicity) | CoRAL supplementary methods, cyclic LCS |
-| `cyclic_lcs_coral_code` | the same LCS over Σ max(e1, e2) × L, as CoRAL's code (`compute_normalized_longest_cycle_subsequence`) normalises it | CoRAL code |
+| `cycle_overlap_coral_code` (headline) | 1 − Σ\|e1 − e2\| × L / Σ max(e1, e2) × L over the joint bins, e1 and e2 the true and inferred multiplicities: what CoRAL's code computes (`get_fragments_similarity_unweighted`), and what produced CoRAL's published numbers | CoRAL code |
+| `cyclic_lcs_coral_code` (headline) | both cycles cut into the bins of their joint breakpoints, as (bin, orientation) sequences of the bins both cover. The longest common subsequence, each match weighted by the bin's length, maximised over every rotation of the inferred cycle and of its reverse, over Σ max(e1, e2) × L, as CoRAL's code (`compute_normalized_longest_cycle_subsequence`) normalises it. A merged walk that contains the true cycle is penalised for its extra bases | CoRAL code |
+| `cycle_overlap_supp` (secondary) | bases in both cycles' interval sets over bases in either, without multiplicity; intervals on different chromosomes never overlap. Equals `cycle_overlap_coral_code` when no interval is used twice | CoRAL supplementary methods, cycle-interval overlap |
+| `cyclic_lcs_supp` (secondary) | the same LCS over the true cycle's length (with multiplicity): a merged walk that contains the true cycle scores 1 | CoRAL supplementary methods, cyclic LCS |
 | `length_error` | log2(1 + R), R = (L_inferred − L_true) / L_true; 0 for the right length, signed | CoRAL supplementary methods |
 | `exact_cycle` (`exact_cycle_phased`) | 1 when the cycles have the same reference-merged runs, in order up to rotation and reversal, with every interval end within `--graph-tol` (so every junction too); haplotype-blind (with haplotypes) | AA / CoRAL exact reconstruction |
 
@@ -750,13 +766,16 @@ segmentation alone does not change them.
 | `species_count_error`, `n_missed`, `n_false` | strict species − truth species in scope; truth species without a match; strict species without a match | this work |
 | `cn_explained_top1`, `cn_explained_top3` | share of the graph's length-weighted copy number (sequence edges with copy number ≥ `--cn-explained-min-cn`, 5) explained by the k heaviest cycles (copy count × length with multiplicity; paths left out). No truth is needed. CoRAL's code returns 1 when there are fewer than k cycles; this does not | CoRAL, copy-number ratio (`best_copy_number_ratio`, `top_three_copy_number_ratio`) |
 | `subwalks_satisfied` (`_support`) | share of multi-junction long-read paths (≥ 2 novel junctions) whose junctions appear consecutively and in order, either direction, in some cycle (weighted by `#NOV`) | CoRAL, subwalk constraints |
-| `mean_composite`, `mean_composite_h0`, `mean_cycle_overlap`, `mean_cyclic_lcs`, `n_exact_cycles` | over the truth species in scope | |
-| `error_free`, `bp_accuracy`, … | the graph-level metrics, 1 only if every amplicon is error-free, else means | |
+| `mean_composite`, `mean_composite_h0`, `mean_cycle_overlap_coral_code`, `mean_cyclic_lcs_coral_code`, `mean_cycle_overlap_supp`, `mean_cyclic_lcs_supp`, `n_exact_cycles` | over the truth species in scope | |
+| `error_free`, `error_free_merged`, `bp_accuracy`, … | the graph-level metrics, 1 only if every amplicon is error-free, else means | |
 
 **Checking CoRAL's definitions against its code** (master branch, `coral/scoring/`). The CoRAL
 code differs from the supplementary methods in two places: its interval overlap counts
 multiplicity, and its LCS is normalised by the bins' total rather than by the true length. Both
-versions are reported (`*_coral_code`). Its log2 length error is not in the scoring code we
+versions are reported. The code's versions (`*_coral_code`) are the headline, since they produced
+CoRAL's published numbers and their LCS normalisation penalises merged walks; the
+supplementary-methods versions are the secondary `*_supp` columns (named `cycle_overlap` and
+`cyclic_lcs` before 2026-11-03). Its log2 length error is not in the scoring code we
 read, and is implemented from the supplementary methods.
 
 **`rck-ecdna` answers in AA format (`rck.ecdna.aa_export`).** `aa/<name>_decomp<k>_cycles.txt`
@@ -843,7 +862,7 @@ scales from the windows.
 | `test_refit.py` | LP: no; CLI: yes (small) | a fractional weight (10.4); an unsupported leftover dropped; a supported one kept; the `--refit-min-copies` threshold; the last species never dropped; observation rows use the flow background; end-to-end fractional copy number (10.4, integer 10) and `--no-refit` |
 | `test_subgraph_inputs.py` | observations: no; run: yes (small) | scales, segment and junction copy numbers and flank background read from `scale.json`, `CN_*` columns and `cn_profile.tsv`; CN columns win over the scale; `--depth-per-copy` recomputes from `WEIGHT`; `--inputs auto/subgraph/windows`; a full run from the subgraph folder alone |
 | `test_recovery.py` | no | segment recall and precision, junction F1, phasing accuracy (one haplotype wrong; every haplotype swapped, which only the swap-invariant score forgives), the composite and its copy-number term; the recovery matrix: a missed species scores 0, `best_rank` finds a better alternative, out-of-scope rows are listed but not scored or averaged, the TSV columns, strict JSON, and a run with no decompositions |
-| `test_aa_eval.py` | no | the method-agnostic scorer on hand-built cases: graph level (a perfect match within 100 bp, a missed edge, a wrong orientation, a 101 bp offset, a false-positive segment failing error-free while every edge is right, a flank segment not counted, a false edge, infinite-sites violations, allele against total copy-number error); CoRAL's cycle metrics (perfect, a rotated and reversed cycle with cyclic LCS 1, a reordered one, a missed and an extra interval, multiplicity in CoRAL's code against the supplement, other chromosomes, log2 length error); exact cycle within tolerance; a nested pair whose answer merges the species, strict against best-of; false and missed species; an unphased answer (no composite, composite-H0 kept); composite-H0 with every haplotype wrong; the strict rules; CN explained by the heaviest cycles; long-read subwalks; AA parsing (haplotypes, other orderings, `0+ … 0-` paths) and the truth reader unchanged; `aa_export` reproducing `rck-ecdna-eval` exactly, through a second ordering |
+| `test_aa_eval.py` | no | the method-agnostic scorer on hand-built cases: graph level (a perfect match within 100 bp, a missed edge, a wrong orientation, a 101 bp offset, a false-positive segment failing error-free while every edge is right, a benign copy-number split failing `error_free` and passing `error_free_merged` (and not merged when a discordant edge sits at the boundary), `merge_benign_splits` on its own, a flank segment not counted, a false edge, infinite-sites violations, allele against total copy-number error); CoRAL's cycle metrics (perfect, a rotated and reversed cycle with cyclic LCS 1, a reordered one, a missed and an extra interval, multiplicity in CoRAL's code against the supplement, other chromosomes, log2 length error; the CoRAL-code columns first and the supplement's as `*_supp`); exact cycle within tolerance; a nested pair whose answer merges the species, strict against best-of; false and missed species; an unphased answer (no composite, composite-H0 kept); composite-H0 with every haplotype wrong; the strict rules; CN explained by the heaviest cycles; long-read subwalks; AA parsing (haplotypes, other orderings, `0+ … 0-` paths) and the truth reader unchanged; `aa_export` reproducing `rck-ecdna-eval` exactly, through a second ordering |
 | `test_plot.py` | no (figures: matplotlib and cnplot) | axis regions padded and merged; figures skipped when cnplot cannot be imported; a circular species with truth and recovery-matrix pages and their PNGs; a linear species without truth |
 | `test_step_penalty.py` | yes (small) | a hub segment with two 3-segment loops (nested-like). At 2:1 the merged walk wins without `--step-penalty` (ambiguous, decided by the species penalty) and the separate circles win with it. At 3:1 the answer is decided by the tie-break and, with `--step-penalty`, by the steps; the gaps match λ × extra steps. Default ranking unchanged; a single circle is not ambiguous; `--ambiguity-window 0` turns the report off. Pool ranking (no Gurobi): λ reorders and prunes recorded entries, residual first. `--keep-pool`: the pool kept at λ = 0.1 re-ranks to the rank-1 decomposition and ambiguity fields of direct runs at λ = 0.02–0.5 (2:1 and 3:1); the command line refuses it at λ = 0, writes `pool/`, and `rerank` reproduces the run's rank 1 |
 | `test_block_flip.py` | inputs: no; flow and run: yes (small) | pieces read and mapped through phantom contraction; orientation −1 swapped and fixed; a block missing from `phase_blocks.tsv` is unoriented; low-SNP pieces total-only; a missing `segment_blocks.tsv` falls back with a warning; a circle on A whose unoriented block has swapped observations: the block is flipped, all ecDNA on A, no imputed edge, the objective of the unswapped input; `--block-flip off` unchanged; an oriented block never flipped (but flips with `--flip-oriented-penalty`); a block without evidence `unresolved`; a segment over an oriented and an unoriented block; the refit uses flipped observations; `block_flips.tsv`, `summary.json`, `observations.json` pieces, `flow_segments.tsv` and the plot points |

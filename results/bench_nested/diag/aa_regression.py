@@ -5,8 +5,10 @@
 For every case of run_case.py and each λ (0: the lambda_0 run's rank 1; λ > 0: the pool's rank 1
 at λ, as collect.py re-ranks it):
 
-1. the truth mixture graph is built with amplicon-allele-analysis simulations/truth_mixture.py:
-   in place (truth/aa/mixture_*) when the truth folder is on scratch, else under OUT/mixtures/;
+1. the truth mixture graph is read from truth/aa/mixture_* when it is there (the scratch
+   simulations, and the tracked demo5-demo8 runs, whose mixtures are in amplicon-allele-analysis);
+   otherwise it is built with amplicon-allele-analysis simulations/truth_mixture.py, in place when
+   the truth folder is on scratch, else under OUT/mixtures/ (demo4);
    runs without truth/aa (demo3) get no graph-level metrics;
 2. the answer and its first 2 same-fit alternatives are exported to AA format
    (rck.ecdna.aa_export) under OUT/<case>/lambda_<λ>/ and scored by rck.ecdna.aa_eval;
@@ -54,8 +56,11 @@ def mixture_dir(case, out):
     truth = case["truth"]
     if not os.path.isdir(os.path.join(truth, "truth", "aa")):
         return None
+    in_place = os.path.join(truth, "truth", "aa")
+    if os.path.exists(os.path.join(in_place, "mixture_amplicons.tsv")):
+        return in_place  # written there already: the scratch simulations, and the tracked demo5-demo8 runs
     on_scratch = os.path.realpath(truth).startswith("/n/fs/scratch/")
-    target = os.path.join(truth, "truth", "aa") if on_scratch else os.path.join(out, "mixtures", case["name"])
+    target = in_place if on_scratch else os.path.join(out, "mixtures", case["name"])
     if not os.path.exists(os.path.join(target, "mixture_amplicons.tsv")):
         try:
             truth_mixture.write_all(truth, target, truth_sample(case))

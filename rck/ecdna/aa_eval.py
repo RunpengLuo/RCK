@@ -23,12 +23,15 @@ CoRAL, the original RCK (once converted) and ``rck-ecdna`` all go through the sa
 Metrics (definitions and sources in docs/ecDNA.md, section 6, "Method-agnostic scorer"):
 
 graph level, per truth amplicon, at ``--graph-tol`` (100 bp, the AA and CoRAL convention)
-    ``error_free`` (AA), ``bp_accuracy`` (CoRAL), ``novel_adjacency_fnr`` / ``_fdr`` (RCK),
+    ``error_free`` (AA) and ``error_free_merged`` (the same after merging benign copy-number
+    splits), ``bp_accuracy`` (CoRAL), ``novel_adjacency_fnr`` / ``_fdr`` (RCK),
     ``segment_cn_mae`` and ``segment_cn_rel_err`` (allele-specific when ``--segment-cn`` is
     given), ``is_violations`` (extremities used by more than one novel adjacency);
 species level, after one-to-one matching
-    the ``rck-ecdna-eval`` scores at ``--species-tol`` (10 kb), unchanged; CoRAL's
-    ``cycle_overlap``, ``cyclic_lcs`` and ``length_error``; ``exact_cycle``; ``composite_h0``;
+    the ``rck-ecdna-eval`` scores at ``--species-tol`` (10 kb), unchanged; CoRAL's cycle metrics,
+    headline as CoRAL's code computes them (``cycle_overlap_coral_code``, ``cyclic_lcs_coral_code``),
+    the supplementary-methods versions as ``cycle_overlap_supp`` and ``cyclic_lcs_supp``, and
+    ``length_error``; ``exact_cycle``; ``composite_h0``;
 sample level
     species-count error, missed and false species, ``cn_explained_top1`` / ``_top3``
     (CoRAL), ``subwalks_satisfied``.
@@ -172,6 +175,42 @@ def segment_cn_error(truth_segments: pd.DataFrame, inferred_graph: aaf.AAGraph, 
             "segment_cn_mae_total": err_total / length if length else None}
 
 
+def merge_benign_splits(graph: aaf.AAGraph, tol: int = 1) -> List[aaf.AASequence]:
+    """The graph's sequence edges with every benign split removed: neighbouring segments
+    (``b.start == a.end + 1``) joined by a concordant edge ``a.end+ -> b.start-``, with no
+    discordant or source edge at either side of that boundary, become one segment. Such a
+    boundary is a copy-number change (or an imputed grid point) without a breakpoint, which AA
+    and CoRAL graphs also write. Breakends match within ``tol`` bp. The merged copy number is the
+    length-weighted mean (unused by ``error_free_merged``)."""
+    concordant = [e for e in graph.edges if e.kind == "concordant"]
+    breaks = [b for e in graph.edges if e.kind in ("discordant", "source") for b in (e.a, e.b)]
+
+    def joined(a: aaf.AASequence, b: aaf.AASequence) -> bool:
+        if a.chrom != b.chrom or b.start != a.end + 1:
+            return False
+        left, right = (a.chrom, a.end, "+"), (b.chrom, b.start, "-")
+        if not any(edges_match(e, aaf.AAEdge("concordant", left, right, 0.0), tol) for e in concordant):
+            return False
+        return not any(_be_close(x, left, tol) or _be_close(x, right, tol) for x in breaks)
+
+    out: List[aaf.AASequence] = []
+    for s in sorted(graph.sequences, key=lambda x: (x.chrom, x.start, x.end)):
+        if out and joined(out[-1], s):
+            a = out[-1]
+            la, ls = a.end - a.start + 1, s.end - s.start + 1
+            out[-1] = aaf.AASequence(a.chrom, a.start, s.end, (a.cn * la + s.cn * ls) / (la + ls))
+        else:
+            out.append(aaf.AASequence(s.chrom, s.start, s.end, s.cn))
+    return out
+
+
+def _segment_match(true_segs, inf_segs, tol: int) -> Tuple[List[bool], list]:
+    seg_match = lambda a, b: a.chrom == b.chrom and abs(a.start - b.start) <= tol and abs(a.end - b.end) <= tol  # noqa: E731
+    found = [any(seg_match(t, i) for i in inf_segs) for t in true_segs]
+    false = [i for i in inf_segs if not any(seg_match(i, t) for t in true_segs)]
+    return found, false
+
+
 @dataclass
 class MixtureAmplicon:
     index: int
@@ -204,9 +243,12 @@ def graph_metrics(amp: MixtureAmplicon, inferred: aaf.AAGraph, inferred_cn: Opti
     inf_segs = scoped_sequences(inferred, amp.intervals, tol)
     found = [any(edges_match(t, i, tol) for i in inf_edges) for t in true_edges]
     false_edges = [i for i in inf_edges if not any(edges_match(i, t, tol) for t in true_edges)]
-    seg_match = lambda a, b: a.chrom == b.chrom and abs(a.start - b.start) <= tol and abs(a.end - b.end) <= tol  # noqa: E731
-    segs_found = [any(seg_match(t, i) for i in inf_segs) for t in true_segs]
-    false_segs = [i for i in inf_segs if not any(seg_match(i, t) for t in true_segs)]
+    segs_found, false_segs = _segment_match(true_segs, inf_segs, tol)
+    # error_free_merged: the same rule after removing benign splits (merge_benign_splits) in both graphs
+    true_merged = [x for x in merge_benign_splits(amp.graph) if _overlap_len(amp.intervals, x.chrom, x.start, x.end) > tol]
+    inf_merged = [x for x in merge_benign_splits(inferred) if _overlap_len(amp.intervals, x.chrom, x.start, x.end) > tol]
+    msegs_found, mfalse_segs = _segment_match(true_merged, inf_merged, tol)
+    edges_ok = all(found) and not false_edges
     n_true, n_inf = len(true_edges), len(inf_edges)
     recall = sum(found) / n_true if n_true else None
     row = {"amplicon": amp.index, "species": ",".join(amp.species),
@@ -214,7 +256,10 @@ def graph_metrics(amp: MixtureAmplicon, inferred: aaf.AAGraph, inferred_cn: Opti
            "n_true_segments": len(true_segs), "n_segments_found": sum(segs_found), "n_inferred_segments": len(inf_segs),
            "n_false_segments": len(false_segs), "n_true_edges": n_true, "n_edges_found": sum(found),
            "n_inferred_edges": n_inf, "n_false_edges": len(false_edges),
-           "error_free": int(all(segs_found) and all(found) and not false_segs and not false_edges),
+           "error_free": int(all(segs_found) and not false_segs and edges_ok),
+           "n_true_segments_merged": len(true_merged), "n_segments_found_merged": sum(msegs_found),
+           "n_inferred_segments_merged": len(inf_merged), "n_false_segments_merged": len(mfalse_segs),
+           "error_free_merged": int(all(msegs_found) and not mfalse_segs and edges_ok),
            "bp_accuracy": recall,
            "novel_adjacency_fnr": None if recall is None else 1.0 - recall,
            "novel_adjacency_fdr": len(false_edges) / n_inf if n_inf else None,
@@ -368,7 +413,7 @@ SPECIES_COLUMNS = ["mode", "truth", "truth_weight", "truth_length_bp", "inferred
                    "phasing_accuracy", "phasing_accuracy_swap_invariant", "order_match", "topology_match", "cn_rel_err",
                    "composite", "exact_cycle_phased",
                    "inferred_h0", "segment_jaccard_h0", "junction_f1_h0", "order_match_h0", "cn_rel_err_h0", "composite_h0",
-                   "cycle_overlap", "cycle_overlap_coral_code", "cyclic_lcs", "cyclic_lcs_coral_code", "length_error",
+                   "cycle_overlap_coral_code", "cyclic_lcs_coral_code", "cycle_overlap_supp", "cyclic_lcs_supp", "length_error",
                    "exact_cycle"]
 # best-of: each metric on its own over the candidates; these are minimised, the rest maximised
 MINIMISED = {"cn_rel_err", "cn_rel_err_h0"}
@@ -402,12 +447,12 @@ def blind_part(s: ev.PairScore, t: Cycle, c: Optional[Cycle], graph_tol: int = G
     row = {"inferred_h0": s.inferred, "segment_jaccard_h0": s.jaccard_total, "junction_f1_h0": s.junction_f1,
            "order_match_h0": s.order_match, "cn_rel_err_h0": s.cn_rel_err, "composite_h0": composite_h0(s)}
     if c is None:
-        row.update({"cycle_overlap": 0.0, "cycle_overlap_coral_code": 0.0, "cyclic_lcs": 0.0, "cyclic_lcs_coral_code": 0.0,
+        row.update({"cycle_overlap_coral_code": 0.0, "cyclic_lcs_coral_code": 0.0, "cycle_overlap_supp": 0.0, "cyclic_lcs_supp": 0.0,
                     "length_error": None, "exact_cycle": 0})
         return row
     lcs, lcs_code, _ = cyclic_lcs(ev.runs(t.steps), ev.runs(c.steps, circular=c.circular), c.circular)
-    row.update({"cycle_overlap": cycle_overlap(t.steps, c.steps), "cycle_overlap_coral_code": cycle_overlap_coral_code(t.steps, c.steps),
-                "cyclic_lcs": lcs, "cyclic_lcs_coral_code": lcs_code, "length_error": length_error(t.steps, c.steps),
+    row.update({"cycle_overlap_coral_code": cycle_overlap_coral_code(t.steps, c.steps), "cyclic_lcs_coral_code": lcs_code,
+                "cycle_overlap_supp": cycle_overlap(t.steps, c.steps), "cyclic_lcs_supp": lcs, "length_error": length_error(t.steps, c.steps),
                 "exact_cycle": _exact(t, c, graph_tol)})
     return row
 
@@ -472,8 +517,8 @@ def best_of_rows(truth: Sequence[Cycle], candidates: Sequence[Cycle], phased: bo
                 scored.append(part)
         row = {"mode": "best_of", "truth": t.name, "truth_weight": t.weight, "truth_length_bp": cycle_length(t.steps)}
         if not scored:
-            row.update({"composite": 0.0 if phased else None, "composite_h0": 0.0, "exact_cycle": 0, "cycle_overlap": 0.0,
-                        "cyclic_lcs": 0.0, "cycle_overlap_coral_code": 0.0, "cyclic_lcs_coral_code": 0.0})
+            row.update({"composite": 0.0 if phased else None, "composite_h0": 0.0, "exact_cycle": 0, "cycle_overlap_coral_code": 0.0,
+                        "cyclic_lcs_coral_code": 0.0, "cycle_overlap_supp": 0.0, "cyclic_lcs_supp": 0.0})
             if phased:
                 row["exact_cycle_phased"] = 0
             rows.append(row)
@@ -684,13 +729,14 @@ def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = 
     rows += best_of_rows(scored, candidates, phased, species_tol, graph_tol)
     species = pd.DataFrame(rows, columns=SPECIES_COLUMNS)
 
-    graph_rows = []
+    graph_rows, mixture_graphs = [], []
     if mixture is not None and graph is not None:
         cn = pd.read_csv(segment_cn, sep="\t") if segment_cn else None
         names = {t.name.split(".")[0] for t in scored}
         for amp in mixture:
             if names & set(amp.species):
                 graph_rows.append(graph_metrics(amp, graph, cn, graph_tol))
+                mixture_graphs.append(amp.graph.path)
     graph_frame = pd.DataFrame(graph_rows)
 
     read_paths_ = read_paths(paths) if paths else []
@@ -704,20 +750,24 @@ def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = 
                "n_false": counts["n_false"] if mode == "strict" else None,
                "mean_composite": mine["composite"].astype(float).mean() if phased and len(mine) else None,
                "mean_composite_h0": mine["composite_h0"].astype(float).mean() if len(mine) else None,
-               "mean_cycle_overlap": mine["cycle_overlap"].astype(float).mean() if len(mine) else None,
-               "mean_cyclic_lcs": mine["cyclic_lcs"].astype(float).mean() if len(mine) else None,
+               "mean_cycle_overlap_coral_code": mine["cycle_overlap_coral_code"].astype(float).mean() if len(mine) else None,
+               "mean_cyclic_lcs_coral_code": mine["cyclic_lcs_coral_code"].astype(float).mean() if len(mine) else None,
+               "mean_cycle_overlap_supp": mine["cycle_overlap_supp"].astype(float).mean() if len(mine) else None,
+               "mean_cyclic_lcs_supp": mine["cyclic_lcs_supp"].astype(float).mean() if len(mine) else None,
                "n_exact_cycles": int(mine["exact_cycle"].fillna(0).sum()) if len(mine) else 0}
         row.update(explained)
         row.update(subwalks_satisfied(read_paths_, chosen, graph_tol))
         if len(graph_frame):
-            row.update({"error_free": int(graph_frame["error_free"].all()), "bp_accuracy": graph_frame["bp_accuracy"].mean(),
+            row.update({"error_free": int(graph_frame["error_free"].all()),
+                        "error_free_merged": int(graph_frame["error_free_merged"].all()), "bp_accuracy": graph_frame["bp_accuracy"].mean(),
                         "novel_adjacency_fnr": graph_frame["novel_adjacency_fnr"].mean(),
                         "novel_adjacency_fdr": graph_frame["novel_adjacency_fdr"].mean(),
                         "segment_cn_mae": graph_frame["segment_cn_mae"].mean(), "is_violations": int(graph_frame["is_violations"].sum())})
         sample_rows.append(row)
     info = {"cycles": cycles_path, "graph": graph_path, "alt_cycles": list(alt_cycles), "strict_rule": rule, "phased": phased,
             "species_tol_bp": species_tol, "graph_tol_bp": graph_tol, "n_truth_total": len(truth),
-            "truth_in_scope": [t.name for t in scored], "regions": regions}
+            "truth_in_scope": [t.name for t in scored], "regions": regions,
+            "mixture_graphs": mixture_graphs}
     return ScoreResult(graph_frame, species, pd.DataFrame(sample_rows), list(scored), list(strict), candidates, info)
 
 

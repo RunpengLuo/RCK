@@ -18,13 +18,15 @@ from rck.ecdna import evaluate as ev
 from rck.ecdna.evaluate import CStep, Cycle
 
 
-def graph_text(sequences, discordant):
+def graph_text(sequences, discordant, concordant=()):
     lines = ["SequenceEdge: StartPosition, EndPosition, PredictedCopyCount, AverageCoverage, Size, NumberReadsMapped"]
     for c, s, e, cn in sequences:
         lines.append("sequence\t{c}:{s}-\t{c}:{e}+\t{cn}\t{cn}\t{n}\t0".format(c=c, s=s, e=e, cn=cn, n=e - s + 1))
     lines.append("BreakpointEdge: StartPosition->EndPosition, PredictedCopyCount, NumberOfReadPairs, x, y")
     for a, b, cn in discordant:
         lines.append("discordant\t{a}->{b}\t{cn}\t0\tNone\tNone".format(a=a, b=b, cn=cn))
+    for a, b, cn in concordant:
+        lines.append("concordant\t{a}->{b}\t{cn}\t0\tNone\tNone".format(a=a, b=b, cn=cn))
     return "\n".join(lines) + "\n"
 
 
@@ -62,8 +64,8 @@ class TestGraphMetrics(Tmp):
         segs = pd.DataFrame([{"chrom": c, "start": s, "end": e, "cn": 12.0, "cn_a": 2.0, "cn_b": 10.0} for c, s, e in SEGS])
         return aa_eval.MixtureAmplicon(1, ["ecdna1"], [("chr1", 1, 3000)], truth, segs)
 
-    def score(self, sequences, edges, cn=None, tol=100):
-        g = aa_format.read_graph(self.write("inf_graph.txt", graph_text(sequences, edges)))
+    def score(self, sequences, edges, cn=None, tol=100, concordant=()):
+        g = aa_format.read_graph(self.write("inf_graph.txt", graph_text(sequences, edges, concordant)))
         return aa_eval.graph_metrics(self.amplicon(), g, cn, tol)
 
     def test_perfect_match(self):
@@ -72,6 +74,7 @@ class TestGraphMetrics(Tmp):
         seqs = [("chr1", 100, 1000, 12.0), ("chr1", 1001, 2000, 12.0), ("chr1", 2001, 3000, 12.0)]
         r = self.score(seqs, edges)
         self.assertEqual(r["error_free"], 1)
+        self.assertEqual(r["error_free_merged"], 1)
         self.assertEqual(r["bp_accuracy"], 1.0)
         self.assertEqual(r["novel_adjacency_fnr"], 0.0)
         self.assertEqual(r["novel_adjacency_fdr"], 0.0)
@@ -102,6 +105,34 @@ class TestGraphMetrics(Tmp):
         self.assertEqual(r["bp_accuracy"], 1.0)
         self.assertEqual(r["n_false_segments"], 2)
         self.assertEqual(r["error_free"], 0)
+        self.assertEqual(r["error_free_merged"], 0)  # no concordant edge at 1500: not a benign split
+
+    def test_benign_copy_number_split_passes_error_free_merged(self):
+        # 1001-2000 split at 1500 by a copy-number change (12 -> 14) with a concordant edge only:
+        # the strict column counts two false segments, the merged column merges them back
+        seqs = [("chr1", 1, 1000, 12.0), ("chr1", 1001, 1500, 12.0), ("chr1", 1501, 2000, 14.0), ("chr1", 2001, 3000, 12.0)]
+        conc = [("chr1:1500+", "chr1:1501-", 12.0)]
+        r = self.score(seqs, EDGES, concordant=conc)
+        self.assertEqual(r["error_free"], 0)
+        self.assertEqual(r["n_false_segments"], 2)
+        self.assertEqual(r["error_free_merged"], 1)
+        self.assertEqual(r["n_false_segments_merged"], 0)
+        self.assertEqual(r["n_inferred_segments_merged"], 3)
+        # the same split with a discordant edge at the boundary is a breakpoint, not merged
+        r = self.score(seqs, EDGES + [("chr1:1500+", "chr1:2500-", 1.0)], concordant=conc)
+        self.assertEqual(r["error_free_merged"], 0)
+        self.assertEqual(r["n_false_segments_merged"], 2)
+
+    def test_merge_benign_splits(self):
+        # a concordant edge next to a discordant one (the truth's 1000/1001 boundary) is kept split;
+        # a gap between segments is never merged
+        g = aa_format.read_graph(self.write("g.txt", graph_text(
+            [("chr1", 1, 1000, 5.0), ("chr1", 1001, 2000, 7.0), ("chr1", 2001, 3000, 9.0), ("chr1", 3101, 4000, 9.0)],
+            [("chr1:1000+", "chr1:3000+", 1.0)],
+            [("chr1:1000+", "chr1:1001-", 4.0), ("chr1:2001-", "chr1:2000+", 6.0), ("chr1:3000+", "chr1:3101-", 1.0)])))
+        merged = aa_eval.merge_benign_splits(g)
+        self.assertEqual([(m.start, m.end) for m in merged], [(1, 1000), (1001, 3000), (3101, 4000)])
+        self.assertAlmostEqual(merged[1].cn, 8.0)
 
     def test_flank_segment_is_not_counted(self):
         seqs = [("chr1", 1, 1000, 12.0), ("chr1", 1001, 2000, 12.0), ("chr1", 2001, 3000, 12.0), ("chr1", 2960, 9000, 2.0)]
@@ -226,6 +257,24 @@ class TestModes(Tmp):
         self.assertEqual(sample.loc["strict", "n_false"], 0)
         self.assertEqual(sample.loc["strict", "n_missed"], 0)
         self.assertGreater(sample.loc["best_of", "mean_composite"], sample.loc["strict", "mean_composite"])
+
+    def test_coral_code_columns_are_the_headline(self):
+        # CoRAL's code versions come first; the supplementary-methods versions are *_supp. The
+        # strict answer's merged walk contains the nested species: the supplement's LCS (over the
+        # true length) forgives it, CoRAL's code (over the joint bins) does not
+        main, alt = self.files()
+        result = aa_eval.score(main, nested_truth(), alt_cycles=[alt])
+        cols = list(result.species.columns)
+        self.assertLess(cols.index("cycle_overlap_coral_code"), cols.index("cycle_overlap_supp"))
+        self.assertLess(cols.index("cyclic_lcs_coral_code"), cols.index("cyclic_lcs_supp"))
+        self.assertNotIn("cyclic_lcs", cols)
+        self.assertNotIn("cycle_overlap", cols)
+        best = result.species[result.species["mode"] == "best_of"].set_index("truth")
+        self.assertLess(best.loc["nested", "cyclic_lcs_coral_code"], best.loc["nested", "cyclic_lcs_supp"] + 1e-12)
+        sample = result.sample.set_index("mode")
+        for c in ("mean_cycle_overlap_coral_code", "mean_cyclic_lcs_coral_code", "mean_cycle_overlap_supp", "mean_cyclic_lcs_supp"):
+            self.assertIn(c, sample.columns)
+        self.assertNotIn("mean_cyclic_lcs", sample.columns)
 
     def test_false_and_missed_species(self):
         main, _ = self.files()

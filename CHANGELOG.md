@@ -348,7 +348,59 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
     and a walk with a 2-copy dip on one loop, an exact two-species fit by default and one walk
     with cheaper residuals (absolute or relative) and the sum ranking.
 
+- **Method-agnostic scorer** `rck.ecdna.aa_eval` (`python -m rck.ecdna.aa_eval`) for the
+  comparison with AmpliconArchitect, CoRAL and the original RCK (`docs/ecDNA.md`, section 6,
+  "Method-agnostic scorer"). It reads AA-format cycles and graph files only, against simulator
+  truth, with `Haplotypes=` optional. No `rck-ecdna` default or output changes.
+  - `rck.ecdna.aa_format`: the AA graph and cycles parser, shared with the truth reader. It also
+    reads `0+ … 0-` paths and the optional `Haplotypes=`, `Status=`, `Species=` and
+    `Alt_segments=` / `Alt_haplotypes=` keys.
+  - Graph level, per truth amplicon, at `--graph-tol` 100 bp, against the truth mixture graph of
+    amplicon-allele-analysis `simulations/truth_mixture.py`:
+    - AA error-free reconstruction;
+    - CoRAL breakpoint-graph accuracy;
+    - RCK novel-adjacency FNR and FDR;
+    - segment copy-number error, allele-specific with `--segment-cn`;
+    - infinite-sites violations.
+  - Species level: the `rck-ecdna-eval` scores at `--species-tol` 10 kb, unchanged
+    (`score_decomposition` and `score_pair` are called as they are), plus:
+    - CoRAL's cycle-interval overlap, cyclic LCS and log2 length error, each also in the form
+      CoRAL's code computes it;
+    - exact cycle at 100 bp;
+    - composite-H0: haplotype-blind, without phasing accuracy.
+  - Sample level: species-count error, missed and false species, the copy number explained by
+    the 1 and 3 heaviest cycles (CoRAL), and the long-read subwalks satisfied.
+  - Two modes in every table. `strict` is the method's answer; `--strict-rule` is `status`,
+    `cn-frac:F`, `top-cn:X` or `all`, and the default `auto` is `status`, else `cn-frac:0.1`,
+    `rck-ecdna`'s own threshold. `best_of` takes, per truth species, every cycle of the answer
+    and of `--alt-cycles`, with each metric maximised on its own, as CoRAL scores.
+  - `rck.ecdna.aa_export`: writes an `rck-ecdna` answer for the scorer, a run's rank 1 or a kept
+    pool's entry. It writes the low_weight status, the other orderings, the first k same-fit
+    alternatives (as `diag/grow_rules.py`'s set metric), the graph and allele copy numbers.
+    Positions are the walk's + 1, so the scorer reads exactly the steps `rck-ecdna-eval` reads.
+  - Tests: `tests/ecdna/test_aa_eval.py` (24, no Gurobi).
+- **bench_nested: method-agnostic metrics, opt-in** (`collect.py --aa-metrics`). The flag
+  re-scores every case and λ through the AA-format path, appends the main columns (`strict.*`,
+  `best_of.*`, `aa_path_matches`) to `bench_sweep.tsv` after the existing ones, and writes
+  `aa_metrics.tsv` and a README summary between `aa-metrics` markers. The λ rule and the failure
+  rule are unchanged. `diag/aa_regression.py` compares the AA path with today's scores field by
+  field.
+  - On the 40 cases at λ = 0 and 0.2, every composite part, composite, matched species,
+    `n_species`, `n_truth` and `merged` is identical at full precision. With `--aa-metrics`, all
+    240 (case, λ) match, and the 19 existing columns of `bench_sweep.tsv`, `pipeline.tsv`,
+    `rerank_validation.tsv` and the README results section are unchanged.
+  - Results (README, "Method-agnostic metrics (2026-11-03)"), at λ = 0.2:
+    - best-of mean composite 0.931 against 0.853 strict;
+    - composite-H0 0.835;
+    - 55 of 72 truth species exact cycles;
+    - breakpoint-graph accuracy 1.000, novel-adjacency FDR 0.007;
+    - 1 of 42 amplicons AA error-free: all 532 unmatched inferred segment boundaries are
+      imputed extremities of the subgraph.
+
 ### Changed
+
+- `evaluate.read_aa_cycles` parses with `rck.ecdna.aa_format`. Its output is unchanged; an
+  unlisted segment or an AA path (`0+ … 0-`) still raises `ValueError`, with a reworded message.
 
 - `rck_run.py`: `MIPGapAbs` is set only from the new `--run-g-mip-gap-abs` option. It was
   previously set to the relative `--run-g-mip-gap` value, which forced near-exact

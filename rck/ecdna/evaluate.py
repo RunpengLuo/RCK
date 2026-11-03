@@ -409,34 +409,12 @@ def read_aa_cycles(path: str) -> List[Tuple[List[dict], List[Tuple[int, str]]]]:
 
     Segment rows use the simulator's 0-based half-open coordinates (``START = start - 1``,
     ``END = end``), the same convention as truth/segments.tsv, so step extremity names match
-    obs/adjacency.tsv. The walk is a list of (row index, strand) with 1-based indices.
+    obs/adjacency.tsv. The walk is a list of (row index, strand) with 1-based indices. The file
+    is parsed by :mod:`rck.ecdna.aa_format`, which the method-agnostic scorer shares.
     """
-    segments: Dict[str, Tuple[str, int, int]] = {}
-    cycles = []
-    with open(path) as handle:
-        for line in handle:
-            fields = line.rstrip("\n").split("\t")
-            if fields[0] == "Segment" and len(fields) >= 5:
-                segments[fields[1]] = (fields[2], int(fields[3]) - 1, int(fields[4]))
-            elif line.startswith("Cycle="):
-                parts = dict(p.split("=", 1) for p in line.strip().split(";") if "=" in p)
-                tokens = [t.strip() for t in parts.get("Segments", "").split(",") if t.strip()]
-                cycles.append(tokens)
-    result = []
-    for tokens in cycles:
-        rows, walk, index = [], [], {}
-        for t in tokens:
-            sid, strand = t[:-1], t[-1]
-            if strand not in "+-" or sid not in segments or sid == "0":
-                raise ValueError("{p}: cycle step {t} is not a listed segment".format(p=path, t=t))
-            if sid not in index:
-                chrom, start, end = segments[sid]
-                rows.append({"#CHR": chrom, "START": start, "END": end})
-                index[sid] = len(rows)
-            walk.append((index[sid], strand))
-        if walk:
-            result.append((rows, walk))
-    return result
+    from rck.ecdna.aa_format import raw_walks, read_cycles  # aa_format imports this module
+
+    return raw_walks(read_cycles(path))
 
 
 def truth_from_simulation(run_dir: str, sample: Optional[str] = None, max_permutations: int = 50_000) -> List[Cycle]:

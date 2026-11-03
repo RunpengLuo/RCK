@@ -2,6 +2,7 @@
 
     python collect.py              # rerank_validation.tsv, bench_sweep.tsv, pipeline.tsv, README.md results
     python collect.py --validate   # only the re-ranking check against results/step_sweep/sweep.tsv
+    python collect.py --aa-metrics # also the method-agnostic AA-format metrics (rck.ecdna.aa_eval)
 
 Reads runs/<case>/lambda_0/ (a λ = 0 run) and runs/<case>/pool/ (a --keep-pool run, re-ranked
 with rck.ecdna.rerank for every λ > 0), and amplicon-allele-analysis
@@ -22,6 +23,14 @@ SCALE_DEPTH_TOL from the bench cases' median, or the flow's segment and junction
 against the truth, diag/scale_ratio.py, differ by more than a factor SCALE_RATIO_MAX), else
 ``RCK``. SCALE_RATIO_MAX 1.5 lies between the noise seen on v2 (ratio 1.02-1.40) and the
 ploidy-class error (≈ 2, nest_cross_3sp_s403).
+
+``--aa-metrics`` (opt-in) re-scores every (case, λ) through the method-agnostic AA-format path
+(diag/aa_regression.py: rck.ecdna.aa_export, then rck.ecdna.aa_eval against the truth mixture
+graph of amplicon-allele-analysis simulations/truth_mixture.py) and appends its columns
+(AA_COLUMNS, prefixed ``strict.`` or ``best_of.``) to bench_sweep.tsv after the existing ones,
+writes them all to aa_metrics.tsv, and a summary to the README between the aa-metrics markers.
+The λ rule and the failure rule read only the existing columns, so they are unchanged.
+BENCH_NESTED_AA_OUT puts the exported files elsewhere (default /n/fs/scratch/$USER/bench_nested_aa).
 """
 import argparse
 import json
@@ -55,6 +64,14 @@ MIN_GAIN_CASES = 2  # a λ's shortfall to the best λ counts only if at least th
 SCALE_DEPTH_TOL = 0.3  # depth per copy more than this (relative) from the bench cases' median is a scale error
 SCALE_RATIO_MAX = 1.5  # segment / junction scale (observed over truth CN) beyond this factor either way is a scale error
 JUNCTION_MATCH = 0.5  # an inferred species "carries" a truth species with at least this junction recall
+# --aa-metrics: the sample-level columns of rck.ecdna.aa_eval appended to bench_sweep.tsv, per mode
+AA_COLUMNS = {
+    "strict": ["mean_composite_h0", "n_exact_cycles", "mean_cycle_overlap", "mean_cyclic_lcs", "species_count_error",
+               "n_missed", "n_false", "error_free", "bp_accuracy", "novel_adjacency_fnr", "novel_adjacency_fdr",
+               "segment_cn_mae", "is_violations", "cn_explained_top1", "cn_explained_top3", "subwalks_satisfied"],
+    "best_of": ["mean_composite", "mean_composite_h0", "n_exact_cycles", "mean_cycle_overlap", "mean_cyclic_lcs",
+                "subwalks_satisfied"],
+}
 COLUMNS = ["case", "kind", "scenario", "step_penalty", "source", "n_species", "n_truth", "weights", "steps", "residual",
            "composites", "mean_composite", "merged", "merged_note", "ambiguous", "decided_by", "gap", "n_alternatives",
            "runtime_s"]
@@ -396,11 +413,124 @@ def write_readme(text):
         handle.write(readme)
 
 
+# ---------------------------------------------------------------------------------------------- #
+# method-agnostic AA-format metrics (--aa-metrics)
+# ---------------------------------------------------------------------------------------------- #
+
+def aa_metrics(table, jobs=16):
+    """Every (case, λ) of ``table`` scored by rck.ecdna.aa_eval (diag/aa_regression.py), with the
+    check that the AA path reproduces the existing columns."""
+    from multiprocessing import Pool
+
+    import aa_regression
+
+    out = os.environ.get("BENCH_NESTED_AA_OUT", aa_regression.DEFAULT_OUT)
+    os.makedirs(out, exist_ok=True)
+    cases = {c["name"]: c for c in run_case.cases()}
+    keys = table[["case", "step_penalty"]].drop_duplicates().to_dict("records")
+    with Pool(max(1, min(jobs, len(cases)))) as pool:
+        pool.starmap(aa_regression.mixture_dir, [(c, out) for c in cases.values() if c["name"] in set(table["case"])])
+        results = pool.map(aa_regression.one, [(cases[k["case"]], float(k["step_penalty"]), out) for k in keys])
+    rows = [r[0] for r in results if r is not None]
+    frame = pd.DataFrame(rows)
+    errors = frame[frame["error"].notna()] if "error" in frame else frame.iloc[:0]
+    for r in errors.itertuples():
+        print("aa-metrics error: {c} λ={l}\n{e}".format(c=r.case, l=r.step_penalty, e=r.error))
+    merged = table.merge(frame, on=["case", "step_penalty"], how="left", suffixes=("", "_aa"))
+    same = []
+    for c in ("composites", "mean_composite", "n_species", "n_truth", "merged"):
+        if c + "_aa" in merged:
+            same.append(merged.apply(lambda r: aa_regression.same(r[c], r[c + "_aa"]), axis=1))
+    frame["aa_path_matches"] = (pd.concat(same, axis=1).all(axis=1) & merged.get("parts_mismatches", pd.Series("", index=merged.index))
+                                .fillna("").eq("")).values if same else False
+    return frame
+
+
+def aa_appended(table, frame):
+    """bench_sweep.tsv: the existing columns, then AA_COLUMNS."""
+    cols = ["%s.%s" % (m, c) for m, cs in AA_COLUMNS.items() for c in cs]
+    keep = frame[["case", "step_penalty", "aa_path_matches"] + [c for c in cols if c in frame]]
+    return table.merge(keep, on=["case", "step_penalty"], how="left")
+
+
+def aa_markdown(frame, reported):
+    """README summary of the new metrics at λ = 0 and the reported λ, over the bench cases and
+    over all cases."""
+    L = []
+    t = frame.copy()
+    t["bench"] = t["kind"] == "bench"
+    n_match = int(t["aa_path_matches"].sum())
+    L.append("**Method-agnostic metrics** (`python collect.py --aa-metrics`; `aa_metrics.tsv`; definitions in "
+             "docs/ecDNA.md, section 6, \"Method-agnostic scorer\"). Every case and λ was scored again from AA-format "
+             "files only (`rck.ecdna.aa_export` + `rck.ecdna.aa_eval`): {k} of {n} (case, λ) reproduce the existing "
+             "composites, species counts and merged flags exactly.".format(k=n_match, n=len(t)))
+    L.append("")
+    lams = [0.0] + ([reported] if reported else [])
+    head = "| metric | " + " | ".join("{w}, λ = {l:g}".format(w=w, l=l) for l in lams for w in ("bench", "all")) + " |"
+    L.append(head)
+    L.append("|---|" + "---|" * (2 * len(lams)))
+
+    def cell(col, lam, bench, how="mean", digits=3):
+        rows = t[np.isclose(t["step_penalty"], lam) & (t["bench"] if bench else True)]
+        v = rows[col].astype(float)
+        if how == "share":
+            return "{a:.0f} / {b:.0f}".format(a=v.sum(), b=rows[col.replace("n_exact_cycles", "n_truth")].astype(float).sum())
+        if how == "count":
+            return "{a:.0f}".format(a=v.sum())
+        if how == "abs":
+            v = v.abs()
+        return fmt(v.mean(), digits)
+
+    spec = [("composite, strict (rank 1, as today)", "strict.mean_composite", "mean"),
+            ("composite, best-of (rank 1 + 2 same-fit alternatives, every cycle)", "best_of.mean_composite", "mean"),
+            ("composite-H0, strict", "strict.mean_composite_h0", "mean"),
+            ("composite-H0, best-of", "best_of.mean_composite_h0", "mean"),
+            ("exact cycles (100 bp), strict", "strict.n_exact_cycles", "share"),
+            ("exact cycles (100 bp), best-of", "best_of.n_exact_cycles", "share"),
+            ("CoRAL cycle-interval overlap, strict", "strict.mean_cycle_overlap", "mean"),
+            ("CoRAL cyclic LCS, strict", "strict.mean_cyclic_lcs", "mean"),
+            ("CoRAL cyclic LCS, best-of", "best_of.mean_cyclic_lcs", "mean"),
+            ("species-count error (mean absolute, inferred − true)", "strict.species_count_error", "abs"),
+            ("missed species", "strict.n_missed", "count"),
+            ("false species", "strict.n_false", "count"),
+            ("AA error-free reconstruction (share of cases, every amplicon, 100 bp)", "strict.error_free", "mean"),
+            ("CoRAL breakpoint-graph accuracy", "strict.bp_accuracy", "mean"),
+            ("novel-adjacency FNR", "strict.novel_adjacency_fnr", "mean"),
+            ("novel-adjacency FDR", "strict.novel_adjacency_fdr", "mean"),
+            ("allele segment CN error (copies per base)", "strict.segment_cn_mae", "mean"),
+            ("infinite-sites violations (sum)", "strict.is_violations", "count"),
+            ("CN explained, heaviest cycle", "strict.cn_explained_top1", "mean"),
+            ("CN explained, 3 heaviest cycles", "strict.cn_explained_top3", "mean"),
+            ("long-read subwalks satisfied, strict", "strict.subwalks_satisfied", "mean")]
+    for label, col, how in spec:
+        if col not in t:
+            continue
+        L.append("| " + label + " | " + " | ".join(cell(col, l, b, how) for l in lams for b in (True, False)) + " |")
+    return "\n".join(L)
+
+
+def write_aa_readme(text):
+    path = os.path.join(RESULTS, "README.md")
+    start, end = "<!-- aa-metrics:start -->", "<!-- aa-metrics:end -->"
+    readme = open(path).read() if os.path.exists(path) else ""
+    block = start + "\n" + text + "\n" + end
+    if start in readme:
+        readme = re.sub(re.escape(start) + ".*?" + re.escape(end), lambda _: block, readme, flags=re.S)
+    elif "<!-- results:end -->" in readme:
+        readme = readme.replace("<!-- results:end -->", "<!-- results:end -->\n\n" + block, 1)
+    else:
+        readme += "\n" + block + "\n"
+    with open(path, "w") as handle:
+        handle.write(readme)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--validate", action="store_true", help="only check the re-ranking against the step sweep")
     parser.add_argument("--lambda", dest="lam", type=float, default=None,
                         help="λ to report in pipeline.tsv and the scenario table (default: the chosen λ)")
+    parser.add_argument("--aa-metrics", action="store_true",
+                        help="also score every case through the method-agnostic AA-format path (rck.ecdna.aa_eval)")
     args = parser.parse_args()
     rows = []
     for case in run_case.cases():
@@ -413,13 +543,20 @@ def main():
         print(validation.to_string(index=False))
     if args.validate:
         return 0
-    table.to_csv(os.path.join(RESULTS, "bench_sweep.tsv"), sep="\t", index=False)
+    aa = aa_metrics(table) if args.aa_metrics else None
+    (aa_appended(table, aa) if aa is not None else table).to_csv(os.path.join(RESULTS, "bench_sweep.tsv"), sep="\t", index=False)
     choice = choose(table)
     reported = args.lam if args.lam is not None else (choice["chosen"] if choice["chosen"] is not None else max(LAMBDAS))
     pipe = pipeline(table, reported)
     text = results_markdown(table, choice, validation, pipe, reported)
     write_readme(text)
     print(text)
+    if aa is not None:
+        aa.to_csv(os.path.join(RESULTS, "aa_metrics.tsv"), sep="\t", index=False)
+        aa_text = aa_markdown(aa.merge(table[["case", "step_penalty", "kind"]], on=["case", "step_penalty"], how="left",
+                                       suffixes=("_aa", "")), reported)
+        write_aa_readme(aa_text)
+        print(aa_text)
     return 0
 
 

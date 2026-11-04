@@ -434,6 +434,13 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
   - `results/graph_route/envs/`: CycleExtractor now runs with the coral-3.1.1 environment's python
     (same numpy, networkx, gurobipy, highspy); the separate `cycle-extractor` environment and its
     lock files are removed.
+  - Head-to-head runs (2026-11-04, plan priority 1 a–c): `results/graph_route/graph_route.py`
+    (`prepare` / `list` / `run` / `status`), `graph_route.sbatch` and `graph_route.list`: CoRAL
+    3.1.1 `cycle`, RCK-ecDNA on `aa_import --imputed none` (total-only, the bench's λ = 0.2
+    procedure: pool at 0.1, re-ranked) and CycleExtractor 1.0.0 on 39 truth `graph_reads_paths`
+    amplicon graphs and 36 inferred graphs (225 runs, `run.json` per run with version, solver,
+    time limit and input graph; `CE_SOLVER=highs` optional). `native_aa_metrics.tsv`: the native
+    arm, the bench's existing aa_eval scores at λ = 0.2. NEXT_STEPS.md has the 2026-11-04 plan.
 
 ### Changed
 

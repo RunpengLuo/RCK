@@ -6,6 +6,143 @@ subgraph** (realistic). Methods: CoRAL 3.1.1 `cycle`, CycleExtractor (CE), origi
 RCK-ecDNA. Cases: demo5–demo8, then the 32 bench cases (demo3: no truth/aa, skipped).
 How to run things and what was validated: [README.md](README.md).
 
+## Current plan (2026-11-04)
+
+Supersedes "Next steps, in order" below; the earlier text is kept for the record.
+
+**Where things stand.** The AA-format exporter and the reverse translator (`aa_import`) are done.
+The round trip (36 cases x 4 arms, `roundtrip_compare.tsv`): with imputed edges restored every case
+is identical (the translator is exact); without them the flow objective is unchanged except in the
+two cases whose flow used one (ctrl_dup_s710, nest_samehap_6to1_s804); but the decomposition changes
+in 29 of 36 cases at an unchanged flow objective. The flow MILP has many equally good integer flows,
+the solver's choice among them depends on model size and order, and the decomposition depends on
+that choice: a property of RCK-ecDNA, not a translator bug. Investigating it is deferred (e).
+
+Decisions: head-to-head on `aa_import --imputed none`; RCK-ecDNA's native run is a separate
+`native` arm; `--imputed regenerate` only for Task 3's realistic part; oracle headline on truth
+`graph_reads_paths`, `graph_plain` secondary; every table strict and best-of; cross-method
+comparisons on composite-H0.
+
+### Priority 1, now (results needed for a meeting today)
+
+a. **Run list**: methods {CoRAL `coral cycle`, CycleExtractor, RCK-ecDNA via `aa_import --imputed
+   none`} x graphs {truth `graph_reads_paths`, inferred export} x cases {demo5–demo8 + 32 bench}.
+   RCK-ecDNA as in the bench (`--block-flip unoriented` where allele data exist, `--step-penalty
+   0.2`, `--keep-pool` for best-of). Log method version, solver, time limit and input graph per run.
+b. **Native arm**: score RCK-ecDNA's existing bench runs with aa_eval. No new runs.
+c. The sbatch command (`%2`: CoRAL and RCK-ecDNA share the 2-session licence) and a licence-time
+   estimate; the user submits.
+d. After the array: score with aa_eval, strict and best-of, composite-H0 for every cross-method
+   comparison, graph-level metrics once per input graph (not per method). Write to
+   results/graph_route/: a head-to-head table (case x graph x method), a per-scenario summary, a
+   short README paragraph with the main results. Label RCK-ecDNA's numbers single-seed and add one
+   sentence citing the round-trip finding.
+
+### Priority 2, after the meeting
+
+e. **Tie-sensitivity**: rerun the original subgraphs with 3 Gurobi seeds (and CoRAL with 3 seeds),
+   add composite deltas to `roundtrip.py compare`, compare integer flows edge by edge for s505,
+   s506, s308 and s801; report the composite spread per case.
+f. **Original RCK**: converter to RCK's input format, run, score at graph level (novel adjacencies
+   used, allele-specific CN).
+g. The `graph_plain` secondary arm (what path constraints add for each method).
+h. **Path-gap report**: what `rck_inputs.clip_path` drops (demo7: 12 truth path constraints against
+   3 inferred), and whether those paths would separate the tied answers in s301, s703 and
+   nest_samehap_6to1. Report only.
+
+### Priority 3, depending on e
+
+i. If seeds change composites materially, change the flow model so that, among flows with the
+   optimal objective, it prefers one that decomposes with the least residual and fewest species
+   (a second-stage objective, or the joint flow-and-decomposition model in
+   bench_nested/NEXT_STEPS.md). Rerun the bench and the graph route afterwards.
+
+### Later (Task 2 read route, then Task 3), as already planned
+
+j. The S10 read layer with a shared whole-genome background, timed on demo5 at 1x long reads.
+k. AA and CoRAL genome-wide on our BAMs.
+l. Our BAM front end: GRIDSS for short reads, Sniffles2 plus haplotagging for long reads.
+m. Task 3: the oracle part on CoRAL's published truth graphs, then the realistic part on their reads.
+
+### Priority 1 as built (2026-11-04)
+
+**a. `graph_route.py` + `graph_route.sbatch`** (`graph_route.list`, 225 runs; `graph_route_prepare.tsv`).
+`python graph_route.py prepare` (offline, done) exports each inferred subgraph to
+`$G/<case>/inferred/graph/` (byte-identical to the round trip's `aa/`), imports every graph with
+`aa_import --imputed none --sample <subgraph's sample>` to `$G/<case>/runs/<graph>/rck_input/amplicon<N>/`
+(75 imports, no warnings; the inferred imports are byte-identical to the round trip's `rt_none`),
+and writes the LIST. Runs go to `$G/<case>/runs/<graph>/<method>/amplicon<N>/`, each with `run.json`
+(method, version, solver, Gurobi version, time limit, input graph, command, RCK commit, elapsed,
+attempts, seed note).
+
+| | count |
+|---|---|
+| graphs | 39 truth `graph_reads_paths` amplicon graphs (demo6 and two others have 2 amplicons; one run per amplicon) + 36 inferred = 75 |
+| LIST lines 0–149 | per graph: CoRAL, then RCK-ecDNA |
+| LIST lines 150–224 | CycleExtractor, every graph (a block of its own, see c) |
+
+Settings, and where they differ from the brief. **The user confirmed all three deviations on
+2026-11-04**: (1) RCK-ecDNA's λ = 0.2 comes from the bench procedure (pool at 0.1, re-ranked),
+not a direct `--step-penalty 0.2` run; (2) RCK-ecDNA gets the graph-only import on both arms
+(flank background 2, no cn_profile); (3) no `--block-flip` (an AA graph has no allele data).
+CE runs with Gurobi (its default), inside the `%2` array.
+
+- **CoRAL 3.1.1** `coral cycle --solver gurobi_direct --solver-time-limit 1800 --threads 4`, otherwise
+  defaults (`--cycle-decomp-mode max_weight`, alpha 0.01, global limit 21600 s). Its `models/` (.lp/.nl)
+  are archived to `models.tar.gz` after the run.
+- **CycleExtractor 1.0.0** `CE.py --solver gurobi` (its default), defaults otherwise; time limit
+  hard-coded at 7200 s per MILP (no flag). `CE_SOLVER=highs` switches to HiGHS (no licence); run.json
+  records which. Smoke-tested with HiGHS on demo5 and demo6 amplicon 2 truth graphs (command path,
+  output name).
+- **RCK-ecDNA** on the graph-only import (flank background 2, no cn_profile: exactly what CoRAL and CE
+  see; the earlier step-5 table said "+ original cn_profile" for the inferred arm, not used), total-only
+  (`--min-snps-allele 100000000 --soft-junction-hap --soft-junction-penalty 0`; an AA graph has no
+  allele data, so `--block-flip unoriented` does not apply), `--time-limit 1800 --threads 4`.
+  **Step penalty as the bench computes λ = 0.2**: `--step-penalty 0.1 --keep-pool --pool-lambdas 0
+  0.02 0.05 0.1 0.2 0.5`, scored at λ = 0.2 by `aa_export --lambda 0.2` (re-ranked from the pool), so
+  the graph-route and native numbers come from the same procedure. Single seed (Gurobi default).
+
+**b. Native arm: done, no runs.** `native_aa_metrics.tsv` = the λ = 0.2 rows of
+`results/bench_nested/aa_metrics.tsv` (aa_eval strict and best-of, from Task 1's
+`diag/aa_regression.py`; per species in `/n/fs/yubi-iw/runs/bench_nested_aa/aa_species.tsv`) for
+the 32 bench cases and demo5, demo6_union, demo7_blockflip (allele data, block flips), demo8.
+Mean composite-H0: strict 0.820, best-of 0.907; `error_free_merged` 33/36, `bp_accuracy` 1.0.
+
+**c. Submit** (the user submits):
+
+```bash
+cd ~/RCK/results/graph_route && L=/n/fs/scratch/$USER/graph_route/h2h/logs && mkdir -p $L && sbatch --output=$L/%x_%A_%a.out graph_route.sbatch
+python graph_route.py status        # offline, afterwards: done / missing / failed per method and graph, licence-bound time
+```
+
+**Submitted 2026-11-04: Slurm job 32104590** (`--array=0-224%2`, logs in
+`/n/fs/scratch/$USER/graph_route/h2h/logs/`). Checking it (poll at most once a minute):
+
+```bash
+squeue -u $USER -n graph-route                                        # pending / running tasks
+sacct -j 32104590 -X --format=JobID%18,State,Elapsed,ExitCode | awk 'NR>2{print $2}' | sort | uniq -c   # task states
+L=/n/fs/scratch/$USER/graph_route/h2h/logs
+grep -h ": ok in \|: failed in " $L/*.out | awk '{print $4, $5}' | sort | uniq -c   # method, ok/failed
+grep -l "Traceback\|: failed in" $L/*.out                             # failed tasks: read these logs
+cd ~/RCK/results/graph_route && /n/fs/yubi-iw/conda/envs/gurobi-env/bin/python graph_route.py status   # 225 done expected
+```
+
+Pass: `status` shows 225 `done`, none `failed`; every `run.json` has `"status": "ok"`. A run's
+output: `$G/<case>/runs/<graph>/<method>/amplicon<N>/` (`coral_amplicon<N>_cycles.txt`,
+`ce_amplicon<N>_cycles.txt`, or RCK-ecDNA's `decompositions.tsv` + `pool/`). Failed tasks: read
+the log, then resubmit the same command (finished runs are skipped). Then step d.
+
+Licence-time estimate: RCK-ecDNA ~1–2 h (bench pool runs 3254 s over 35 allele-specific cases,
+max 1896 s; total-only runs took 0.63x the allele-specific time in the round trip); CoRAL not yet
+measured on these graphs, ~0.2–1.5 h; CE seconds per graph. **~1.5–3.5 h of licence time.** Wall
+time at `%2` is longer: in the round trip an exited task's session stayed counted for minutes, which
+cost 113 "too many sessions" retries (2 min each) over 144 tasks, 6900 s of compute in 3.4 h wall.
+Expect **~4–6 h wall for 225 tasks**. Faster option: run CE with HiGHS on this host (no licence,
+~5 min) and submit only `--array=0-149%2` (~3–4 h wall); then CE's solver differs from its default,
+which run.json records.
+
+## Earlier plan and state (2026-11-03, kept for the record)
+
 ## State (2026-11-03, evening)
 
 - Part A (Task 1 follow-ups) committed: RCK 41686bc, amplicon-allele-analysis 965d9eb (not pushed);

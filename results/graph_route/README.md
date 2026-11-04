@@ -14,6 +14,9 @@ for demo5–demo8 and the 32 bench cases. The plan and the state of the work are
 | `check_coral_format.py` | check AA graphs against CoRAL 3.1.1's parser, sorter and writer; `--golden`; `--ce` (CycleExtractor, HiGHS) |
 | `roundtrip.py`, `roundtrip.sbatch`, `roundtrip.list` | the round-trip test (subgraph → AA → subgraph → RCK-ecDNA total-only) |
 | `roundtrip_prepare.tsv` | its offline part: per case, the graph comparison of each arm |
+| `graph_route.py`, `graph_route.sbatch`, `graph_route.list` | the head-to-head runs (priority 1 a): CoRAL, RCK-ecDNA (`aa_import --imputed none`) and CycleExtractor on the truth `graph_reads_paths` and inferred graphs, one run per line, `run.json` per run |
+| `graph_route_prepare.tsv` | per graph: input file and the import's counts and fitted scale |
+| `native_aa_metrics.tsv` | the native arm: RCK-ecDNA's bench runs at λ = 0.2, scored by aa_eval (rows of `results/bench_nested/aa_metrics.tsv`) |
 
 Outputs go to `/n/fs/yubi-iw/runs/graph_route/` (project space, not purged; rebuild with the commands below).
 

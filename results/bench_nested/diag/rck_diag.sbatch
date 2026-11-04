@@ -11,7 +11,7 @@
 # DIAG_POOL_LAMBDA sets the pool run's --step-penalty (default run_case.py's 0.1; any λ > 0 gives the
 # same pool, and rank 1 is that λ's), and DIAG_LAMBDA0=0 skips the λ = 0 run.
 set -euo pipefail
-export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
+export PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH
 export GRB_LICENSE_FILE=$HOME/gurobi.lic
 cd ~/RCK/results/bench_nested
 if [ -n "${LIST:-}" ]; then set -- $(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$LIST"); fi

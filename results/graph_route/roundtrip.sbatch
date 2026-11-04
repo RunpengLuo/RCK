@@ -19,7 +19,7 @@
 # demo7 0.8 GB); time: two MILPs at --time-limit 1800 each, bench runs took 1-358 s.
 
 set -euo pipefail
-export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
+export PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH
 export GRB_LICENSE_FILE=$HOME/gurobi.lic
 cd "$SLURM_SUBMIT_DIR"
 unset BENCH_NESTED_ROOT BENCH_NESTED_OUT

@@ -1,11 +1,12 @@
 # Environments of the graph route (Task 2)
 
-One conda environment, in home: `~/.conda/envs/coral-3.1.1`.
+One conda environment, in project space: `/n/fs/yubi-iw/conda/envs/coral-3.1.1` (cloned there from
+`~/.conda/envs/coral-3.1.1` on 2026-11-04; tested with the check below).
 
 | what | how it is run | pinned to |
 |---|---|---|
-| CoRAL 3.1.1 | `~/.conda/envs/coral-3.1.1/bin/coral cycle ...` (Gurobi: Slurm only) | CoRAL commit `7f3bf317`, runtime packages at its `poetry.lock` versions |
-| CycleExtractor 1.0.0 | `~/.conda/envs/coral-3.1.1/bin/python -I ~/tools/CycleExtractor/CE.py --graph G --output O [--solver highs]` | code: git checkout of commit `1b29b33` in `~/tools/CycleExtractor` |
+| CoRAL 3.1.1 | `/n/fs/yubi-iw/conda/envs/coral-3.1.1/bin/coral cycle ...` (Gurobi: Slurm only) | CoRAL commit `7f3bf317`, runtime packages at its `poetry.lock` versions |
+| CycleExtractor 1.0.0 | `/n/fs/yubi-iw/conda/envs/coral-3.1.1/bin/python -I /n/fs/yubi-iw/tools/CycleExtractor/CE.py --graph G --output O [--solver highs]` | code: git checkout of commit `1b29b33` in `/n/fs/yubi-iw/tools/CycleExtractor` |
 
 CycleExtractor needs numpy, networkx, gurobipy and (for `--solver highs`) highspy. The
 coral-3.1.1 environment has the same versions the separate `cycle-extractor` environment had
@@ -18,11 +19,11 @@ cycle, `Segments=6+,2+,4+` (a rotation of `2+,4+,6+`), `Copy_count=85.1898177020
 
 Lock files:
 
-* `coral-3.1.1.conda-explicit.txt`: `conda list --explicit -p ~/.conda/envs/coral-3.1.1`
-* `coral-3.1.1.pip-freeze.txt`: `~/.conda/envs/coral-3.1.1/bin/pip freeze --all`
+* `coral-3.1.1.conda-explicit.txt`: `conda list --explicit -p /n/fs/yubi-iw/conda/envs/coral-3.1.1`
+* `coral-3.1.1.pip-freeze.txt`: `/n/fs/yubi-iw/conda/envs/coral-3.1.1/bin/pip freeze --all`
 
 Rebuild: `conda create -p ENV --file coral-3.1.1.conda-explicit.txt --override-channels -c conda-forge`,
 then `ENV/bin/pip install -r coral-3.1.1.pip-freeze.txt` (CoRAL's line pins the commit; install it
-with `--no-deps`), then `git clone https://github.com/AmpliconSuite/CycleExtractor ~/tools/CycleExtractor`
-and `git -C ~/tools/CycleExtractor checkout 1b29b33`. (`--override-channels -c conda-forge`: the
+with `--no-deps`), then `git clone https://github.com/AmpliconSuite/CycleExtractor /n/fs/yubi-iw/tools/CycleExtractor`
+and `git -C /n/fs/yubi-iw/tools/CycleExtractor checkout 1b29b33`. (`--override-channels -c conda-forge`: the
 host's conda refuses the default Anaconda channels until their terms of service are accepted.)

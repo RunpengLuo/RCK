@@ -22,13 +22,13 @@ numbers below ("Re-baseline results (22 cases)").
 `comparison.md` and `comparison.tsv` compare the first benchmark with v2. The first benchmark's
 results are kept below ("First benchmark"), and its tables in git history (9b74b87).
 
-Run outputs stay on scratch, which **purges files older than two weeks**. The local `runs` link
-points at `/n/fs/scratch/$USER/bench_nested_v2/grow/rck_runs` (since 2026-11-01): the 18 new
+Run outputs live in project space, `/n/fs/yubi-iw/runs/` (moved from scratch on 2026-11-04). The local `runs` link
+points at `/n/fs/yubi-iw/runs/bench_nested_v2/grow/rck_runs` (since 2026-11-01): the 18 new
 cases' runs, plus links to the re-baseline's runs in `bench_nested_v2/rebuild/rck_runs` for the
-other 22. The 8 regression cases there link on to `/n/fs/scratch/$USER/bench_nested/rck_runs`.
+other 22. The 8 regression cases there link on to `/n/fs/yubi-iw/runs/bench_nested/rck_runs`.
 amplicon-allele-analysis `simulations/runs/bench_nested` points at
-`/n/fs/scratch/$USER/bench_nested_v2/grow/runs`, the new simulations plus links to v2's.
-The diagnostics are in `/n/fs/scratch/$USER/bench_nested_v2/diag/`. Everything this README or `NEXT_STEPS.md` needs to
+`/n/fs/yubi-iw/runs/bench_nested_v2/grow/runs`, the new simulations plus links to v2's.
+The diagnostics are in `/n/fs/yubi-iw/runs/bench_nested_v2/diag/`. Everything this README or `NEXT_STEPS.md` needs to
 keep is in the repositories; the simulations can be regenerated from the configs with
 `bench_nested.py`, and the RCK runs with `bench_nested.sbatch`.
 
@@ -119,18 +119,18 @@ join, and they caused part of the `ctrl_dup_s702` and `nest_cross_3sp_s402` fail
 amplicon-allele-analysis `CHANGELOG.md`, `hap_labels`. The benchmark was rebuilt with
 inherited labels (these are now the tracked configs and subgraphs, so steps 1–3 above run it; the
 commands below are how it was first built and run, outside the tracked folders):
-`/n/fs/scratch/$USER/bench_nested_v2/{configs,runs,subgraphs}`, 14 accepted seeds. Its RCK runs
+`/n/fs/yubi-iw/runs/bench_nested_v2/{configs,runs,subgraphs}`, 14 accepted seeds. Its RCK runs
 go to their own folders. The regression cases are unchanged, so their existing runs are linked
 in rather than rerun:
 
 ```bash
 cd ~/RCK/results/bench_nested && mkdir -p logs
-export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2      # cases: its seeds.tsv and subgraphs
+export BENCH_NESTED_ROOT=/n/fs/yubi-iw/runs/bench_nested_v2      # cases: its seeds.tsv and subgraphs
 export BENCH_NESTED_OUT=$BENCH_NESTED_ROOT/rck_runs                # runs
 export BENCH_NESTED_RESULTS=$BENCH_NESTED_ROOT/rck_results         # collect.py tables and README
 mkdir -p $BENCH_NESTED_OUT
 for c in demo3 demo4_amp0 demo4_amp1 demo5 demo6_union demo7_blockflip demo7_totalonly demo8; do
-  ln -sfn /n/fs/scratch/$USER/bench_nested/rck_runs/$c $BENCH_NESTED_OUT/$c
+  ln -sfn /n/fs/yubi-iw/runs/bench_nested/rck_runs/$c $BENCH_NESTED_OUT/$c
 done
 sbatch --array=8-21%2 bench_nested.sbatch                          # the 14 bench cases (sbatch passes the environment)
 python collect.py                                                  # afterwards, with the same three variables set
@@ -166,7 +166,7 @@ time at 2 concurrent tasks).
   (`strict.*`, `best_of.*`), and `aa_path_matches`: whether the AA-format path reproduced the
   case's composites, species count and merged flag. With the flag, `bench_sweep.tsv` gains the main
   ones after its existing columns. Per-species and per-amplicon tables, and the exported AA files,
-  go to `/n/fs/scratch/$USER/bench_nested_aa/` (`BENCH_NESTED_AA_OUT`); `diag/aa_regression.py`
+  go to `/n/fs/yubi-iw/runs/bench_nested_aa/` (`BENCH_NESTED_AA_OUT`); `diag/aa_regression.py`
   writes the same, with the field-by-field comparison, as `aa_regression.tsv` there.
 - `runs/`: every run's full output (not tracked).
 
@@ -186,8 +186,8 @@ Run on ionic (Slurm 31981878/31981889 validation, 31981902/31981984 RCK). 20 of 
 complete. `nest_cross_3sp_s406` and `nest_cross_1to1_s502` were cancelled at the session's time
 limit. The first was still at an 81% MIP gap after 800 s in its λ = 0 decomposition; the second
 finished λ = 0 (488 s) but not its pool run. Both need a longer Slurm limit (`--time=05:00:00`)
-and are excluded from the choice below until then. The RCK runs live on scratch
-(`runs` → `/n/fs/scratch/$USER/bench_nested/rck_runs`; a 5 GB home quota cannot hold them).
+and are excluded from the choice below until then. The RCK runs live in project space
+(`runs` → `/n/fs/yubi-iw/runs/bench_nested/rck_runs`; a 5 GB home quota cannot hold them).
 
 The rule below picks 0.5 because of a single case, `nest_samehap_3to1_s301`, which stays merged
 and wrong at every λ (0.693 → 0.740). It is also the edge of the grid. Every other case gives
@@ -348,11 +348,11 @@ The scorer for the comparison with AmpliconArchitect, CoRAL and the original RCK
 (`rck.ecdna.aa_eval`, docs/ecDNA.md section 6) reads AA-format files only. The block above is
 `collect.py --aa-metrics` on the 40 cases; no run was repeated. Its graph truth is the mixture
 graph of amplicon-allele-analysis `simulations/truth_mixture.py`, written to `truth/aa/` of the 32
-bench simulations on scratch. For the tracked demo runs it is in amplicon-allele-analysis
+bench simulations (now in `/n/fs/yubi-iw/runs/`). For the tracked demo runs it is in amplicon-allele-analysis
 (`simulations/runs/demo{5,6,7,8}_*/truth/aa/mixture_*`, since 2026-11-03), and demo4's (RCK's
-`tests/ecdna/data/demo4_truth`) is still built under `/n/fs/scratch/$USER/bench_nested_aa/mixtures/`.
+`tests/ecdna/data/demo4_truth`) is still built under `/n/fs/yubi-iw/runs/bench_nested_aa/mixtures/`.
 Moving demo5–demo8 to the repository copies changed only the paths in `aa_eval.json`: the copies
-are byte-identical to the scratch ones, and every graph and species table of those cases is
+are byte-identical to the ones beside the simulations, and every graph and species table of those cases is
 unchanged.
 
 - **Regression.** `diag/aa_regression.py` exports each answer to AA format, scores it with
@@ -504,7 +504,7 @@ Compute: 4349 s of RCK wall time over 22 cases (one λ = 0 run and one pool run 
 
 Step d of `NEXT_STEPS.md`. Simulations and subgraphs: amplicon-allele-analysis Slurm 32049944
 (`BENCH_NESTED_ARGS="--accept 6 --candidates 30"`, `BENCH_NESTED_RCK_PLOIDY=2`, root
-`/n/fs/scratch/$USER/bench_nested_v2/grow`). RCK on the 18 new cases only: Slurm 32050408 (18 of 18
+`/n/fs/yubi-iw/runs/bench_nested_v2/grow`). RCK on the 18 new cases only: Slurm 32050408 (18 of 18
 COMPLETED; 7030 s of RCK wall time over all 40 cases). The run record is in `grow_2026-11-01/`
 (`README.md`, `collect.log`, the three tables, `compare_existing.txt`).
 
@@ -533,7 +533,7 @@ COMPLETED; 7030 s of RCK wall time over all 40 cases). The run record is in `gro
 
 Step c of `NEXT_STEPS.md`. The 14 subgraphs were rebuilt from the unchanged v2 simulations, from
 amplicon-allele-analysis `simulations/`, with
-`BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2/rebuild BENCH_NESTED_RCK_PLOIDY=2 python bench_nested.py rebuild`,
+`BENCH_NESTED_ROOT=/n/fs/yubi-iw/runs/bench_nested_v2/rebuild BENCH_NESTED_RCK_PLOIDY=2 python bench_nested.py rebuild`,
 and RCK was run on all 22 cases (Slurm 32041913, outputs in `rebuild/rck_runs`). The run record and
 the comparison with v2 are in `rebuild_2026-10-31/` (`comparison_vs_v2.txt`).
 
@@ -558,7 +558,7 @@ the comparison with v2 are in `rebuild_2026-10-31/` (`comparison_vs_v2.txt`).
 ## bench_nested_v2 (2026-10-27; the benchmark since 2026-10-29)
 
 These are the results of the rebuilt benchmark (inherited haplotype labels, see above), run on ionic
-(Slurm 32000320, the 14 bench cases; the 8 regression cases are links to the runs above). They to `/n/fs/scratch/$USER/bench_nested_v2/rck_results/` and are now this folder's tables,
+(Slurm 32000320, the 14 bench cases; the 8 regression cases are links to the runs above). They to `/n/fs/yubi-iw/runs/bench_nested_v2/rck_results/` and are now this folder's tables,
 with `comparison.md` and `comparison.tsv` against the first benchmark's. The rest of this section
 is the 2026-10-27 reading, under the old λ rule and failure stages; "Results (bench_nested_v2)"
 above is the current one.
@@ -608,7 +608,7 @@ RCK wall time: 4349 s over 22 cases, 2860 s of it in `nest_cross_3sp_s403`.
 ### Follow-up checks (bench_nested_v2, 2026-10-27)
 
 These are diagnostic runs on the existing outputs and subgraphs, with no new simulation, in
-`/n/fs/scratch/$USER/bench_nested_v2/diag/` (Slurm 32005476 and 32005494; scripts `rck_diag.sbatch`,
+`/n/fs/yubi-iw/runs/bench_nested_v2/diag/` (Slurm 32005476 and 32005494; scripts `rck_diag.sbatch`,
 `pool_summary.py`, `flow_vs_truth.py`, `scale_ratio.py`, `summarize.sh`, kept in `diag/` here). The plan
 that follows from them is in `NEXT_STEPS.md`. "Fitted θ" is the
 junction-reads-per-copy value `rck_inputs` fits; the bench fixes it at 6.5.

@@ -25,7 +25,7 @@ copy of the v2 configs, subgraphs and `rck_results` is in `~/backups/bench_neste
 - **Two benchmarks exist.**
   - The first (committed tables in this folder) used per-step haplotype labels.
   - **bench_nested_v2** (inherited labels, `p_cross` 0.5) lives only on scratch:
-    `/n/fs/scratch/$USER/bench_nested_v2/{configs,runs,subgraphs,rck_runs,rck_results,diag}`.
+    `/n/fs/yubi-iw/runs/bench_nested_v2/{configs,runs,subgraphs,rck_runs,rck_results,diag}`.
     Its configs, `seeds.tsv`, subgraphs and tables are **not** in either repo.
   - Scratch is not backed up.
 - **v2 replaced the first benchmark on 2026-10-29** (step 1, done).
@@ -68,7 +68,7 @@ copy of the v2 configs, subgraphs and `rck_results` is in `~/backups/bench_neste
 
 Read `comparison.md`. If v2 replaces v1:
 
-- copy `/n/fs/scratch/$USER/bench_nested_v2/configs/` into amplicon-allele-analysis
+- copy `/n/fs/yubi-iw/runs/bench_nested_v2/configs/` into amplicon-allele-analysis
   `simulations/configs/bench_nested/`;
 - copy the subgraph folders into `simulations/subgraphs/bench_nested/` (check their size first:
   `du -sh` on that one known folder; home quota is 5 GB);
@@ -152,7 +152,7 @@ before choosing among the pool's exact fits.
   it.
 - RCK's untracked `results/bench/` (179 MB), `logs/` and `ecbench_*.out` in the repo root are run
   outputs. Move them to scratch if home quota gets tight.
-- Diagnostic outputs of this session: `/n/fs/scratch/$USER/bench_nested_v2/diag/rck/` (s403 with
+- Diagnostic outputs of this session: `/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck/` (s403 with
   ploidy 2; s502, s505, s301 and s703 with fitted θ; Slurm 32005476 and 32005494). Their scripts
   are in `diag/` here.
 
@@ -217,7 +217,7 @@ before choosing among the pool's exact fits.
   node. Under inherited labels some former haplotype-switch junctions are plain reference
   continuations without a node, which emptied s702 and s703; most paths were dropped in every
   case. Fixed (`clip_path`). Rebuilt s702, s703 and s301 into
-  `/n/fs/scratch/$USER/bench_nested_v2/subgraphs_paths/` (graphs byte-identical; paths with ≥ 2
+  `/n/fs/yubi-iw/runs/bench_nested_v2/subgraphs_paths/` (graphs byte-identical; paths with ≥ 2
   junctions: s702 0, s703 1 (3 reads), s301 3 (5 reads)), so paths can only weakly help.
   **The committed subgraphs predate the fix**, and paths are on by default (`--path-weight 0.5`):
   rebuilding them changes RCK's input for every case. Do it before step 7's rerun.
@@ -504,24 +504,24 @@ for c in nest_samehap_3to1_s301 ctrl_dup_s703 nest_cross_1to1_s505 nest_cross_1t
 done
 grep -c '^  sigma: 0.0$' $BENCH_NESTED_ROOT/configs/*.yaml          # 1 each
 sbatch --job-name=sigma0-sim --cpus-per-task=1 --mem=4G --time=03:00:00 --output=logs/%x_%j.out \
-  --export=ALL,BENCH_NESTED_ROOT --wrap 'export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH; python -c "
+  --export=ALL,BENCH_NESTED_ROOT --wrap 'export PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH; python -c "
 import os, bench_nested as b
 for sc, seed in [(\"nest_samehap_3to1\", 301), (\"ctrl_dup\", 703), (\"nest_cross_1to1\", 505), (\"nest_cross_1to1\", 502)]:
     b.build_subgraph(b.simulate(sc, seed), os.path.join(b.SUBGRAPHS, b.run_name(sc, seed)))"'
 ```
 
 Step 2 needs Gurobi: 4 runs, s505 up to 25 min. s502 is the passing control from the same
-scenario. LIST file `/n/fs/scratch/$USER/bench_nested_v2/diag/rck_sigma0/sigma0.list`:
+scenario. LIST file `/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_sigma0/sigma0.list`:
 
 ```
-nest_samehap_3to1_s301_sigma0 /n/fs/scratch/ym3292/bench_nested_sigma0/subgraphs/nest_samehap_3to1_s301/union /n/fs/scratch/ym3292/bench_nested_sigma0/runs/nest_samehap_3to1_s301 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_sigma0/nest_samehap_3to1_s301_sigma0
-ctrl_dup_s703_sigma0 /n/fs/scratch/ym3292/bench_nested_sigma0/subgraphs/ctrl_dup_s703/union /n/fs/scratch/ym3292/bench_nested_sigma0/runs/ctrl_dup_s703 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_sigma0/ctrl_dup_s703_sigma0
-nest_cross_1to1_s505_sigma0 /n/fs/scratch/ym3292/bench_nested_sigma0/subgraphs/nest_cross_1to1_s505/union /n/fs/scratch/ym3292/bench_nested_sigma0/runs/nest_cross_1to1_s505 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_sigma0/nest_cross_1to1_s505_sigma0
-nest_cross_1to1_s502_sigma0 /n/fs/scratch/ym3292/bench_nested_sigma0/subgraphs/nest_cross_1to1_s502/union /n/fs/scratch/ym3292/bench_nested_sigma0/runs/nest_cross_1to1_s502 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_sigma0/nest_cross_1to1_s502_sigma0
+nest_samehap_3to1_s301_sigma0 /n/fs/scratch/ym3292/bench_nested_sigma0/subgraphs/nest_samehap_3to1_s301/union /n/fs/scratch/ym3292/bench_nested_sigma0/runs/nest_samehap_3to1_s301 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_sigma0/nest_samehap_3to1_s301_sigma0
+ctrl_dup_s703_sigma0 /n/fs/scratch/ym3292/bench_nested_sigma0/subgraphs/ctrl_dup_s703/union /n/fs/scratch/ym3292/bench_nested_sigma0/runs/ctrl_dup_s703 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_sigma0/ctrl_dup_s703_sigma0
+nest_cross_1to1_s505_sigma0 /n/fs/scratch/ym3292/bench_nested_sigma0/subgraphs/nest_cross_1to1_s505/union /n/fs/scratch/ym3292/bench_nested_sigma0/runs/nest_cross_1to1_s505 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_sigma0/nest_cross_1to1_s505_sigma0
+nest_cross_1to1_s502_sigma0 /n/fs/scratch/ym3292/bench_nested_sigma0/subgraphs/nest_cross_1to1_s502/union /n/fs/scratch/ym3292/bench_nested_sigma0/runs/nest_cross_1to1_s502 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_sigma0/nest_cross_1to1_s502_sigma0
 ```
 
 ```bash
-cd /n/fs/scratch/$USER/bench_nested_v2/diag/rck_sigma0 && mkdir -p logs
+cd /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_sigma0 && mkdir -p logs
 LIST=$PWD/sigma0.list DIAG_POOL_LAMBDA=0.2 DIAG_LAMBDA0=0 sbatch --array=0-3%2 --time=02:00:00 ~/RCK/results/bench_nested/diag/rck_diag.sbatch
 python ~/RCK/results/bench_nested/diag/noise_summary.py sigma0.list   # when done
 ```
@@ -535,22 +535,22 @@ Read it as follows:
 **Run B (optional, only after run A shows model errors): flow junction weight.** The existing v2
 subgraphs at `--alpha-novel 1.0` (default 0.5). s402, s201 and s502 are guards: their junctions are
 noisier than, or about as noisy as, their depth. LIST file
-`/n/fs/scratch/$USER/bench_nested_v2/diag/rck_flow/alpha.list`, submitted with:
+`/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_flow/alpha.list`, submitted with:
 
 ```bash
-cd /n/fs/scratch/$USER/bench_nested_v2/diag/rck_flow && mkdir -p logs
+cd /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_flow && mkdir -p logs
 LIST=$PWD/alpha.list DIAG_POOL_LAMBDA=0.2 DIAG_LAMBDA0=0 sbatch --array=0-5%2 --time=02:00:00 ~/RCK/results/bench_nested/diag/rck_diag.sbatch
 ```
 
 The lines are:
 
 ```
-ctrl_dup_s703_an1 /n/fs/scratch/ym3292/bench_nested_v2/subgraphs/ctrl_dup_s703/union /n/fs/scratch/ym3292/bench_nested_v2/runs/ctrl_dup_s703 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_flow/ctrl_dup_s703_an1 --alpha-novel 1.0
-nest_cross_1to1_s505_an1 /n/fs/scratch/ym3292/bench_nested_v2/subgraphs/nest_cross_1to1_s505/union /n/fs/scratch/ym3292/bench_nested_v2/runs/nest_cross_1to1_s505 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_flow/nest_cross_1to1_s505_an1 --alpha-novel 1.0
-nest_samehap_3to1_s301_an1 /n/fs/scratch/ym3292/bench_nested_v2/subgraphs/nest_samehap_3to1_s301/union /n/fs/scratch/ym3292/bench_nested_v2/runs/nest_samehap_3to1_s301 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_flow/nest_samehap_3to1_s301_an1 --alpha-novel 1.0
-nest_cross_1to1_s502_an1 /n/fs/scratch/ym3292/bench_nested_v2/subgraphs/nest_cross_1to1_s502/union /n/fs/scratch/ym3292/bench_nested_v2/runs/nest_cross_1to1_s502 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_flow/nest_cross_1to1_s502_an1 --alpha-novel 1.0
-nest_cross_3sp_s402_an1 /n/fs/scratch/ym3292/bench_nested_v2/subgraphs/nest_cross_3sp_s402/union /n/fs/scratch/ym3292/bench_nested_v2/runs/nest_cross_3sp_s402 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_flow/nest_cross_3sp_s402_an1 --alpha-novel 1.0
-nest_samehap_2to1_s201_an1 /n/fs/scratch/ym3292/bench_nested_v2/subgraphs/nest_samehap_2to1_s201/union /n/fs/scratch/ym3292/bench_nested_v2/runs/nest_samehap_2to1_s201 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_flow/nest_samehap_2to1_s201_an1 --alpha-novel 1.0
+ctrl_dup_s703_an1 /n/fs/yubi-iw/runs/bench_nested_v2/subgraphs/ctrl_dup_s703/union /n/fs/yubi-iw/runs/bench_nested_v2/runs/ctrl_dup_s703 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_flow/ctrl_dup_s703_an1 --alpha-novel 1.0
+nest_cross_1to1_s505_an1 /n/fs/yubi-iw/runs/bench_nested_v2/subgraphs/nest_cross_1to1_s505/union /n/fs/yubi-iw/runs/bench_nested_v2/runs/nest_cross_1to1_s505 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_flow/nest_cross_1to1_s505_an1 --alpha-novel 1.0
+nest_samehap_3to1_s301_an1 /n/fs/yubi-iw/runs/bench_nested_v2/subgraphs/nest_samehap_3to1_s301/union /n/fs/yubi-iw/runs/bench_nested_v2/runs/nest_samehap_3to1_s301 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_flow/nest_samehap_3to1_s301_an1 --alpha-novel 1.0
+nest_cross_1to1_s502_an1 /n/fs/yubi-iw/runs/bench_nested_v2/subgraphs/nest_cross_1to1_s502/union /n/fs/yubi-iw/runs/bench_nested_v2/runs/nest_cross_1to1_s502 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_flow/nest_cross_1to1_s502_an1 --alpha-novel 1.0
+nest_cross_3sp_s402_an1 /n/fs/yubi-iw/runs/bench_nested_v2/subgraphs/nest_cross_3sp_s402/union /n/fs/yubi-iw/runs/bench_nested_v2/runs/nest_cross_3sp_s402 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_flow/nest_cross_3sp_s402_an1 --alpha-novel 1.0
+nest_samehap_2to1_s201_an1 /n/fs/yubi-iw/runs/bench_nested_v2/subgraphs/nest_samehap_2to1_s201/union /n/fs/yubi-iw/runs/bench_nested_v2/runs/nest_samehap_2to1_s201 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_flow/nest_samehap_2to1_s201_an1 --alpha-novel 1.0
 ```
 
 ### Agreed order (2026-10-31, later) and a correction to the ploidy recommendation
@@ -561,9 +561,9 @@ it rather than skipped. The order is now:
 1. **c. Re-baseline the existing 22 cases. [done 2026-11-01: adopted; see "Step c, result" at the end]** Rebuild the 14 bench subgraphs with the
    current `rck_inputs.py`, which has the `clip_path` fix, and the ploidy handling below. Build
    into a scratch root, so the tracked subgraphs and the v2 runs stay as they are until reviewed:
-   - root `/n/fs/scratch/$USER/bench_nested_v2/rebuild/`, with `configs/` (a copy of the tracked
+   - root `/n/fs/yubi-iw/runs/bench_nested_v2/rebuild/`, with `configs/` (a copy of the tracked
      ones), `runs` (→ the v2 simulations, unchanged) and `subgraphs/`;
-   - RCK outputs in `/n/fs/scratch/$USER/bench_nested_v2/rebuild/rck_runs/`.
+   - RCK outputs in `/n/fs/yubi-iw/runs/bench_nested_v2/rebuild/rck_runs/`.
    Then run RCK on all 22 cases. The 8 regression cases rerun too, so that the new baseline is one
    self-consistent set of runs.
 2. **d. More seeds. [done 2026-11-01: d1 Slurm 32049944, d2 Slurm 32050408; adopted; see "Step d2, result" and "Grown bench: failure analysis and revised plan (2026-11-01)" at the end]**
@@ -602,10 +602,10 @@ right). That rule is a hidden diploid prior:
 
 **Step c, status (2026-10-31, 14:5x):**
 - **Subgraphs rebuilt.** All 14 bench subgraphs are rebuilt in
-  `/n/fs/scratch/$USER/bench_nested_v2/rebuild/subgraphs/`, from
+  `/n/fs/yubi-iw/runs/bench_nested_v2/rebuild/subgraphs/`, from
   amplicon-allele-analysis `simulations/` with:
   ```bash
-  BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2/rebuild BENCH_NESTED_RCK_PLOIDY=2 python bench_nested.py rebuild
+  BENCH_NESTED_ROOT=/n/fs/yubi-iw/runs/bench_nested_v2/rebuild BENCH_NESTED_RCK_PLOIDY=2 python bench_nested.py rebuild
   ```
   - Subgraph-stage failures: none.
   - Against the tracked v2 subgraphs, `nodes`, `edges`, `segment_blocks`, `phase_blocks` and
@@ -617,7 +617,7 @@ right). That rule is a hidden diploid prior:
 - **RCK submitted.** Slurm array **32041913** (`--array=0-21%2 --time=02:00:00`), submitted from
   here with:
   - `BENCH_NESTED_ROOT` as above, and
-    `BENCH_NESTED_OUT=/n/fs/scratch/$USER/bench_nested_v2/rebuild/rck_runs`;
+    `BENCH_NESTED_OUT=/n/fs/yubi-iw/runs/bench_nested_v2/rebuild/rck_runs`;
   - logs in `/n/fs/scratch/$USER/bench_nested_v2/rebuild/logs/`.
 - **When it finishes:**
   - check it with `sacct -j 32041913 -X -o JobID%14,State,Elapsed`;
@@ -635,7 +635,7 @@ right). That rule is a hidden diploid prior:
     recommendation.
   - Small side effects: s402's λ = 0 run (0.5221 → 0.5206), s703's second weight (16.22 → 15.53,
     same walks and composite), and pool sizes ±1–2 in four cases.
-- **s403 against the 2026-10-27 ploidy-2 diagnostic** (`/n/fs/scratch/$USER/bench_nested_v2/diag/rck/nest_cross_3sp_s403_ploidy2`):
+- **s403 against the 2026-10-27 ploidy-2 diagnostic** (`/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck/nest_cross_3sp_s403_ploidy2`):
   - `observations.json`, `flow_segments.tsv` and `flow_adjacencies.tsv` are byte-identical in
     both the λ = 0 and the pool run.
   - The 32 rank-1 rows of `decompositions.tsv` are identical except the path columns
@@ -654,7 +654,7 @@ right). That rule is a hidden diploid prior:
     `simulations/subgraphs/bench_nested/` (now identical to `rebuild/subgraphs/`);
   - `rebuild_2026-10-31/{bench_sweep,pipeline,rerank_validation}.tsv` were copied here
     (`rerank_validation.tsv` is unchanged);
-  - `python collect.py` with `BENCH_NESTED_OUT=/n/fs/scratch/$USER/bench_nested_v2/rebuild/rck_runs`
+  - `python collect.py` with `BENCH_NESTED_OUT=/n/fs/yubi-iw/runs/bench_nested_v2/rebuild/rck_runs`
     and the tracked subgraphs reproduces all three tables byte for byte;
   - README.md has the re-baseline's results, with v2's kept under "v2 results before the
     re-baseline".
@@ -684,7 +684,7 @@ Code (amplicon-allele-analysis `simulations/`; no default changed):
     fields exactly. So `--accept 6` re-derives the accepted seeds in slots 1–2 without
     re-simulating, and adds slots 3–6.
 
-Root `/n/fs/scratch/$USER/bench_nested_v2/grow/` (set up; nothing run in it):
+Root `/n/fs/yubi-iw/runs/bench_nested_v2/grow/` (set up; nothing run in it):
 - `configs/`: copies of the tracked configs and `seeds.tsv`;
 - `runs/`: one link per existing v2 simulation, plus copies of the per-scenario `*.seeds.tsv`.
   New seeds are simulated into this folder, not into v2's;
@@ -701,8 +701,8 @@ nest_samehap_3to1, nest_cross_1to1, ctrl_dup and nest_samehap_6to1.
 
 ```bash
 cd ~/amplicon-allele-analysis/simulations
-export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
-export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2/grow BENCH_NESTED_RCK_PLOIDY=2
+export PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH
+export BENCH_NESTED_ROOT=/n/fs/yubi-iw/runs/bench_nested_v2/grow BENCH_NESTED_RCK_PLOIDY=2
 BENCH_NESTED_ARGS="--accept 6 --candidates 30" sbatch --array=2,4,6,7 --mem=3G --time=01:30:00 \
   --output=$BENCH_NESTED_ROOT/logs/%x_%A_%a.out bench_nested.sbatch
 # when done (one sacct, not a polling loop):
@@ -723,8 +723,8 @@ Step d2, RCK (Gurobi), on the new cases only:
 
 ```bash
 cd ~/RCK/results/bench_nested
-export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
-export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2/grow BENCH_NESTED_OUT=/n/fs/scratch/$USER/bench_nested_v2/grow/rck_runs
+export PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH
+export BENCH_NESTED_ROOT=/n/fs/yubi-iw/runs/bench_nested_v2/grow BENCH_NESTED_OUT=/n/fs/yubi-iw/runs/bench_nested_v2/grow/rck_runs
 IDX=$(python run_case.py list | while IFS=$'\t' read i name kind sub; do
         [ -e "$BENCH_NESTED_OUT/$name/pool/pool/pool.json" ] || echo $i; done | paste -sd,)
 echo "$IDX"                                   # only the new cases
@@ -750,7 +750,7 @@ The `clip_path` fix is already in `rck_inputs.py`.
 
 ```bash
 cd ~/amplicon-allele-analysis/simulations
-export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
+export PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH
 export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_sigma0 BENCH_NESTED_RCK_PLOIDY=2
 mkdir -p $BENCH_NESTED_ROOT/configs $BENCH_NESTED_ROOT/logs
 for c in nest_samehap_3to1_s301 ctrl_dup_s703 nest_cross_1to1_s505 nest_cross_1to1_s502; do
@@ -764,7 +764,7 @@ for sc, seed in [(\"nest_samehap_3to1\", 301), (\"ctrl_dup\", 703), (\"nest_cros
     b.build_subgraph(b.simulate(sc, seed), os.path.join(b.SUBGRAPHS, b.run_name(sc, seed)))"'
 # truth must match v2 (sigma only changes the counts):
 for c in nest_samehap_3to1_s301 ctrl_dup_s703 nest_cross_1to1_s505 nest_cross_1to1_s502; do
-  diff -rq $BENCH_NESTED_ROOT/runs/$c/truth /n/fs/scratch/$USER/bench_nested_v2/runs/$c/truth && echo "$c truth ok"; done
+  diff -rq $BENCH_NESTED_ROOT/runs/$c/truth /n/fs/yubi-iw/runs/bench_nested_v2/runs/$c/truth && echo "$c truth ok"; done
 ```
 
 The RCK step is the LIST and `rck_diag.sbatch` command of "Run A" unchanged: 4 runs, s505 up to
@@ -790,8 +790,8 @@ within the 1:30 limit. Logs: `/n/fs/scratch/$USER/bench_nested_v2/grow/logs/benc
 sacct -j 32049944 -X -o JobID%14,JobName%18,State,Elapsed,MaxRSS     # COMPLETED x4? (do not loop it)
 tail -n 3 /n/fs/scratch/$USER/bench_nested_v2/grow/logs/bench-nested-sim_32049944_*.out
 # a task exits 1 when a scenario got fewer than 6 accepted seeds; its log says which slot failed
-cd ~/amplicon-allele-analysis/simulations && export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
-export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2/grow BENCH_NESTED_RCK_PLOIDY=2
+cd ~/amplicon-allele-analysis/simulations && export PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH
+export BENCH_NESTED_ROOT=/n/fs/yubi-iw/runs/bench_nested_v2/grow BENCH_NESTED_RCK_PLOIDY=2
 python bench_nested.py seeds && python bench_nested.py report
 awk -F'\t' 'NR>1 && $6=="True" {print $1}' $BENCH_NESTED_ROOT/configs/seeds.tsv | sort | uniq -c   # 6 for the 4 scenarios, 2 for the others
 grep -c "set with --rck-ploidy" $BENCH_NESTED_ROOT/subgraphs/*/union/scale.json | grep -v ':1$'  # empty
@@ -847,8 +847,8 @@ When it finishes:
 ```bash
 sacct -j 32050408 -X -o JobID%14,JobName%14,State,Elapsed,MaxRSS     # 18 x COMPLETED? (once, no loop)
 grep -L "pool in" /n/fs/scratch/$USER/bench_nested_v2/grow/logs/bench-nested_32050408_*.out  # any task without a finished pool run
-cd ~/RCK/results/bench_nested && export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
-export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_v2/grow BENCH_NESTED_OUT=/n/fs/scratch/$USER/bench_nested_v2/grow/rck_runs
+cd ~/RCK/results/bench_nested && export PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH
+export BENCH_NESTED_ROOT=/n/fs/yubi-iw/runs/bench_nested_v2/grow BENCH_NESTED_OUT=/n/fs/yubi-iw/runs/bench_nested_v2/grow/rck_runs
 mkdir -p $BENCH_NESTED_ROOT/rck_results
 BENCH_NESTED_RESULTS=$BENCH_NESTED_ROOT/rck_results python collect.py 2>&1 | tee $BENCH_NESTED_ROOT/rck_results/collect.log
 # the 22 existing rows must be identical to this folder's tables:
@@ -857,7 +857,7 @@ for t in bench_sweep pipeline rerank_validation; do
 import sys, pandas as pd
 t = sys.argv[1]; key = "run" if t == "pipeline" else None
 old = pd.read_csv(f"{t}.tsv", sep="\t", dtype=str)
-new = pd.read_csv(f"/n/fs/scratch/ym3292/bench_nested_v2/grow/rck_results/{t}.tsv", sep="\t", dtype=str)
+new = pd.read_csv(f"/n/fs/yubi-iw/runs/bench_nested_v2/grow/rck_results/{t}.tsv", sep="\t", dtype=str)
 merged = old.merge(new, how="left", indicator=True)
 print(t, "old rows", len(old), "new rows", len(new), "old rows missing or changed in new:", (merged["_merge"] != "both").sum())
 PY
@@ -1076,17 +1076,17 @@ Step 5's items:
 - s709, which has 3 traversals and passes.
 
 The option changes only the decomposition MILP's per-edge cap. LIST file
-`/n/fs/scratch/$USER/bench_nested_v2/diag/rck_mult/mult4.list`:
+`/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_mult/mult4.list`:
 
 ```
-ctrl_dup_s708_m4 /n/fs/scratch/ym3292/bench_nested_v2/grow/subgraphs/ctrl_dup_s708/union /n/fs/scratch/ym3292/bench_nested_v2/grow/runs/ctrl_dup_s708 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_mult/ctrl_dup_s708_m4 --max-multiplicity 4
-ctrl_dup_s710_m4 /n/fs/scratch/ym3292/bench_nested_v2/grow/subgraphs/ctrl_dup_s710/union /n/fs/scratch/ym3292/bench_nested_v2/grow/runs/ctrl_dup_s710 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_mult/ctrl_dup_s710_m4 --max-multiplicity 4
-ctrl_dup_s703_m4 /n/fs/scratch/ym3292/bench_nested_v2/grow/subgraphs/ctrl_dup_s703/union /n/fs/scratch/ym3292/bench_nested_v2/grow/runs/ctrl_dup_s703 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_mult/ctrl_dup_s703_m4 --max-multiplicity 4
-ctrl_dup_s709_m4 /n/fs/scratch/ym3292/bench_nested_v2/grow/subgraphs/ctrl_dup_s709/union /n/fs/scratch/ym3292/bench_nested_v2/grow/runs/ctrl_dup_s709 /n/fs/scratch/ym3292/bench_nested_v2/diag/rck_mult/ctrl_dup_s709_m4 --max-multiplicity 4
+ctrl_dup_s708_m4 /n/fs/yubi-iw/runs/bench_nested_v2/grow/subgraphs/ctrl_dup_s708/union /n/fs/yubi-iw/runs/bench_nested_v2/grow/runs/ctrl_dup_s708 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_mult/ctrl_dup_s708_m4 --max-multiplicity 4
+ctrl_dup_s710_m4 /n/fs/yubi-iw/runs/bench_nested_v2/grow/subgraphs/ctrl_dup_s710/union /n/fs/yubi-iw/runs/bench_nested_v2/grow/runs/ctrl_dup_s710 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_mult/ctrl_dup_s710_m4 --max-multiplicity 4
+ctrl_dup_s703_m4 /n/fs/yubi-iw/runs/bench_nested_v2/grow/subgraphs/ctrl_dup_s703/union /n/fs/yubi-iw/runs/bench_nested_v2/grow/runs/ctrl_dup_s703 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_mult/ctrl_dup_s703_m4 --max-multiplicity 4
+ctrl_dup_s709_m4 /n/fs/yubi-iw/runs/bench_nested_v2/grow/subgraphs/ctrl_dup_s709/union /n/fs/yubi-iw/runs/bench_nested_v2/grow/runs/ctrl_dup_s709 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_mult/ctrl_dup_s709_m4 --max-multiplicity 4
 ```
 
 ```bash
-cd /n/fs/scratch/$USER/bench_nested_v2/diag/rck_mult && mkdir -p logs   # write mult4.list here first
+cd /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_mult && mkdir -p logs   # write mult4.list here first
 LIST=$PWD/mult4.list DIAG_POOL_LAMBDA=0.2 sbatch --array=0-3%2 --time=00:30:00 ~/RCK/results/bench_nested/diag/rck_diag.sbatch
 # when done (one sacct, no loop):
 python ~/RCK/results/bench_nested/diag/noise_summary.py mult4.list
@@ -1116,7 +1116,7 @@ Their configs are now tracked, so the `sed` loop takes all 8:
 
 ```bash
 cd ~/amplicon-allele-analysis/simulations
-export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
+export PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH
 export BENCH_NESTED_ROOT=/n/fs/scratch/$USER/bench_nested_sigma0 BENCH_NESTED_RCK_PLOIDY=2
 mkdir -p $BENCH_NESTED_ROOT/configs $BENCH_NESTED_ROOT/logs
 CASES="nest_samehap_3to1_s301 ctrl_dup_s703 nest_cross_1to1_s505 nest_cross_1to1_s502 nest_samehap_6to1_s801 nest_samehap_6to1_s803 nest_samehap_6to1_s804 nest_cross_1to1_s508"
@@ -1129,14 +1129,14 @@ for sc, seed in [(\"nest_samehap_3to1\", 301), (\"ctrl_dup\", 703), (\"nest_cros
                  (\"nest_samehap_6to1\", 801), (\"nest_samehap_6to1\", 803), (\"nest_samehap_6to1\", 804), (\"nest_cross_1to1\", 508)]:
     b.build_subgraph(b.simulate(sc, seed), os.path.join(b.SUBGRAPHS, b.run_name(sc, seed)))"'
 # truth must match the bench's (sigma only changes the counts):
-for c in $CASES; do diff -rq $BENCH_NESTED_ROOT/runs/$c/truth /n/fs/scratch/$USER/bench_nested_v2/grow/runs/$c/truth && echo "$c truth ok"; done
+for c in $CASES; do diff -rq $BENCH_NESTED_ROOT/runs/$c/truth /n/fs/yubi-iw/runs/bench_nested_v2/grow/runs/$c/truth && echo "$c truth ok"; done
 ```
 
 The RCK step uses the "Run A" LIST, extended to 8 lines of the same form
 (`<case>_sigma0 $ROOT/subgraphs/<case>/union $ROOT/runs/<case> .../diag/rck_sigma0/<case>_sigma0`):
 
 ```bash
-cd /n/fs/scratch/$USER/bench_nested_v2/diag/rck_sigma0 && mkdir -p logs
+cd /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_sigma0 && mkdir -p logs
 LIST=$PWD/sigma0.list DIAG_POOL_LAMBDA=0.2 DIAG_LAMBDA0=0 sbatch --array=0-7%2 --time=02:00:00 ~/RCK/results/bench_nested/diag/rck_diag.sbatch
 ```
 

@@ -5,10 +5,11 @@
 For every case of run_case.py and each λ (0: the lambda_0 run's rank 1; λ > 0: the pool's rank 1
 at λ, as collect.py re-ranks it):
 
-1. the truth mixture graph is read from truth/aa/mixture_* when it is there (the scratch
-   simulations, and the tracked demo5-demo8 runs, whose mixtures are in amplicon-allele-analysis);
+1. the truth mixture graph is read from truth/aa/mixture_* when it is there (the untracked
+   simulations on scratch or /n/fs/yubi-iw/runs, and the tracked demo5-demo8 runs, whose
+   mixtures are in amplicon-allele-analysis);
    otherwise it is built with amplicon-allele-analysis simulations/truth_mixture.py, in place when
-   the truth folder is on scratch, else under OUT/mixtures/ (demo4);
+   the truth folder is on scratch or /n/fs/yubi-iw/runs, else under OUT/mixtures/ (demo4);
    runs without truth/aa (demo3) get no graph-level metrics;
 2. the answer and its first 2 same-fit alternatives are exported to AA format
    (rck.ecdna.aa_export) under OUT/<case>/lambda_<λ>/ and scored by rck.ecdna.aa_eval;
@@ -39,7 +40,7 @@ from rck.ecdna.rerank import rerank  # noqa: E402
 sys.path.insert(0, run_case.SIM)
 import truth_mixture  # noqa: E402  (amplicon-allele-analysis simulations/truth_mixture.py)
 
-DEFAULT_OUT = os.path.join("/n/fs/scratch", os.environ.get("USER", "user"), "bench_nested_aa")
+DEFAULT_OUT = "/n/fs/yubi-iw/runs/bench_nested_aa"
 PARTS = ["inferred", "segment_jaccard", "haplotype_jaccard", "junction_f1", "phased_junction_f1", "phasing_accuracy",
          "order_match", "cn_rel_err", "composite"]
 OLD_NAMES = {"segment_jaccard": "jaccard_total", "haplotype_jaccard": "jaccard_hap"}
@@ -58,9 +59,9 @@ def mixture_dir(case, out):
         return None
     in_place = os.path.join(truth, "truth", "aa")
     if os.path.exists(os.path.join(in_place, "mixture_amplicons.tsv")):
-        return in_place  # written there already: the scratch simulations, and the tracked demo5-demo8 runs
-    on_scratch = os.path.realpath(truth).startswith("/n/fs/scratch/")
-    target = in_place if on_scratch else os.path.join(out, "mixtures", case["name"])
+        return in_place  # written there already: the untracked simulations, and the tracked demo5-demo8 runs
+    untracked = os.path.realpath(truth).startswith(("/n/fs/scratch/", "/n/fs/yubi-iw/runs/"))
+    target = in_place if untracked else os.path.join(out, "mixtures", case["name"])
     if not os.path.exists(os.path.join(target, "mixture_amplicons.tsv")):
         try:
             truth_mixture.write_all(truth, target, truth_sample(case))

@@ -22,9 +22,9 @@ archived and described under it. The other 21 runs solved every model to optimal
   - `nest_samehap_3to1_s301`, `ctrl_dup_s703` and `nest_cross_1to1_s505` use their committed
     subgraph.
   - `nest_cross_3sp_s403` uses the ploidy-2 subgraph from the 2026-10-27 diagnostics
-    (`subgraph_construct.py --rck-ploidy 2`, in `/n/fs/scratch/$USER/bench_nested_v2/diag/s403_ploidy2/`).
+    (`subgraph_construct.py --rck-ploidy 2`, in `/n/fs/yubi-iw/runs/bench_nested_v2/diag/s403_ploidy2/`).
   - The path runs use s703 and s301 rebuilt with the `rck_inputs.py` path fix
-    (`/n/fs/scratch/$USER/bench_nested_v2/subgraphs_paths/`; same graph, only `paths.tsv` differs).
+    (`/n/fs/yubi-iw/runs/bench_nested_v2/subgraphs_paths/`; same graph, only `paths.tsv` differs).
 - **Settings** (`rck-ecdna` options added on 2026-10-29, all off by default):
 
   | setting | options |
@@ -52,7 +52,7 @@ archived and described under it. The other 21 runs solved every model to optimal
     `../obs_vs_truth.py`) are the offline checks of 2026-10-31 on the saved pools and flows. No
     new runs; see NEXT_STEPS.md "Assessment (2026-10-31)".
   - The pool's full `decompositions.tsv` (up to 9 MB a run) and the Gurobi logs stay in
-    `/n/fs/scratch/$USER/bench_nested_v2/diag/rck_noise/`, which scratch purges after two weeks.
+    `/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_noise/` (project space; moved from scratch 2026-11-04).
 
 ## Results
 

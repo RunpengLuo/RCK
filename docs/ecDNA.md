@@ -679,9 +679,9 @@ background. The simulator writes only one AA graph per species, so amplicon-alle
   end inside (Σ_clones U × copies). Concordant edges carry what node balance leaves.
 - **Alleles** are known for the first tumor sample only (`segments.tsv` describes that sample).
 - **Where they are:** the tracked demo5–demo8 runs carry theirs in amplicon-allele-analysis
-  (`simulations/runs/demo*/truth/aa/mixture_*`); the bench simulations on scratch carry theirs in
+  (`simulations/runs/demo*/truth/aa/mixture_*`); the bench simulations (`/n/fs/yubi-iw/runs/`) carry theirs in
   place; `results/bench_nested/diag/aa_regression.py` uses a `truth/aa/mixture_amplicons.tsv`
-  wherever it exists and otherwise builds one (demo4: under `/n/fs/scratch/$USER/bench_nested_aa/mixtures/`).
+  wherever it exists and otherwise builds one (demo4: under `/n/fs/yubi-iw/runs/bench_nested_aa/mixtures/`).
 
 **Tolerances.** `--graph-tol` (100 bp, the AA and CoRAL convention) applies to the graph-level
 metrics and `exact_cycle`. `--species-tol` (10 kb) applies to the existing species metrics, so
@@ -843,7 +843,7 @@ ionic schedules jobs with Slurm. `docs/examples/ecdna_ionic.sbatch` is a templat
   ```
 
 - **Batch jobs:** put the environment's `bin/` on `PATH`
-  (`export PATH=$HOME/.conda/envs/<env>/bin:$PATH`), as `results/step_sweep/sweep.sbatch` does.
+  (`export PATH=/n/fs/yubi-iw/conda/envs/<env>/bin:$PATH`), as `results/step_sweep/sweep.sbatch` does.
   `source ~/.bashrc; conda activate` can fail on a compute node, where conda's shell setup is
   not loaded. Keep array jobs to 2 concurrent tasks (`--array=0-N%2`) for the academic WLS licence.
 - **Nested-ecDNA benchmark** (`results/bench_nested/`): 14 simulations from amplicon-allele-analysis

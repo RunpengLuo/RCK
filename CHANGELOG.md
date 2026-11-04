@@ -437,6 +437,43 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
 
 ### Changed
 
+- **Environments, tools and run outputs now live in project space, `/n/fs/yubi-iw`** (2026-11-04;
+  home is a 5 GB quota and scratch purges after two weeks). Scripts and docs point there:
+  - conda environments: `$HOME/.conda/envs/<env>` -> `/n/fs/yubi-iw/conda/envs/<env>`
+    (`gurobi-env`, `coral-3.1.1`) in `bench_nested.sbatch`, `diag/rck_diag.sbatch`,
+    `diag/summarize.sh`, `results/step_sweep/sweep.sbatch`, `results/graph_route/roundtrip.sbatch`,
+    the graph-route README, NEXT_STEPS and `envs/README.md`, and docs/ecDNA.md;
+  - CycleExtractor: `~/tools/CycleExtractor` -> `/n/fs/yubi-iw/tools/CycleExtractor`
+    (`check_coral_format.py`'s `CE`);
+  - run outputs: `/n/fs/scratch/$USER/{bench_nested,bench_nested_v2,bench_nested_aa,graph_route}`
+    -> `/n/fs/yubi-iw/runs/...`: the defaults of `diag/aa_regression.py` (`DEFAULT_OUT`, used by
+    `collect.py --aa-metrics`) and `roundtrip.py` (`GRAPH_ROUTE_OUT`), `roundtrip.list`, the
+    `diag/rck_noise` LIST files, and the paths in the bench_nested and graph_route READMEs,
+    NEXT_STEPS, `comparison.md` and `diag/rck_noise/SUMMARY.md`. `aa_regression.mixture_dir`
+    builds a missing truth mixture in place for simulations under `/n/fs/yubi-iw/runs/` too, as
+    it did on scratch.
+  - Slurm logs and temporary files stay on scratch (`roundtrip.sbatch` and NEXT_STEPS log paths,
+    `rck_diag.sbatch`'s submit folder), as does the not-yet-built `bench_nested_sigma0` root.
+    Past run records (`diag/rck_noise/runs/*/summary.json`) keep the paths they were run with.
+  - Text that said outputs stay on scratch and are purged after two weeks (bench_nested README,
+    graph_route README and NEXT_STEPS, `diag/rck_noise/SUMMARY.md`, docs/ecDNA.md) now
+    describes project space; `envs/README.md` says the coral-3.1.1 environment is in project space.
+  - Outside the repository: the 55 symlinks inside the copied runs
+    (`bench_nested_v2/{grow/rck_runs,grow/runs,rck_runs,rebuild/runs}`) still pointed at scratch
+    (rsync copies links as they are) and now point at their `/n/fs/yubi-iw/runs/` counterparts
+    (undo script `/n/fs/yubi-iw/runs/.undo_symlink_repoint_2026-11-04.sh`). The old
+    `~/.conda/envs/{coral-3.1.1,gurobi-env}` and `~/.conda/pkgs` are removed (home: 590 MB ->
+    2.5 GB free).
+  - Checked with the new environments, without Slurm or solves: CycleExtractor's README sample
+    (HiGHS) gives the same cycle, `2+,4+,6+` up to rotation (the start segment varies between runs
+    in the old environment too), `Copy_count=85.18981770205714`; `coral cycle --help`; `import
+    gurobipy` (13.0.3) and an empty model read the WLS licence; `tests.ecdna.test_aa_import`,
+    `test_aa_eval`, `test_subgraph_io` (60 tests) pass; `collect.py` and `collect.py --aa-metrics`
+    (to a separate `BENCH_NESTED_RESULTS`) reproduce `bench_sweep.tsv`, `aa_metrics.tsv`,
+    `pipeline.tsv`, `rerank_validation.tsv` and the README results byte for byte, and
+    `roundtrip.py compare` reproduces `roundtrip_compare.tsv` / `.txt`, reading no file on
+    scratch; the sbatch scripts resolve `python` to the new gurobi-env.
+
 - **`aa_eval`: CoRAL's code versions are the headline cycle metrics.** `cycle_overlap_coral_code`
   and `cyclic_lcs_coral_code` (what produced CoRAL's published numbers; the code's LCS
   normaliser penalises merged walks) now come first in `aa_species_metrics.tsv`. The

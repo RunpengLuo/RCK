@@ -30,7 +30,7 @@ graph of amplicon-allele-analysis simulations/truth_mixture.py) and appends its 
 (AA_COLUMNS, prefixed ``strict.`` or ``best_of.``) to bench_sweep.tsv after the existing ones,
 writes them all to aa_metrics.tsv, and a summary to the README between the aa-metrics markers.
 The λ rule and the failure rule read only the existing columns, so they are unchanged.
-BENCH_NESTED_AA_OUT puts the exported files elsewhere (default /n/fs/scratch/$USER/bench_nested_aa).
+BENCH_NESTED_AA_OUT puts the exported files elsewhere (default /n/fs/yubi-iw/runs/bench_nested_aa).
 """
 import argparse
 import json

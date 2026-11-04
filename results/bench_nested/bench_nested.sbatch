@@ -22,7 +22,7 @@
 set -euo pipefail
 # the conda env's bin on PATH, as results/step_sweep/sweep.sbatch: `conda activate` needs conda's
 # shell setup, which ~/.bashrc does not give a batch job on a compute node
-export PATH=$HOME/.conda/envs/gurobi-env/bin:$PATH
+export PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH
 export GRB_LICENSE_FILE=$HOME/gurobi.lic
 export AAA=${AAA:-$HOME/amplicon-allele-analysis}
 cd "$SLURM_SUBMIT_DIR"

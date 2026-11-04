@@ -8,22 +8,22 @@ for demo5–demo8 and the 32 bench cases. The plan and the state of the work are
 
 | file | what |
 |---|---|
-| `envs/` | lock files of `~/.conda/envs/coral-3.1.1` (CoRAL and CycleExtractor both run with it) |
+| `envs/` | lock files of `/n/fs/yubi-iw/conda/envs/coral-3.1.1` (CoRAL and CycleExtractor both run with it) |
 | `fixtures/` | graphs written by CoRAL 3.1.1's own writer (`coral_rewrite.py`): the reference layout |
 | `coral_rewrite.py` | parse a graph with CoRAL and write it back with CoRAL's writer |
 | `check_coral_format.py` | check AA graphs against CoRAL 3.1.1's parser, sorter and writer; `--golden`; `--ce` (CycleExtractor, HiGHS) |
 | `roundtrip.py`, `roundtrip.sbatch`, `roundtrip.list` | the round-trip test (subgraph → AA → subgraph → RCK-ecDNA total-only) |
 | `roundtrip_prepare.tsv` | its offline part: per case, the graph comparison of each arm |
 
-Outputs go to `/n/fs/scratch/$USER/graph_route/` (purged after two weeks; rebuild with the commands below).
+Outputs go to `/n/fs/yubi-iw/runs/graph_route/` (project space, not purged; rebuild with the commands below).
 
 ## Commands
 
 ```bash
 cd ~/RCK
-PY=$HOME/.conda/envs/gurobi-env/bin/python           # RCK
-CPY=$HOME/.conda/envs/coral-3.1.1/bin/python         # CoRAL / CycleExtractor
-G=/n/fs/scratch/$USER/graph_route
+PY=/n/fs/yubi-iw/conda/envs/gurobi-env/bin/python           # RCK
+CPY=/n/fs/yubi-iw/conda/envs/coral-3.1.1/bin/python         # CoRAL / CycleExtractor
+G=/n/fs/yubi-iw/runs/graph_route
 
 # inferred subgraph -> AA graph (+ _segment_cn.tsv, _export.json)
 $PY -m rck.ecdna.aa_export subgraph SUBGRAPH_DIR $G/CASE/inferred/graph --name CASE [--imputed comment|drop]

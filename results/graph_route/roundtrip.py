@@ -6,7 +6,7 @@
     python roundtrip.py compare                                                         # offline, after the array
 
 Cases: demo5-demo8 and the 32 bench cases of results/bench_nested/run_case.py. Per case, under
-$GRAPH_ROUTE_OUT/roundtrip/<case>/ (default /n/fs/scratch/$USER/graph_route):
+$GRAPH_ROUTE_OUT/roundtrip/<case>/ (default /n/fs/yubi-iw/runs/graph_route):
 
   aa/            python -m rck.ecdna.aa_export subgraph (imputed candidates as #rck_imputed lines)
   rt_comment/    aa_import --imputed comment --cn-profile <original> --background-cn <original>:
@@ -38,7 +38,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 RCK = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, RCK)
 sys.path.insert(0, os.path.join(RCK, "results", "bench_nested"))
-OUT = os.path.join(os.environ.get("GRAPH_ROUTE_OUT", "/n/fs/scratch/{u}/graph_route".format(u=os.environ.get("USER", "user"))), "roundtrip")
+OUT = os.path.join(os.environ.get("GRAPH_ROUTE_OUT", "/n/fs/yubi-iw/runs/graph_route"), "roundtrip")
 LIST = os.path.join(HERE, "roundtrip.list")
 ARMS = ["original", "rt_comment", "rt_none_profile", "rt_none"]
 TOTAL_ONLY = ["--min-snps-allele", "100000000", "--soft-junction-hap", "--soft-junction-penalty", "0", "--step-penalty", "0"]

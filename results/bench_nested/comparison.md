@@ -2,8 +2,8 @@
 
 - **Old**: RCK `results/bench_nested/{bench_sweep,pipeline}.tsv` (2026-10-25). Its simulations used per-step
   haplotype labels and `p_cross` 0.2. Its subgraphs are in amplicon-allele-analysis
-  `simulations/subgraphs/bench_nested/`. Its RCK runs are in `/n/fs/scratch/ym3292/bench_nested/rck_runs`.
-- **New**: `/n/fs/scratch/ym3292/bench_nested_v2` (2026-10-27). It uses `hap_labels: inherit`, `p_cross` 0.5 (0
+  `simulations/subgraphs/bench_nested/`. Its RCK runs are in `/n/fs/yubi-iw/runs/bench_nested/rck_runs`.
+- **New**: `/n/fs/yubi-iw/runs/bench_nested_v2` (2026-10-27). It uses `hap_labels: inherit`, `p_cross` 0.5 (0
   for samehap), `--max-extend` 5 Mb (the default) and the new `evaluate.py`, which scores a junction against
   every truth phasing. Its 14 bench cases were run with `sbatch --array=8-21%2` (job 32000320). The 8
   regression cases (demo3–demo8) are links to the old runs.
@@ -246,6 +246,6 @@ None of these needs a new simulation or RCK run. Items marked "re-rank" use the 
 ## Follow-up checks (2026-10-27)
 
 See RCK `results/bench_nested/README.md`, "Follow-up checks". Diagnostic runs and scripts are in
-`/n/fs/scratch/ym3292/bench_nested_v2/diag/`. Corrections to the text above: the s402 switch is at λ 0.10 → 0.11, not
+`/n/fs/yubi-iw/runs/bench_nested_v2/diag/`. Corrections to the text above: the s402 switch is at λ 0.10 → 0.11, not
 0.14–0.2. s403 with the correct scale (`--rck-ploidy 2`) still fails (0.545), so its failure is
 subgraph scale and then RCK.

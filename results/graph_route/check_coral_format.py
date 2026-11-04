@@ -2,8 +2,8 @@
 
 Run with the coral-3.1.1 environment's python and RCK on the path:
 
-    PYTHONPATH=~/RCK ~/.conda/envs/coral-3.1.1/bin/python check_coral_format.py GRAPH... [--paths-from-export]
-    PYTHONPATH=~/RCK ~/.conda/envs/coral-3.1.1/bin/python check_coral_format.py --golden OUT.tsv
+    PYTHONPATH=~/RCK /n/fs/yubi-iw/conda/envs/coral-3.1.1/bin/python check_coral_format.py GRAPH... [--paths-from-export]
+    PYTHONPATH=~/RCK /n/fs/yubi-iw/conda/envs/coral-3.1.1/bin/python check_coral_format.py --golden OUT.tsv
 
 For every graph (NEXT_STEPS.md step 2c):
 
@@ -26,7 +26,7 @@ For every graph (NEXT_STEPS.md step 2c):
 amplicon_0 test fixture with the synthetic read paths of tests/ecdna/data/graph_route/amplicon0_paths.tsv, exported
 and then encoded by CoRAL itself (step 4).
 
-``--ce GRAPH...`` runs CycleExtractor (~/tools/CycleExtractor/CE.py, this python, HiGHS) on each
+``--ce GRAPH...`` runs CycleExtractor (/n/fs/yubi-iw/tools/CycleExtractor/CE.py, this python, HiGHS) on each
 graph and reads its cycles back with ``aa_format.read_cycles``.
 """
 import argparse
@@ -47,7 +47,7 @@ from rck.ecdna import aa_format as aaf
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RCK = os.path.abspath(os.path.join(HERE, "..", ".."))
-CE = os.path.expanduser("~/tools/CycleExtractor/CE.py")
+CE = "/n/fs/yubi-iw/tools/CycleExtractor/CE.py"
 
 
 def coral_walk(g, coords, concordant_pairs):

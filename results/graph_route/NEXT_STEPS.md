@@ -21,14 +21,14 @@ How to run things and what was validated: [README.md](README.md).
 - **Decisions taken 2026-11-03** (section "Decisions"): head-to-head on `--imputed none`; oracle
   headline on `graph_reads_paths`, `graph_plain` secondary.
 - Storage: home and `/n/fs/ugrad/ug28/ym3292` are the same 5 GB share (~600 MB free); large outputs
-  stay on `/n/fs/scratch/$USER/graph_route/` (purged after two weeks).
+  are in project space, `/n/fs/yubi-iw/runs/graph_route/` (moved from scratch 2026-11-04; Slurm logs stay on scratch).
 
 ## Environments (step 1)
 
 | env | path | contents |
 |---|---|---|
-| `coral-3.1.1` | `~/.conda/envs/coral-3.1.1` | conda-forge python 3.11; CoRAL 3.1.1 = commit `7f3bf317` and the runtime packages it imports at its `poetry.lock` versions (gurobipy 12.0.3, pyomo 6.10.0, highspy 1.13.1, pandas 3.0.1, numpy 2.4.3, networkx 3.6.1, …); 1.8 GB |
-| CycleExtractor code | `~/tools/CycleExtractor` | git checkout of commit `1b29b33` (`CE.py`, version 1.0.0), run as `~/.conda/envs/coral-3.1.1/bin/python -I ~/tools/CycleExtractor/CE.py` |
+| `coral-3.1.1` | `/n/fs/yubi-iw/conda/envs/coral-3.1.1` | conda-forge python 3.11; CoRAL 3.1.1 = commit `7f3bf317` and the runtime packages it imports at its `poetry.lock` versions (gurobipy 12.0.3, pyomo 6.10.0, highspy 1.13.1, pandas 3.0.1, numpy 2.4.3, networkx 3.6.1, …); 1.8 GB |
+| CycleExtractor code | `/n/fs/yubi-iw/tools/CycleExtractor` | git checkout of commit `1b29b33` (`CE.py`, version 1.0.0), run as `/n/fs/yubi-iw/conda/envs/coral-3.1.1/bin/python -I /n/fs/yubi-iw/tools/CycleExtractor/CE.py` |
 
 Lock files and rebuild: `envs/README.md`. `coral cycle` itself has not been run (Gurobi: Slurm only).
 The host's conda refuses the default Anaconda channels until their terms of service are accepted;
@@ -103,7 +103,7 @@ flag was needed for total-only runs.
   junctions are mixture discordant edges, steps placed within 1 bp; written in CoRAL's order, plus
   `mixture_amplicon<N>_path_constraints.tsv`), `--reads-per-copy R` (reads = round(CN x R)),
   `--depth-per-copy D` (AverageCoverage = CN x D). Defaults byte-identical (tested on demo6, demo7).
-  Both variants for all 36 cases are on scratch: `$G/<case>/truth/graph_plain/` and
+  Both variants for all 36 cases are in `/n/fs/yubi-iw/runs/graph_route` (`$G`): `$G/<case>/truth/graph_plain/` and
   `$G/<case>/truth/graph_reads_paths/` (R = 6.5 and D from the case's scale.json).
 - `check_coral_format.py` (coral env): step 2c's checks, plus the independent rebuild of every path
   constraint on CoRAL's adjacencies, the truth sidecar check, `--golden` and `--ce`. Results: README.
@@ -219,13 +219,13 @@ sacct -j 32096382 --format=JobID%20,State,Elapsed,MaxRSS,ExitCode | grep -v '\.'
 L=/n/fs/scratch/$USER/graph_route/roundtrip/logs
 tail -n 3 $L/graph-route-rt_32096382_0.out        # one task's log: "== task", gurobi version, "<case> <arm>: N s"
 grep -l "attempt .* failed\|Traceback" $L/*.out  # failed tasks
-ls /n/fs/scratch/$USER/graph_route/roundtrip/*/runs/*/summary.json | wc -l    # finished runs (of 144)
+ls /n/fs/yubi-iw/runs/graph_route/roundtrip/*/runs/*/summary.json | wc -l    # finished runs (of 144)
 seff 32096382_0                                   # memory / time of a task
 ```
 
 Poll at most once a minute (the controller rate-limits). Afterwards: `python roundtrip.py compare`
-prints and writes `roundtrip_compare.tsv` (here) and `compare.tsv` (scratch). A single run's answer
-is in `runs/<arm>/decompositions.tsv` and `summary.json` under each case on scratch.
+prints and writes `roundtrip_compare.tsv` (here) and `compare.tsv` (`/n/fs/yubi-iw/runs/graph_route/roundtrip/`). A single run's answer
+is in `runs/<arm>/decompositions.tsv` and `summary.json` under each case in `/n/fs/yubi-iw/runs/graph_route/roundtrip/`.
 
 ## Steps 4–6 (sketch, for after the round trip)
 
@@ -235,7 +235,7 @@ is in `runs/<arm>/decompositions.tsv` and `summary.json` under each case on scra
   format reference. Score its `rck.acnt.tsv` / `rck.scnt.tsv` at graph level.
 - **5. Runs**: one Slurm array `graph_route.sbatch` over cases x {truth, inferred} x methods, `%2`,
   skip-if-done, a `run.json` per run (method, version/commit, solver, time limit, input graph,
-  command). Outputs `/n/fs/scratch/$USER/graph_route/<case>/<graph>/<method>/`. CoRAL: `coral cycle
+  command). Outputs `/n/fs/yubi-iw/runs/graph_route/<case>/<graph>/<method>/`. CoRAL: `coral cycle
   --bp-graph G --output-prefix ... --solver gurobi_direct`; CE: coral env python, `--solver gurobi`.
   STOP with the sbatch commands and a licence-time estimate.
 - **6. Score/collect**: `aa_eval` strict and best-of, composite-H0 for every comparison with CoRAL/CE;
@@ -245,6 +245,6 @@ is in `runs/<arm>/decompositions.tsv` and `summary.json` under each case on scra
 
 - Run only the test modules changed or added (name them); no `unittest discover` (Gurobi).
 - No default changes in RCK-ecDNA or the simulator; new behaviour opt-in.
-- Large outputs on `/n/fs/scratch/$USER/graph_route/` (purged after two weeks: ~2026-11-17).
+- Large outputs on `/n/fs/yubi-iw/runs/graph_route/` (project space); temporary files and Slurm logs on scratch.
 - Update docs/ecDNA.md, both CHANGELOGs, README.md and this file. No commit without showing a diff summary.
-- Use `$HOME/.conda/envs/<env>/bin/python` directly; sourcing `~/.bashrc` takes minutes.
+- Use `/n/fs/yubi-iw/conda/envs/<env>/bin/python` directly; sourcing `~/.bashrc` takes minutes.

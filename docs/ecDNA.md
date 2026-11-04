@@ -820,6 +820,13 @@ get the same AA-format graph: the truth mixture graph and our inferred subgraph
   (`aa_import.compare_subgraphs`: ids, orders, reads, observations, read paths), on demo5–demo8
   and all 32 bench cases. Total-only runs on both sides use `--min-snps-allele 100000000
   --soft-junction-hap --soft-junction-penalty 0`, which ignores junction labels exactly.
+- `python -m rck.ecdna.coral_flank GRAPH OUT [--flank 10000]`: CoRAL 3.1.1 balances the two outer
+  nodes of each run of contiguous sequence edges with its s/t edges only, so it cannot use a
+  breakpoint there; graphs cut at their breakpoints (truth mixtures, `aa_export subgraph`) then
+  decompose into zero-weight paths. This adds a flank sequence edge (CN = the node-balance
+  residual, no reads) and a concordant join at both ends of every run, in CoRAL's order, with
+  path constraints renumbered. The graph route gives it to CoRAL only (CycleExtractor joins s/t
+  at every node; RCK-ecDNA has its own flank joins and background).
 - The one reader change: an `extremity` row of edges.tsv may carry an `AID` (the import fills it,
   to keep reference-join ids); subgraph_construct.py leaves it empty, so its subgraphs read as before.
 

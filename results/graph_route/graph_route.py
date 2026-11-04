@@ -4,6 +4,7 @@
     python graph_route.py list                                    # the LIST, one run per line
     python graph_route.py run IDX                                 # one run (Slurm array task)
     python graph_route.py status                                  # offline: done / missing / failed per run
+    python graph_route.py coral-inputs                            # offline: the flanked graphs CoRAL runs on
 
 Cases: demo5-demo8 and the 32 bench cases (roundtrip.cases()). Graph arms:
 
@@ -18,7 +19,9 @@ Cases: demo5-demo8 and the 32 bench cases (roundtrip.cases()). Graph arms:
 Methods, each with what it is given:
 
   coral      CoRAL 3.1.1 `coral cycle --solver gurobi_direct --solver-time-limit 1800 --threads T`
-             (other options at CoRAL's defaults: --cycle-decomp-mode max_weight, alpha 0.01)
+             (other options at CoRAL's defaults: --cycle-decomp-mode max_weight, alpha 0.01) on the
+             graph with 10 kb flanks at every interval end (rck.ecdna.coral_flank): CoRAL cannot
+             use a breakpoint on an interval's end node, and our graphs end at breakpoints
   ce         CycleExtractor 1.0.0 `CE.py --solver gurobi` (its defaults; its time limit is
              hard-coded, 7200 s per MILP, no flag); CE_SOLVER=highs runs it without the licence.
              The ce runs are the last block of the LIST, so they can be run apart
@@ -156,11 +159,30 @@ def subprocess_run(argv, outdir, log_name):
     return rc, any(e in text for e in LICENCE_ERRORS[:2])
 
 
+def coral_input(graph, outdir, amp):
+    """The flanked copy of ``graph`` CoRAL runs on (rck.ecdna.coral_flank), written once:
+    <case>/runs/<graph>/coral_input/amplicon<N>/coral_amplicon<N>_graph.txt."""
+    from rck.ecdna.coral_flank import DEFAULT_FLANK, flank_graph
+
+    folder = os.path.join(os.path.dirname(os.path.dirname(outdir)), "coral_input", "amplicon{a}".format(a=amp))
+    flanked = os.path.join(folder, "coral_amplicon{a}_graph.txt".format(a=amp))
+    if not os.path.exists(flanked):
+        os.makedirs(folder, exist_ok=True)
+        info = flank_graph(graph, flanked + ".tmp", DEFAULT_FLANK)
+        with open(os.path.join(folder, "coral_flank.json"), "w") as handle:
+            json.dump(info, handle, indent=2)
+        os.replace(flanked + ".tmp", flanked)
+    return flanked
+
+
 def run_coral(graph, outdir, amp):
-    argv = [os.path.join(CORAL_ENV, "bin", "coral"), "cycle", "--bp-graph", graph, "--output-prefix", os.path.join(outdir, "coral"),
+    flanked = coral_input(graph, outdir, amp)
+    argv = [os.path.join(CORAL_ENV, "bin", "coral"), "cycle", "--bp-graph", flanked, "--output-prefix", os.path.join(outdir, "coral"),
             "--solver", "gurobi_direct", "--solver-time-limit", str(TIME_LIMIT), "--threads", THREADS]
     meta = {"version": CORAL_VERSION, "solver": "gurobi_direct", "time_limit_s": TIME_LIMIT,
-            "time_limit_note": "--solver-time-limit per MILP; --global-time-limit default 21600", "command": argv}
+            "time_limit_note": "--solver-time-limit per MILP; --global-time-limit default 21600",
+            "coral_input": flanked, "coral_input_note": "input graph + 10 kb flanks at every interval end (rck.ecdna.coral_flank)",
+            "command": argv}
     return argv, meta
 
 
@@ -285,6 +307,7 @@ def main():
     r = sub.add_parser("run")
     r.add_argument("index", type=int)
     sub.add_parser("status")
+    sub.add_parser("coral-inputs")
     args = parser.parse_args()
     if args.cmd == "prepare":
         prepare(args.graphs)
@@ -293,6 +316,10 @@ def main():
             print(i, *e, sep="\t")
     elif args.cmd == "run":
         return run(args.index)
+    elif args.cmd == "coral-inputs":
+        for i, (case, arm, amp, method, graph, _r, outdir, _t) in enumerate(read_list()):
+            if method == "coral":
+                print(i, coral_input(graph, outdir, int(amp)))
     else:
         status()
     return 0

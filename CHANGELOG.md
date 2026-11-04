@@ -441,6 +441,14 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
     amplicon graphs and 36 inferred graphs (225 runs, `run.json` per run with version, solver,
     time limit and input graph; `CE_SOLVER=highs` optional). `native_aa_metrics.tsv`: the native
     arm, the bench's existing aa_eval scores at λ = 0.2. NEXT_STEPS.md has the 2026-11-04 plan.
+  - `rck/ecdna/coral_flank.py` (`python -m rck.ecdna.coral_flank GRAPH OUT [--flank 10000]`): CoRAL
+    3.1.1 balances an interval's end nodes with its s/t edges only, so it cannot use a breakpoint
+    there, and on our graphs (cut at the breakpoints) it returned zero-weight paths. This adds a
+    flank sequence edge (CN = node-balance residual, no reads) and a concordant join at every run
+    end, in CoRAL's order, with path constraints renumbered. `graph_route.py` runs CoRAL on it
+    (`coral_input/`, `coral-inputs` subcommand); CycleExtractor and RCK-ecDNA get the graph as before.
+    Offline with CoRAL's own model: truth cycles feasible 28 → 66 of 67. Tests:
+    `tests/ecdna/test_coral_flank.py` (6).
 
 ### Changed
 

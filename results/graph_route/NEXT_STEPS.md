@@ -149,6 +149,54 @@ only what is missing; CE and RCK-ecDNA are skipped).
 
 Expected after the array: `status` shows RCK-ecDNA 75 done, CE 75 done, CoRAL missing or failed.
 
+**Root cause found (2026-11-04).** CoRAL 3.1.1 treats the two outer nodes of every run of
+contiguous sequence edges (its inferred amplicon intervals) as *end nodes*, and its Eulerian
+constraint there is `x(s,v) + x(v,t) == x(sequence edge)` (`models/constraints.py`,
+`get_eulerian_node_constraints`): discordant and concordant edges at an end node are left out of
+the balance. A cycle through a breakpoint at an interval end is therefore infeasible. CoRAL's own
+graphs always extend the amplicon beyond its breakpoints (flank segments), so it never meets
+this; ours end exactly at the breakpoints (truth mixtures are cut to the species intervals;
+the exporter's outer flank joins are `#rck_outside` comments). **69 of the 75 graphs** have a
+breakpoint at an end node (157 of 668 discordant edges). Checked without a solver: CoRAL's greedy
+model for demo5 truth, with demo5's true cycle (w = 16) plugged in, violates exactly the four
+end-node balance constraints. With a flank added, it violates none (CN, balance, multiplicity;
+the spanning-tree constraints were not checked). The `KeyError` in CoRAL's writer is in path
+output after this empty solution, and was not reproduced separately. CE is not affected: its
+`--s-t-strategy all_nodes` joins s/t at every node, and it recovered ctrl_dup_s710's truth cycle.
+
+**Fix implemented (2026-11-04): `rck/ecdna/coral_flank.py`**, CoRAL only (the user chose this over
+flanking every method's graph; CE and RCK-ecDNA runs stay valid). Before `coral cycle`,
+`graph_route.py` writes `$G/<case>/runs/<graph>/coral_input/amplicon<N>/coral_amplicon<N>_graph.txt`
+(+ `coral_flank.json`): at both ends of each run of contiguous sequence edges, a 10 kb flank
+sequence edge joined by a concordant edge. Its CN is the node-balance residual (segment CN − discordant
+CN at the end node, a self-loop twice; the background, 2 on demo5), floored at 0, with coverage
+and reads 0. A flank takes at most (gap − 1) // 2 of the gap to the next run, so two flanks never
+touch. Sequence and concordant edges are written in CoRAL's order and path-constraint `e`/`c`
+indices renumbered; discordant edges unchanged. RCK-ecDNA already assumes such flanks
+(`#rck_outside` joins, flank background), so this gives CoRAL the same picture, not an advantage.
+`python graph_route.py coral-inputs` writes all 75 (`run` also writes one if missing); `run.json`
+records `coral_input`. The LIST is unchanged.
+
+Checked offline with CoRAL 3.1.1's own parser and model (no solver), all 75 graphs:
+- parses, and CoRAL's re-sort keeps the order;
+- breakpoints on end nodes 157 → 0;
+- every path constraint names the same edges as before;
+- **truth cycles feasible in CoRAL's greedy model (CN, balance, multiplicity; not the
+  spanning-tree constraints): 28 → 66 of 67**. The remaining one, nest_samehap_6to1_s804
+  (CN 40.8), exceeds CoRAL's own read-clustered discordant multiplicity bound
+  (`infer_discordant_edge_multiplicities`): a CoRAL limit, not the graph's.
+- No flank had to be shortened. 19 flanks (all on inferred graphs) have a negative residual
+  (observed junction CN above the segment CN, down to −6.4) and get CN 0.
+Tests: `tests/ecdna/test_coral_flank.py` (6, no solver, no CoRAL).
+
+**Still to do:** the four deleted CoRAL outdirs (tasks 0, 2, 4, 6) and the 71 cancelled ones are
+missing, so after job 32104590 finishes, test one task first (it is the first solve on a flanked
+graph and checks CoRAL's writer, whose `KeyError` was not reproduced separately):
+`sbatch --array=0 --output=$L/%x_%A_%a.out graph_route.sbatch`, check
+`coral_cycle_decomposition.log` (`Num cycles` > 0, `Total length weighted CN` > 0) and the
+cycles file, then `sbatch --output=$L/%x_%A_%a.out graph_route.sbatch` (only the CoRAL runs are
+missing, so only they run).
+
 Licence-time estimate: RCK-ecDNA ~1–2 h (bench pool runs 3254 s over 35 allele-specific cases,
 max 1896 s; total-only runs took 0.63x the allele-specific time in the round trip); CoRAL not yet
 measured on these graphs, ~0.2–1.5 h; CE seconds per graph. **~1.5–3.5 h of licence time.** Wall

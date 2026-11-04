@@ -16,6 +16,7 @@ for demo5–demo8 and the 32 bench cases. The plan and the state of the work are
 | `roundtrip_prepare.tsv` | its offline part: per case, the graph comparison of each arm |
 | `graph_route.py`, `graph_route.sbatch`, `graph_route.list` | the head-to-head runs (priority 1 a): CoRAL, RCK-ecDNA (`aa_import --imputed none`) and CycleExtractor on the truth `graph_reads_paths` and inferred graphs, one run per line, `run.json` per run |
 | `graph_route_prepare.tsv` | per graph: input file and the import's counts and fitted scale |
+| `$G/<case>/runs/<graph>/coral_input/` | the graph CoRAL runs on: the input graph with 10 kb flanks at every interval end (`rck.ecdna.coral_flank`; CoRAL cannot use a breakpoint on an interval's end node) |
 | `native_aa_metrics.tsv` | the native arm: RCK-ecDNA's bench runs at λ = 0.2, scored by aa_eval (rows of `results/bench_nested/aa_metrics.tsv`) |
 
 Outputs go to `/n/fs/yubi-iw/runs/graph_route/` (project space, not purged; rebuild with the commands below).
@@ -103,6 +104,12 @@ s506, s508; nest_cross_3sp_s402, s403; nest_samehap_2to1_s201; nest_samehap_6to1
 * RCK-ecDNA: a self-loop's phasing is same-haplotype only, as in RCK.
 
 ## Known limitations (recorded, not worked around)
+
+* **CoRAL ignores breakpoints on interval end nodes** (worked around for CoRAL only). The two outer
+  nodes of each run of contiguous sequence edges are CoRAL's end nodes, balanced only by its s/t
+  edges (`get_eulerian_node_constraints`), so a cycle through a breakpoint there is infeasible.
+  Our graphs end at breakpoints (69 of 75), so `graph_route.py` gives CoRAL the graph with 10 kb
+  flanks (`python -m rck.ecdna.coral_flank GRAPH OUT [--flank 10000]`); NEXT_STEPS.md has the checks.
 
 * **CoRAL re-sorts without renumbering.** `coral cycle` calls `infer_amplicon_intervals`, which sorts
   sequence and concordant edges (natural chromosome order) after the path constraints were parsed by

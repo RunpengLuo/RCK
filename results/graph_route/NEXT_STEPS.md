@@ -132,6 +132,23 @@ output: `$G/<case>/runs/<graph>/<method>/amplicon<N>/` (`coral_amplicon<N>_cycle
 `ce_amplicon<N>_cycles.txt`, or RCK-ecDNA's `decompositions.tsv` + `pool/`). Failed tasks: read
 the log, then resubmit the same command (finished runs are skipped). Then step d.
 
+**CoRAL fails on our graphs (found 2026-11-04, minutes after submission).** On demo5 (truth and
+inferred) and demo6 truth amplicon 1, `coral cycle` explains **0 copy number**: its log says
+`Num cycles = 0; num paths = 3`, `Total length weighted CN = 0.0/35982000.0`, with every greedy
+MILP at objective 0. On the truth graphs it then crashes in its own writer
+(`output/traversal.py:547 eulerian_path_t`, `KeyError: EdgeId(SEQUENCE, 2)`), so `run.json` says
+`failed`. On the inferred graph it exits 0 with zero-weight paths, so `run.json` says `ok` but the
+answer is empty: **check `Total length weighted CN` in `coral_cycle_decomposition.log`, not only
+`status`**. The parse checks (`check_coral_format.py`) passed, so this is in the semantics CoRAL's
+model gives our graphs, not the syntax. Untested leads: sequence `NumberReadsMapped` = 0 and the
+AverageCoverage column CoRAL reads as `lr_nc`; no `source` edges; CN-vs-reads bounds in its
+model. Compare with CoRAL's own GBM39 fixture graph, which it decomposes. **With the user's
+agreement the pending CoRAL tasks (even indices 8-148) were cancelled**; tasks 0, 2, 4 and 6 ran.
+After the fix: delete those four CoRAL outdirs and resubmit the same sbatch (skip-if-done reruns
+only what is missing; CE and RCK-ecDNA are skipped).
+
+Expected after the array: `status` shows RCK-ecDNA 75 done, CE 75 done, CoRAL missing or failed.
+
 Licence-time estimate: RCK-ecDNA ~1–2 h (bench pool runs 3254 s over 35 allele-specific cases,
 max 1896 s; total-only runs took 0.63x the allele-specific time in the round trip); CoRAL not yet
 measured on these graphs, ~0.2–1.5 h; CE seconds per graph. **~1.5–3.5 h of licence time.** Wall

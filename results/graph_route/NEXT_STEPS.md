@@ -134,8 +134,8 @@ the log, then resubmit the same command (finished runs are skipped). Then step d
 
 **CoRAL fails on our graphs (found 2026-11-04, minutes after submission).** On demo5 (truth and
 inferred) and demo6 truth amplicon 1, `coral cycle` explains **0 copy number**: its log says
-`Num cycles = 0; num paths = 3`, `Total length weighted CN = 0.0/35982000.0`, with every greedy
-MILP at objective 0. On the truth graphs it then crashes in its own writer
+`Num cycles = 0; num paths = 3`, with every greedy MILP at objective 0 (its
+`Total length weighted CN = 0.0` line is always 0 in greedy mode; see the test below). On the truth graphs it then crashes in its own writer
 (`output/traversal.py:547 eulerian_path_t`, `KeyError: EdgeId(SEQUENCE, 2)`), so `run.json` says
 `failed`. On the inferred graph it exits 0 with zero-weight paths, so `run.json` says `ok` but the
 answer is empty: **check `Total length weighted CN` in `coral_cycle_decomposition.log`, not only
@@ -193,9 +193,21 @@ Tests: `tests/ecdna/test_coral_flank.py` (6, no solver, no CoRAL).
 missing, so after job 32104590 finishes, test one task first (it is the first solve on a flanked
 graph and checks CoRAL's writer, whose `KeyError` was not reproduced separately):
 `sbatch --array=0 --output=$L/%x_%A_%a.out graph_route.sbatch`, check
-`coral_cycle_decomposition.log` (`Num cycles` > 0, `Total length weighted CN` > 0) and the
-cycles file, then `sbatch --output=$L/%x_%A_%a.out graph_route.sbatch` (only the CoRAL runs are
+`coral_cycle_decomposition.log` (`Num cycles` > 0) and the cycles file, then
+`sbatch --output=$L/%x_%A_%a.out graph_route.sbatch` (only the CoRAL runs are
 missing, so only they run).
+
+**Tested 2026-11-04: Slurm job 32104711** (task 0, demo5 truth, run while job 32104590 was
+throttled to 1 task, then set back to 2): `ok` in 3.5 s, first attempt. CoRAL returns the truth
+cycle, `Cycle=1;Copy_count=16.0;Segments=2+,3-,6+` (the original segments 1+, 2-, 3+ in flanked
+numbering), satisfies both maximal path constraints (2/2), and writes its cycles file without the
+writer's `KeyError`; the rest is a CN 2 background path through the flanks
+(`0+,1+,2+,3+,4+,0-`). **Note:** the log line `Total length weighted CN = 0.0/...` is always 0 in
+greedy (`max_weight`) mode: CoRAL 3.1.1's `maximize_weights_greedy` never adds the iterations'
+weights to `full_solution.total_weights_included`. Judge a run by `Num cycles` and the cycles
+file, not that line. (The original diagnosis rests on 0 cycles and every greedy MILP at objective
+0, not on that line.) Remaining: resubmit the full array after job 32104590 finishes (74 CoRAL
+runs missing).
 
 Licence-time estimate: RCK-ecDNA ~1–2 h (bench pool runs 3254 s over 35 allele-specific cases,
 max 1896 s; total-only runs took 0.63x the allele-specific time in the round trip); CoRAL not yet

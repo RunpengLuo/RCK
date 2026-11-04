@@ -1,0 +1,6 @@
+PID	PATH	NSTEP	#NOV
+synth01_forward_two_chroms	chr4:6019000-@-,chr4:6220999+@+,chr4:6344000-@-,chr4:6344999+@+,chr6:70211999+@+,chr6:70090000-@-	6	12
+synth02_reversed_by_coral	chr6:70323000-@-,chr6:70843999+@+,chr4:6345000-@-,chr4:6687999+@+,chr6:69527000-@-,chr6:69532999+@+	6	7
+synth03_segment_twice	chr6:70322999+@+,chr6:70212000-@-,chr6:69925999+@+,chr6:69662000-@-,chr6:69926000-@-,chr6:70322999+@+	6	5
+synth04_ends_outside	chr4:5000000+@+,chr4:6221000-@-,chr4:6687999+@+,chr4:6600000-@-	4	9
+synth05_reference_only	chr4:6019000-@-,chr4:6220999+@+	2	3

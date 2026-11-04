@@ -408,6 +408,32 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
   split with a discordant edge at the boundary fails both, and `merge_benign_splits` on its own.
 - **`aa_eval`: `aa_eval.json` `info.mixture_graphs`**, the truth mixture graph files a run was
   scored against.
+- **Graph route (Task 2): one AA breakpoint graph for CoRAL 3.1.1, CycleExtractor, original RCK and
+  RCK-ecDNA** (`results/graph_route/`, docs/ecDNA.md section 6 "Graph route"):
+  - `aa_format.write_graph`, a graph writer both CoRAL 3.1.1 and CycleExtractor 1.0.0 read (no
+    blank line, 7- and 6-field lines, `PathConstraint:` / `AmpliconIntervals:` blocks, `#`
+    comments, exact floats); `read_graph` also returns path constraints, intervals, comments and
+    sequence coverage / size / reads; `coral_path_string` (CoRAL's `path_to_str`) and `chrom_key`
+    (CoRAL's chromosome order).
+  - `python -m rck.ecdna.aa_export subgraph`: the normalised subgraph with the copy numbers
+    `rck-ecdna` uses (junction CN = reads / θ), read paths as CoRAL path constraints, in CoRAL's
+    sort order (`coral cycle` re-sorts edges without renumbering path constraints); imputed
+    candidates, region-flank joins and the subgraph's ids in `#rck_*` comment lines.
+    `aa_export RUN OUT` is unchanged.
+  - `python -m rck.ecdna.aa_import` (`rck/ecdna/aa_import.py`): any AA graph back to a subgraph
+    folder for `rck-ecdna --inputs subgraph`, with `scale.json` fitted from the graph and
+    `--imputed comment|none|regenerate`; `compare_subgraphs` for round trips. Export then import
+    is exact on demo5–demo8 and the 32 bench cases.
+  - `results/graph_route/check_coral_format.py` (checks graphs with CoRAL 3.1.1's own parser,
+    sorter and writer; reference tokens; CycleExtractor with HiGHS), `roundtrip.py` /
+    `roundtrip.sbatch` / `roundtrip.list` (the round-trip test; Slurm part prepared).
+  - Tests: `tests/ecdna/test_aa_import.py` (20, no Gurobi), reference tokens written by CoRAL in
+    `tests/ecdna/data/graph_route/`.
+  - `subgraph_io.build_graph` reads an optional `AID` on `extremity` rows (aa_import uses it to keep
+    reference-join ids); subgraph_construct.py never writes one, so its subgraphs read as before.
+  - `results/graph_route/envs/`: CycleExtractor now runs with the coral-3.1.1 environment's python
+    (same numpy, networkx, gurobipy, highspy); the separate `cycle-extractor` environment and its
+    lock files are removed.
 
 ### Changed
 

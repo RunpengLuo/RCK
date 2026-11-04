@@ -795,6 +795,34 @@ every part of it is identical at full precision (`results/bench_nested/diag/aa_r
 Graph edges match the truth within 1 bp either way: a subgraph segment's start and end are not
 in one convention.
 
+### Graph route: one breakpoint graph for every method (`aa_export subgraph`, `aa_import`)
+
+To compare decompositions alone, CoRAL 3.1.1 `cycle`, CycleExtractor, original RCK and RCK-ecDNA
+get the same AA-format graph: the truth mixture graph and our inferred subgraph
+(`results/graph_route/`, whose README has the commands, the validation and the known limitations).
+
+- `python -m rck.ecdna.aa_export subgraph SUBGRAPH_DIR OUTDIR [--name N] [--amplicon 1]
+  [--imputed comment|drop]` writes `<name>_amplicon<N>_graph.txt` (+ `_segment_cn.tsv`,
+  `_export.json`): the normalised graph `rck-ecdna` solves on, with the copy numbers it uses
+  (segment CN = `CN_TOTAL`, junction CN = reads / junction reads per copy), positions + 1, in the
+  layout and sort order CoRAL 3.1.1 and CycleExtractor read (`aa_format.write_graph`). Read paths
+  become CoRAL `path_constraint` tokens (`aa_format.coral_path_string`, CoRAL's `path_to_str`).
+  Imputed candidates have no read evidence and are written as `#rck_imputed` comment lines, which
+  both tools skip; region-flank joins as `#rck_outside`; `#rck_node` / `#rck_seq` / `#rck_edge` /
+  `#rck_pc` keep the subgraph's ids and orders.
+- `python -m rck.ecdna.aa_import GRAPH OUTDIR [--imputed comment|none|regenerate]
+  [--cn-profile F] [--background-cn X]` turns any AA graph back into a subgraph folder for
+  `rck-ecdna --inputs subgraph`; `scale.json` is fitted from the graph (junction scale = median
+  reads / CN; without reads, WEIGHT = CN and scale 1; no depth fit from a CoRAL-rewritten graph).
+  `comment` restores the imputed candidates, `none` leaves them out (what CoRAL and CycleExtractor
+  see), `regenerate` proposes closing candidates on the graph by subgraph_construct.py's rule.
+- Round trip: export then import with `--imputed comment` gives back the normalised graph exactly
+  (`aa_import.compare_subgraphs`: ids, orders, reads, observations, read paths), on demo5–demo8
+  and all 32 bench cases. Total-only runs on both sides use `--min-snps-allele 100000000
+  --soft-junction-hap --soft-junction-penalty 0`, which ignores junction labels exactly.
+- The one reader change: an `extremity` row of edges.tsv may carry an `AID` (the import fills it,
+  to keep reference-join ids); subgraph_construct.py leaves it empty, so its subgraphs read as before.
+
 ## 7. Running on Princeton ionic
 
 ionic schedules jobs with Slurm. `docs/examples/ecdna_ionic.sbatch` is a template.
@@ -863,6 +891,7 @@ scales from the windows.
 | `test_subgraph_inputs.py` | observations: no; run: yes (small) | scales, segment and junction copy numbers and flank background read from `scale.json`, `CN_*` columns and `cn_profile.tsv`; CN columns win over the scale; `--depth-per-copy` recomputes from `WEIGHT`; `--inputs auto/subgraph/windows`; a full run from the subgraph folder alone |
 | `test_recovery.py` | no | segment recall and precision, junction F1, phasing accuracy (one haplotype wrong; every haplotype swapped, which only the swap-invariant score forgives), the composite and its copy-number term; the recovery matrix: a missed species scores 0, `best_rank` finds a better alternative, out-of-scope rows are listed but not scored or averaged, the TSV columns, strict JSON, and a run with no decompositions |
 | `test_aa_eval.py` | no | the method-agnostic scorer on hand-built cases: graph level (a perfect match within 100 bp, a missed edge, a wrong orientation, a 101 bp offset, a false-positive segment failing error-free while every edge is right, a benign copy-number split failing `error_free` and passing `error_free_merged` (and not merged when a discordant edge sits at the boundary), `merge_benign_splits` on its own, a flank segment not counted, a false edge, infinite-sites violations, allele against total copy-number error); CoRAL's cycle metrics (perfect, a rotated and reversed cycle with cyclic LCS 1, a reordered one, a missed and an extra interval, multiplicity in CoRAL's code against the supplement, other chromosomes, log2 length error; the CoRAL-code columns first and the supplement's as `*_supp`); exact cycle within tolerance; a nested pair whose answer merges the species, strict against best-of; false and missed species; an unphased answer (no composite, composite-H0 kept); composite-H0 with every haplotype wrong; the strict rules; CN explained by the heaviest cycles; long-read subwalks; AA parsing (haplotypes, other orderings, `0+ … 0-` paths) and the truth reader unchanged; `aa_export` reproducing `rck-ecdna-eval` exactly, through a second ordering |
+| `test_aa_import.py` | no | the graph route: `aa_format.write_graph` / `read_graph` round trip (no blank line, field counts CoRAL and CycleExtractor need), CoRAL's token order and chromosome order; `aa_export subgraph` on `amplicon_0` with synthetic read paths (tokens equal to the ones CoRAL 3.1.1 writes, `tests/ecdna/data/graph_route/`; layout; junction CN = reads / θ; `--imputed drop`); `aa_import` back: `comment` exact, `none` exact apart from the imputed candidates, `regenerate`, a graph without `#rck` lines; a hand-built graph (scale fit, `source` dropped, no-read fallback, a CoRAL-rewritten graph, a non-contiguous concordant edge rejected, a fold-back kept); demo5–demo8 and four bench cases from amplicon-allele-analysis (skipped without it): exact round trips, the imputed edges ctrl_dup_s710 and nest_samehap_6to1_s804 use, fold-backs listed, the CLI |
 | `test_plot.py` | no (figures: matplotlib and cnplot) | axis regions padded and merged; figures skipped when cnplot cannot be imported; a circular species with truth and recovery-matrix pages and their PNGs; a linear species without truth |
 | `test_step_penalty.py` | yes (small) | a hub segment with two 3-segment loops (nested-like). At 2:1 the merged walk wins without `--step-penalty` (ambiguous, decided by the species penalty) and the separate circles win with it. At 3:1 the answer is decided by the tie-break and, with `--step-penalty`, by the steps; the gaps match λ × extra steps. Default ranking unchanged; a single circle is not ambiguous; `--ambiguity-window 0` turns the report off. Pool ranking (no Gurobi): λ reorders and prunes recorded entries, residual first. `--keep-pool`: the pool kept at λ = 0.1 re-ranks to the rank-1 decomposition and ambiguity fields of direct runs at λ = 0.02–0.5 (2:1 and 3:1); the command line refuses it at λ = 0, writes `pool/`, and `rerank` reproduces the run's rank 1 |
 | `test_block_flip.py` | inputs: no; flow and run: yes (small) | pieces read and mapped through phantom contraction; orientation −1 swapped and fixed; a block missing from `phase_blocks.tsv` is unoriented; low-SNP pieces total-only; a missing `segment_blocks.tsv` falls back with a warning; a circle on A whose unoriented block has swapped observations: the block is flipped, all ecDNA on A, no imputed edge, the objective of the unswapped input; `--block-flip off` unchanged; an oriented block never flipped (but flips with `--flip-oriented-penalty`); a block without evidence `unresolved`; a segment over an oriented and an unoriented block; the refit uses flipped observations; `block_flips.tsv`, `summary.json`, `observations.json` pieces, `flow_segments.tsv` and the plot points |

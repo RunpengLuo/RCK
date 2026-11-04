@@ -378,7 +378,8 @@ def build_graph(nodes_df: pd.DataFrame, edges_df: pd.DataFrame, phantom_max_bp: 
         elif etype == "extremity":
             counter["r"] += 1
             imputed_ext = n1.startswith("imputed_ext") or n2.startswith("imputed_ext")
-            raw_adjacencies.append(Adjacency(aid="ref{i:04d}".format(i=counter["r"]), u=n1, v=n2, kind=REFERENCE,
+            # subgraph_construct.py leaves AID empty on extremity rows; rck.ecdna.aa_import fills it to keep the ids of a round trip
+            raw_adjacencies.append(Adjacency(aid=_str(row.get("AID")) or "ref{i:04d}".format(i=counter["r"]), u=n1, v=n2, kind=REFERENCE,
                                              reads=None if imputed_ext else weight, sources=["extremity:{a}-{b}".format(a=n1, b=n2)]))
         elif etype == "variant":
             aid = _str(row.get("AID")) or "nov{i:04d}".format(i=counter["n"] + 1)

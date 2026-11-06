@@ -152,7 +152,7 @@ Let $Q$ be the traversals that have more than one option, and $\Phi_q$ the optio
 $q$. The chosen assignment is the lexicographic minimum:
 
 ```math
-\pi^\star = \operatorname*{arg\,lexmin}_{\pi \in \prod_{q \in Q} \Phi_q}
+\pi^\star = \mathop{\mathrm{arg\,lexmin}}\limits_{\pi \in \prod_{q \in Q} \Phi_q}
 \Big( \mathrm{conflicts}(\pi),\ -\sum_{j} \big\lvert \lbrace \pi_q : q \text{ traverses } j,\ \pi_q \in \Phi^{\mathrm{listed}}_j \rbrace \big\rvert \Big)
 ```
 

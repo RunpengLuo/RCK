@@ -122,7 +122,7 @@ In the below table, some properties were renamed to match the terminology in RCK
 | `variant` | observed novel adjacency (code: junction, variant edge) | `WEIGHT` = `#NOV`; `NOV_A`, `NOV_B`; `junction_hap` |
 | `imputed_variant` | candidate novel adjacency proposed by stage 2's imputation (code: imputed edge) | none (its `WEIGHT` is kept as `imputed_support`, not as evidence) |
 
-A reference adjacency touching an `imputed_ext*` extremity carries no read count.
+A reference adjacency touching an `imputed_ext*` extremity carries no read count. During subgraph construction, the algorithm finds amplified segments from read depth (section 2.4 of subgraph_construct.md). Each segment end is connected to an observed extremity within --tolerance bp. When no observed extremity is close enough, it creates an imputed extremity, named imputed_ext_<chr>_<n>, which is a breakpoint inferred from a change in depth, with no reads to back it. Its #REF is written as 0 only because the field needs a value. RCK should not use that 0, though, because if the flow model read the 0 as data, it would try to give the reference adjacency 0 copies, which cuts the genome incorrectly. So subgraph_io.py sets reads=None for any reference adjacency with an imputed_ext end. The model then has no read-based target there. Its copy number is set only by copy-number balance with the neighbouring segments and adjacencies.
 
 ### 2.2 Phantom segments
 
@@ -135,13 +135,13 @@ adjacency, so it only carries reference flow. Every segment of at most `--phanto
 their mean; its base joins the right-hand segment; and any other edge on its tail (head) moves to
 the true tail (head) on the same side. `--phantom-max-bp 0` turns this off.
 
-*Why:* without it every breakpoint adds a segment, two extremities and a reference adjacency that
-the MILPs must balance, and novel adjacencies attach to the phantom instead of to the segment
-they join.
+*Why:* This matches the graph input with the expected input from the original RCK algorithm. If the pantom segments aren't contracted, then every breakpoint adds a segment, so there becomes two extremities and a reference adjacency that the MILPs must balance which increases the size, leading to slower optimization. Also, a novel adjacency may attach to the phantom’s end rather than to the real segment it joins. The flow balance and the decomposition’s walks then route copies through a 1 bp piece, and segments don’t line up with the truth, which causes errors in deconvolution step.
 
 ### 2.3 Parallel adjacencies
 
 > **Provenance:** (c) new, `c257e54`. **Code:** `rck/ecdna/subgraph_io.py::_merge_parallel`.
+
+Sometimes, there are edges between the same pair of extremities. This comes from subgraph construction’s imputation: its rules for proposing candidate novel adjacencies sometimes propose an edge that already exist.
 
 Edges between the same pair of extremities are merged:
 
@@ -160,6 +160,7 @@ Edges between the same pair of extremities are merged:
 An extremity is *terminal* when it has no segment (the outer flanks of each region), is a
 chromosome-boundary node, has no side (`_+` / `_-`), or has no reference adjacency. Only the
 background layer of the flow MILP may start or end at a terminal (§4.3).
+This is borrowed from RCK telomeres. In RCK, telomeres are used to end paths, which is similar to terminals in this version.
 
 ### 2.5 Allowed haplotype labellings
 
@@ -252,6 +253,8 @@ and `tumor` is the default.
 *Why the mode:* an amplicon sample is mostly unamplified background, and its commonest copy number
 on allelically balanced blocks is the cell ploidy. The 2026-10-19 fix replaced `np.convolve(...,
 mode="same")`, which returned the wrong length whenever the kernel was longer than the histogram.
+*Why the mode:* Original RCK doesn't have a depth per copy (γ). Its input is segment copy numbers that another tool has already computed. RCK-ecDNA needs γ because its pipeline begins further upstream at raw observations. It has to convert mean read depth per segment, allele counts per segment, and spanning-read counts per novel adjacency into copy numbers.
+
 
 ### 3.2 Junction reads per copy θ
 
@@ -270,6 +273,8 @@ mode="same")`, which returned the wrong length whenever the kernel was longer th
    It needs at least 5 such extremities.
 3. **Fallback** (logged as a warning): the median `#REF` of the subgraph's own reference
    adjacencies divided by $c_0$.
+
+*Why the mode:* Original RCK doesn't have a junction reads per copy (θ). Its input is segment copy numbers that another tool has already computed. RCK-ecDNA needs θ because its pipeline begins further upstream at raw observations. It has to convert these into copy numbers.
 
 ### 3.3 Segment observations and the allele split
 
@@ -291,6 +296,7 @@ observation. `--min-snps-allele 100000000` makes every observation total-only, a
 below.
 
 ### 3.4 Adjacency observations
+(c) new to the RCK model; read-based adjacency copy numbers follow AmpliconArchitect’s read model for breakpoint-graph edges [Deshpande et al. 2019], also used by CoRAL [Zhu et al. 2024]; θ estimation and the haplotype split are new.
 
 $\hat c_j = r_j/\theta$ for every reference or novel adjacency with a read count $r_j$; imputed
 candidates have none. This is the *observed adjacency copy number*. The `CN` column of
@@ -299,10 +305,14 @@ copy number in RCK's sense.
 
 ### 3.5 Flank background
 
+(c) new to the RCK model
+
 For each region $[a,b]$ on chromosome $c$, the flank copy number is the bin-weighted mean of the
 copy number over $[a-1\,\mathrm{Mb},\, a-10\,\mathrm{kb}]$ and $[b+10\,\mathrm{kb},\, b+1\,\mathrm{Mb}]$
 (windows, or `cn_profile.tsv` in subgraph mode), else $c_0$. Every segment in the region gets it as
 $\hat c^{\mathrm{bg}}_s$, the background prior of §4.5.
+
+*Why it was added:* RCK models the whole genome. Every chromosome’s copies are in the model end to end, so the copy number under an amplicon is fixed by the same chromosome’s flow elsewhere. RCK-ecDNA works on a subgraph cut out of the genome, so it loses that context. The flanks stand in for the rest of the chromosome.
 
 ### 3.6 Per-phase-block observations (`--block-flip unoriented`)
 
@@ -327,6 +337,8 @@ one observation per *piece* $\pi$, its part inside one phase block $b(\pi)$:
 
 Without `segment_blocks.tsv` the run logs a warning and uses the segment observations, as with
 `--block-flip off` (the default).
+
+This is build off the original RCK algorithm, which has a a free flip per segment. RCK’s input is allele-specific, not haplotype-specific. So RCK decides, per segment, which allele belongs to which haplotype, as part of its MILP. In the RCK-ecDNA algorith, our observations are partly phased. Within a phase block, read-based phasing ties the segments’ A and B together, and only the block as a whole can be flipped relative to its neighbours. So, this step is RCK’s allele-to-haplotype assignment, constrained by the phasing information we have. The constraint makes the decision much smaller than RCK’s, with only one choice per unoriented block instead of one per segment.
 
 ---
 

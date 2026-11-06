@@ -456,7 +456,7 @@ start or stop at a set $\mathcal L$ of extremities chosen by `--linear-ends`:
 - `none`: the strictly circular model.
 
 Each copy-end costs $\kappa_{\mathrm{end}}$ = `--linear-end-penalty` (0.25), so a linear walk costs
-0.5 per copy. An imputed closing edge costs `--imputed-penalty` (2.0) once, so with 4 or more copies
+0.5 per copy. These values are heuristic. An imputed closing edge costs `--imputed-penalty` (2.0) once, so with 4 or more copies
 an affordable imputed closure wins, while a long gap with no other support is explained as linear.
 
 *Why:* without ends, an amplicon with no closing junction can only be explained by forcing a
@@ -507,6 +507,9 @@ where:
 | $\pi_{\mathrm{soft}}$, $\Phi^{\ast}(j)$ | cost of a labelling outside the read-based ones (`--soft-junction-hap` only); the preferred labellings | 1.0 (`--soft-junction-penalty`) |
 | $\kappa_{\mathrm{end}}$ | cost per linear copy-end | 0.25 |
 | $\kappa_b$ | flip cost (§4.6) | $10^{-6}$ |
+
+
+For --novel-penalty: The cost is added per label used: an indicator $p_{j,\varphi}$ for each novel adjacency $j$ and labelling $\varphi$, weighted by $\pi_j$ in the objective. There are two reasons for changing this strategy from the original RCK. First, not every novel adjacency belongs to the ecDNA. A union subgraph includes SVs on background chromosomes and in other clones. Forcing 90% of them into the flow like original RCK would push copies through joins that may not be on the amplicon. Secondly, RCK has no adjacency read counts, but RCK-ecDNA has an observed copy number for each novel adjacency ($\hat c_j = r_j/\theta$), fitted by the read term with weight $\alpha = 0.5$. So the data already says how many copies each one should carry. The penalty only has to stop the model using a novel adjacency the data doesn’t support. The value 0.05 for this flag is a heuristic and was hand-set to be a small number.
 
 Absolute values are linearised with one auxiliary variable each (`_abs_dev`). Gurobi's relative MIP
 gap is `--mip-gap` ($10^{-4}$).

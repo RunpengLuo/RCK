@@ -827,6 +827,10 @@ get the same AA-format graph: the truth mixture graph and our inferred subgraph
   residual, no reads) and a concordant join at both ends of every run, in CoRAL's order, with
   path constraints renumbered. The graph route gives it to CoRAL only (CycleExtractor joins s/t
   at every node; RCK-ecDNA has its own flank joins and background).
+- Scoring the head-to-head: `results/graph_route/score_h2h.py` (every run through `aa_eval.score`;
+  results and caveats in that folder's README). `aa_format.read_cycles` reads `Cycle=` lines only,
+  so CoRAL 3.1.1's and CycleExtractor's linear walks (`Path=` lines) are invisible to the scorer
+  unless rewritten as `Cycle=`, which `score_h2h.py` does.
 - The one reader change: an `extremity` row of edges.tsv may carry an `AID` (the import fills it,
   to keep reference-join ids); subgraph_construct.py leaves it empty, so its subgraphs read as before.
 

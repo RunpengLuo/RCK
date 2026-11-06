@@ -449,6 +449,13 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
     (`coral_input/`, `coral-inputs` subcommand); CycleExtractor and RCK-ecDNA get the graph as before.
     Offline with CoRAL's own model: truth cycles feasible 28 → 66 of 67. Tests:
     `tests/ecdna/test_coral_flank.py` (6).
+  - Head-to-head scoring (2026-11-06, plan priority 1 d): `results/graph_route/score_h2h.py` scores
+    the 225 runs and the native arm with `aa_eval.score` (strict and best-of, composite-H0,
+    missed / merged / false species), graph-level metrics once per input graph. Writes
+    `h2h_table.tsv`, `h2h_scenario.tsv`, `h2h_species.tsv`, `h2h_graph_metrics.tsv` and, with
+    `--drop-paths`, the `_cycles_only` sensitivity tables. CoRAL's and CycleExtractor's `Path=` lines,
+    which `aa_format.read_cycles` skips, are read as AA-style linear walks, as rck-ecdna's are.
+    Results in `results/graph_route/README.md`.
 
 ### Changed
 

@@ -38,6 +38,41 @@ d. After the array: score with aa_eval, strict and best-of, composite-H0 for eve
    short README paragraph with the main results. Label RCK-ecDNA's numbers single-seed and add one
    sentence citing the round-trip finding.
 
+**Priority 1 done (2026-11-06).** The array finished: Slurm 32104590, then CoRAL on the flanked
+graphs in 32119533 (+ test 32104711). `status`: 225 done, none failed; only licence retries,
+every CoRAL run ≥ 1 cycle. Step d: `score_h2h.py`; tables and the results paragraph are in
+README.md "Head-to-head results". In short (mean composite-H0, strict / best-of):
+- truth graphs: CoRAL 0.74 / 0.80, CE 0.80 / 0.82, RCK-ecDNA 0.76 / 0.82;
+- inferred graphs: CoRAL 0.67 / 0.71, CE 0.60 / 0.67, RCK-ecDNA 0.69 / 0.76;
+- native: 0.82 / 0.91.
+
+Total-only margins are small, and RCK-ecDNA's are single-seed. Allele data (native) is the clear
+separator, most in nest_cross. RCK-ecDNA loses ctrl_dup fold-backs by splitting the truth walk
+into two equal-CN cycles. Scorer gaps found:
+- `aa_format.read_cycles` skips CoRAL/CE `Path=` lines; `score_h2h.py` rewrites them, and the
+  `_cycles_only` tables are the sensitivity run;
+- `aa_eval.read_paths` cannot read `imputed_ext_*` ids, so `subwalks_satisfied` was not computed.
+
+**Recommendation for priority 2.** Keep e first, widen it slightly, and run g before f:
+1. **e (seeds) first, as planned, plus CE.** RCK-ecDNA's truth-vs-inferred swings (s509, s103,
+   s304: 0.5–0.6 lower on the truth graph) and the small total-only margins mean no ranking
+   claim is safe until the composite spread per case is known. CE also solves its greedy MILPs
+   with Gurobi, so 3 seeds for it too (seconds per run). CE has no seed flag that I know of: check
+   for one, or use a `gurobi.env` in its run folder.
+2. **g (`graph_plain`) next.** Path constraints decide CE's results both ways: its
+   samehap_6to1 wins on truth graphs and its demo8 merge. The same arm measures what they do for
+   CoRAL and RCK-ecDNA. Cheap: no new code beyond `prepare --graphs truth_plain`.
+3. **h (path-gap report)**, offline, together with g: it explains part of the truth → inferred
+   drop.
+4. **f (original RCK) last.** It gives graph-level CN and adjacency answers, not cycles, so it
+   cannot enter the composite tables and does not inform the decisions above.
+
+Also, cheap and offline:
+- make `aa_format.read_cycles` read `Path=` lines and `aa_eval.read_paths` map non-coordinate
+  EIDs (each with a test), then drop the workaround in `score_h2h.py`;
+- in i (priority 3), add the fold-back split (ctrl_dup_s708, s710: two cycles at an identical CN
+  where the truth is one walk) to the second-stage objective's targets.
+
 ### Priority 2, after the meeting
 
 e. **Tie-sensitivity**: rerun the original subgraphs with 3 Gurobi seeds (and CoRAL with 3 seeds),

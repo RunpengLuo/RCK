@@ -237,7 +237,7 @@ All copy numbers here are cell-averaged over the sample, so they need not be int
    ```
 
    where $c_0$ is `--baseline-cn` (default 2, or `scale.json`'s `background_cn` in subgraph
-   mode) and $\operatorname{mode}_{\log}$ is the mode of a histogram of $\log \bar d_B$ (bin width
+   mode) and $\mathop{\mathrm{mode}}_{\log}$ is the mode of a histogram of $\log \bar d_B$ (bin width
    0.02) smoothed by a Gaussian kernel of σ = 2 bins. With fewer than 10 balanced blocks every
    background block is used. With fewer than 3 values, or values within one bin width, the
    median is used.

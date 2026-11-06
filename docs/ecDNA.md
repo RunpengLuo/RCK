@@ -114,6 +114,7 @@ extremity has exactly one segment.
 
 > **Provenance:** (c) new, `c257e54`. **Code:** `rck/ecdna/subgraph_io.py::build_graph`.
 
+In the below table, some properties were renamed to match the terminology in RCK (Aganezov & Raphael, 2020), but they are referred to as different names in the code, which is why there is a (code: ...) section.
 | `edges.tsv` `EDGE_TYPE` | DIAG element | Observation carried |
 |---|---|---|
 | `reference` | segment (code: segment edge, reference edge) | `WEIGHT` = mean depth; `BAF`, `n_snps`; `CN_TOTAL`, `CN_A`, `CN_B` in subgraph mode |

@@ -494,10 +494,10 @@ n_s=\frac{1}{\sqrt{\max(\hat c_s,1)}}
 
 The segment data term is adopted from the original RCK algorithm. It was modified in the following ways: \\
 \begin{itemize}
-  \item RCK sums deviations over clones, but RCK-ecDNA compares the sum of its two layers (background and ecDNA), $x_{s,h} = x^e_{s,h} + x^b_{s,h}$, with one bulk observation.
-  \item RCK weights by $L_s = \lceil \ell_s/10\rceil$, which is linear in length with no cap. RCK-ecDNA uses $w_s = \min(\ell_s/50\text{ kb}, 1)$ with a floor of 0.02, so long background segments can’t outweigh short amplified ones. This was created in response to initial poor results on demo3 and demo4.
-  \item RCK-ecDNA is now scaling by observation size, $n_s = 1/\sqrt{\max(\hat c_s,1)}$. A deviation counts relative to the observed copy number, as with a Poisson standard deviation. On the ohter hand, RCK took copy numbers from a caller and didn’t model read noise.
-  \item A total-only case for segments without enough heterozygous SNPs. RCK didn't need this because it always received allele-specific copy numbers.
+\item RCK sums deviations over clones, but RCK-ecDNA compares the sum of its two layers (background and ecDNA), $x_{s,h} = x^e_{s,h} + x^b_{s,h}$, with one bulk observation.
+\item RCK weights by $L_s = \lceil \ell_s/10\rceil$, which is linear in length with no cap. RCK-ecDNA uses $w_s = \min(\ell_s/50\text{ kb}, 1)$ with a floor of 0.02, so long background segments can’t outweigh short amplified ones. This was created in response to initial poor results on demo3 and demo4.
+\item RCK-ecDNA is now scaling by observation size, $n_s = 1/\sqrt{\max(\hat c_s,1)}$. A deviation counts relative to the observed copy number, as with a Poisson standard deviation. On the other hand, RCK took copy numbers from a caller and didn’t model read noise.
+\item A total-only case for segments without enough heterozygous SNPs. RCK didn't need this because it always received allele-specific copy numbers.
 \end{itemize}
 
 \\

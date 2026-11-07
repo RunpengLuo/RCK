@@ -399,11 +399,11 @@ arbitrary and shared by its segments (`docs/Segments.md`, "Segments vs fragments
 | $e_{v,h}$ | $\mathbb Z\cap[0,U_{s(v)}]$ | ecDNA-layer copies ending at linear-end extremity $v\in\mathcal L$ (§4.4). This is based on AA’s source edges and CoRAL’s s–t paths, which allow linear amplicons to end instead of becoming circles. RCK-ecDNA adopts this same method here to let the ecDNA layer explain a linear amplicon, at a cost per copy-end (--linear-end-penalty) so circles stay the default. | `te` |
 | $f_b$ | $\{0,1\}$ | phase block $b$'s A and B are swapped (§4.6). This is similar to $b_f$ in the original RCK, which was the allele flip of fragment $f$. In RCK-ecDNA, it is the same variable and has the same mechanism, ther eis one binary flip shared by every segment in a span whose A/B labelling is arbitrary. The span is a phase block instead of a copy-number fragment, and only blocks subgraph construction couldn’t orient get a flip. | `flip` |
 
-where $U_s=\lceil 1.5\max(\hat c_s,1)\rceil+3$ (`ub_factor`, `ub_add`); $\beta_{\max}$ is `--bg-max`
-(4); $M_j=\max$ of $U_s$ over the segments at $j$'s ends (or $\beta_{\max}$ if none), halved for a
-self-loop (`_big_m`). $x_{s,h}=x^e_{s,h}+x^b_{s,h}$ and
-$y_j=\sum_{\varphi}(y^e_{j,\varphi}+y^b_{j,\varphi})$ are the inferred segment and adjacency copy
-numbers.
+$U_s=\lceil 1.5\max(\hat c_s,1)\rceil+3$ (`ub_factor`, `ub_add`). This is the same as RCK’s copy-number bounds per segment haplotype (--scnb). It has the same role in RCK-ecDNA, but this algorithm derives the bound automatically from the observed copy number instead of needing the --scnb flag. \\
+$\beta_{\max}$ is `--bg-max` (4). This is a new flag that was added. Since the background is chromosomal, its copy number should stay small and is capped at 4 copies per haplotype. My reasoning for this was that the background layer holds the chromosomal copies under an amplicon, which is normally 1 per haplotype, but clones could gain copies, so the cap leaves room up to 4 per haplotype. I wanted to keep it small to stop the background from absorbing amplified copies that should be part of the ecDNA layer. I'm open to other suggestions for the value, but so far, tests run with this cap have successfully deconvolved the ecDNA species. \\
+$M_j=\max$ of $U_s$ over the segments at $j$'s ends (or $\beta_{\max}$ if none), halved for a
+self-loop (`_big_m`). This is based on the same big-M constraint from the original RCK algorithm.  \\
+$x_{s,h}=x^e_{s,h}+x^b_{s,h}$ and $y_j=\sum_{\varphi}(y^e_{j,\varphi}+y^b_{j,\varphi})$ are the inferred segment and adjacency copy numbers. \\
 
 ### 4.3 Constraints
 

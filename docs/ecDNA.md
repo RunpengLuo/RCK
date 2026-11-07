@@ -493,14 +493,12 @@ n_s=\frac{1}{\sqrt{\max(\hat c_s,1)}}
 ```
 
 The segment data term is adopted from the original RCK algorithm. It was modified in the following ways: \\
-\begin{itemize}
-\item RCK sums deviations over clones, but RCK-ecDNA compares the sum of its two layers (background and ecDNA), $x_{s,h} = x^e_{s,h} + x^b_{s,h}$, with one bulk observation.
-\item RCK weights by $L_s = \lceil \ell_s/10\rceil$, which is linear in length with no cap. RCK-ecDNA uses $w_s = \min(\ell_s/50\text{ kb}, 1)$ with a floor of 0.02, so long background segments can’t outweigh short amplified ones. This was created in response to initial poor results on demo3 and demo4.
-\item RCK-ecDNA is now scaling by observation size, $n_s = 1/\sqrt{\max(\hat c_s,1)}$. A deviation counts relative to the observed copy number, as with a Poisson standard deviation. On the other hand, RCK took copy numbers from a caller and didn’t model read noise.
-\item A total-only case for segments without enough heterozygous SNPs. RCK didn't need this because it always received allele-specific copy numbers.
-\end{itemize}
 
-\\
+1. RCK sums deviations over clones, but RCK-ecDNA compares the sum of its two layers (background and ecDNA), $x_{s,h} = x^e_{s,h} + x^b_{s,h}$, with one bulk observation. \\
+2. RCK weights by $L_s = \lceil \ell_s/10\rceil$, which is linear in length with no cap. RCK-ecDNA uses $w_s = \min(\ell_s/50\text{ kb}, 1)$ with a floor of 0.02, so long background segments can’t outweigh short amplified ones. This was created in response to initial poor results on demo3 and demo4. \\
+3. RCK-ecDNA is now scaling by observation size, $n_s = 1/\sqrt{\max(\hat c_s,1)}$. A deviation counts relative to the observed copy number, as with a Poisson standard deviation. On the other hand, RCK took copy numbers from a caller and didn’t model read noise. \\
+4. A total-only case for segments without enough heterozygous SNPs. RCK didn't need this because it always received allele-specific copy numbers. \\
+
 The adjacency read term, $\dfrac{\alpha_j}{\sqrt{\max(\hat c_j,1)}}\lvert y_j - \hat c_j\rvert$	is based on AmpliconArchitect’s read model for breakpoint-graph edges, which fits copy numbers to read counts on discordant and concordant edges (CoRAL keeps the idea, with long reads). AA maximises a Poisson likelihood, but RCK-ecDNA uses an absolute deviation scaled by $1/\sqrt{\hat c}$, a linear stand-in for Poisson noise that keeps the model a MILP. Weights $\alpha$ = 0.5 (novel) and 0.25 (reference) are hand-set and can be tweaked. \\
 The linear copy-end cost, $\kappa_{\mathrm{end}}\sum e_{v,h}$, is based on AA’s source edges and CoRAL’s source/sink nodes, which let linear structures end. The per-copy cost and its value 0.25 are new (section 4.4). \\
 The novel-adjacency cost, $\pi_j p_{j,\varphi}$ with $\pi_j$ = 0.05, replaces RCK’s constraint that at least $1-\mathrm{fp}$ (90%) of novel adjacencies be used. This is based on the parsimony principle and the value was hand-set. \\
@@ -631,10 +629,10 @@ one virtual end node. There are $K$ = `--max-species` (4) slots; $W=\max_e F_e$;
 | $w_k$ | $\mathbb Z\cap[0,W]$ | integer copy weight of slot $k$ |
 | $\beta_{keb}$ | $\{0,1\}$ | bit $b$ of the multiplicity of edge $e$ in slot $k$ |
 | $m_{ke}=\sum_b 2^b\beta_{keb}$ | $\{0,\dots,\bar m\}$ | multiplicity: times species $k$ traverses $e$ |
-| $\zeta_{keb}$ | $[0,W]$ | $=w_k\beta_{keb}$ (linearised) |
+| $\zeta_{keb}$ | $[0,W]$ | $=w_k\beta_{keb}$ (linearised), this is new to RCK-ecDNA and added for linearization |
 | $y_{ke}$ | $\{0,1\}$ | $e$ is in slot $k$'s support |
-| $\lambda^{\mathrm{lin}}_k$ | $\{0,1\}$ | slot $k$ is a linear walk |
-| $r_e$ | $\ge 0$ | residual on edge $e$ |
+| $\lambda^{\mathrm{lin}}_k$ | $\{0,1\}$ | slot $k$ is a linear walk. this is the same as CoRAL’s s–t paths. |
+| $r_e$ | $\ge 0$ | residual on edge $e$. this replaces CoRAL’s coverage constraints. |
 
 Constraints, for every slot $k$:
 
@@ -642,19 +640,25 @@ Constraints, for every slot $k$:
 u_k \le w_k \le W u_k,\qquad
 \zeta_{keb}\le W\beta_{keb},\quad \zeta_{keb}\le w_k,\quad \zeta_{keb}\ge w_k-W(1-\beta_{keb})
 ```
+Left most constraint means that a used slot has a positive weight and an unused one has zero. This is from CoRAL.
+The other 3 constraints write the multiplicity in binary so each product $w_k\beta_{keb}$ of an integer and a binary can be expressed exactly with linear constraints, technique published in https://pubsonline.informs.org/doi/10.1287/opre.23.3.434. CoRAL keeps $\sum_i w_i x_{ei}$ as a quadratic (bilinear) term, which Gurobi has to solve as a nonconvex problem. I changed it in RCK-ecDNA to use linearising to keep the decomposition a plain MILP, which is usually faster and more reliable to solve to optimality. The cost is integer weights.
 
 ```math
 m_{ke}\le \bar m\, y_{ke},\qquad y_{ke}\le m_{ke},\qquad y_{ke}\le u_k,\qquad \sum_e y_{ke}\ge 2u_k
 ```
+These constraints mark which edges a species uses, and require a used species to have at least two (one segment and one adjacency). CoRAL has the same inside its connectivity constraints.
 
 ```math
 m_{k,\mathrm{seg}(x)} = \sum_{e\ \text{adjacency-like at}\ x} m_{ke}\quad\text{for every phased extremity } x,
 \qquad \sum_{e\ \text{linear end}} m_{ke}=2\lambda^{\mathrm{lin}}_k,\quad \lambda^{\mathrm{lin}}_k\le u_k
 ```
+At each phased extremity $x$, the multiplicity of its segment is the summed multiplicity of its adjacencies and linear ends (a self-loop counted twice). This is the same as CoRAL’s per-cycle Eulerian constraint, which makes each species an alternating walk (segment, adjacency, segment, …). But in RCK-ecDNA, I apply it at phased extremities, so a walk stays on one haplotype through a segment, and can switch only through an AB or BA labelling. \\
+A species has either no ends (a circle) or two (one linear walk). This is like the source and sink edges ($s$, $t$) and an s–t path for linear structure in CoRAL. RCK-ecDNA routes all linear ends through one virtual node and counts ends instead. This is the decomposition side of section 4.4’s linear ends, so the flow and the decomposition use the same mechanism.
 
 ```math
 w_k\ge w_{k+1},\qquad u_k\ge u_{k+1}
 ```
+Symmetry breaking for MILP \\
 
 and the residual and objective:
 
@@ -670,16 +674,22 @@ traversals; $\omega_e$ is the residual weight of §5.3; and $P_{\mathrm{reads}}$
 row makes each slot an alternating multiset (each phased extremity has as many adjacency traversals as
 segment traversals). A slot has no linear end (a circle) or exactly two (one linear walk). The
 product $w_k m_{ke}$ is linearised exactly through the binary expansion of $m_{ke}$
-[Glover 1975](pipeline/references.md#glover1975). The ordering constraints break the symmetry between slots.
+[Glover 1975](pipeline/references.md#glover1975). The ordering constraints break the symmetry between slots. \\
+
+**Explanation for Residual** \\
+For CoRAL, the residual is a one-sided fit, $\sum_i w_i x_{ei} \le \mathrm{CN}_e$ where cycles can not exceed an edge’s copy number. It requires the cycles to cover at least 90% of the graph’s length-weighted copy number (p_total_weight), and at least 90% of every discordant edge’s (p_bp_cn). In RCK-ecDNA, it penalises the deviation in both directions, weighted per edge ($\omega_e$, section 5.3). This is because the input is a fitted, balanced integer flow, not noisy raw copy numbers, so it can in principle be reproduced exactly. A two-sided residual aims for that, and measures how far an answer is from it. The 90% thresholds were fixed choices by CoRAL and a hard cap can make a decomposition infeasible when copy numbers are uneven. I chose to use a penalty so that we can always get an answer and lets the objective weigh misfit against parsimony. Also, in RCK-ecDNA, the decomposition MILP gives several alternative decompositions, and RCK-ecDNA then sorts them to choose rank 1 using the residual. \\
+**Explanation for Objective** \\
+The weighted misfit is replaces CoRAL’s covered-fraction term and its 90% constraints. The species penalty is from CoRAL. CoRAL minimises the number of cycles minus the covered fraction, here, I just put both into one weighted sum. The tie-break is new and was added to prefer walks with fewer traversals among equally good answers. The long-read paths are also from CoRAL. \\
+
 
 **Differences from CoRAL's `minimize_cycles`** (`coral/cycle_decomposition.py::minimize_cycles`,
 `coral/models/concrete.py::get_minimize_objective`, `coral/models/constraints.py`, CoRAL 3.1.1):
 
 | | CoRAL 3.1.1 | `rck-ecdna` |
 |---|---|---|
-| graph | AA breakpoint graph, total copy number | phased edges (segment haplotypes, adjacency labellings) |
-| weights $w$ | continuous ($\ge 0$) | integer in the MILP; fractional after the refit (§6) |
-| multiplicity $x$ | integer, 0–10 | integer, 0–`--max-multiplicity` (3) |
+| graph | decomposes the copy numbers on AA’s breakpoint graph, with total copy number per edge | decomposes a haplotype-resolved flow, so each species comes out with a haplotype on every segment and adjacency. decomposes the fitted integer flow rather than raw copy numbers because the flow MILP has already reconciled the observations, so the decomposition only has to split a balanced flow |
+| weights $w$ | continuous ($\ge 0$) | integer in the MILP in $[0,W]$; fractional after the refit (§6) |
+| multiplicity $x$ | integer, 0–10 | integer, times species $k$ traverses edge $e$, 0–`--max-multiplicity` (3). 3 was set at the start of setting up the simulations because it is the largest cap at 2 bits, the smallest that allows a segment traversed more than twice, like in a tandem duplication inside a circle. CoRAL allows 10 (4 bits), but CoRAL solves on a smaller, unphased graph. |
 | fit | $\sum_i w_i x_{ei}\le \mathrm{CN}_e$ (quadratic); cover ≥ `p_total_weight` (0.9) of length-weighted copy number and ≥ `p_bp_cn` (0.9) of every discordant edge's | $\lvert\sum_k w_k m_{ke}-F_e\rvert$ penalised; exact linearisation |
 | objective | number of cycles minus the covered length-weighted fraction | residual + $\rho$ × species + tie-break (+ reads) |
 | connectivity | spanning-tree / node-order constraints | lazy cuts (§5.2) |
@@ -731,7 +741,14 @@ more costs as much as one species. A 1–3 copy dip from depth bias is then chea
 with a leftover or a merged species. *Effect:* on the four decomposition failures (`s301`, `s703`,
 `s505`, `s403`), no setting tried changed rank 1 or added a better pool answer
 (`results/bench_nested/diag/rck_noise/SUMMARY.md`). The options stay opt-in, and defaults and their
-outputs are unchanged.
+outputs are unchanged. \\
+
+Weighting misfit by segment length idea comes from RCK and CoRAL. RCK weights each segment’s deviation by $L_s = \lceil \ell_s/10\rceil$ (section 4.1). CoRAL measures fit by length-weighted copy number: its objective and its 90% coverage target count each segment’s copies times its length. \\
+The 50 kb cap and the 0.05 floor are added for RCK-ecDNA. This is the same cap the flow MILP uses ($w_s$, section 4.5), so long background segments don’t outweigh short amplified ones. \\
+The adjacency weight is similar to CoRAL’s coverage target of at least 90% of every discordant edge’s copy number (p_bp_cn). In RCK-ecDNA, the fits on breakpoints is judged per edge, not by length, because a novel adjacency has no length. Also, I use a soft weight of 1 instead of a hard 90% threshold, and the option --adj-residual-weight. \\
+--seg-residual-scale and --adj-residual-weight are used to scale the segment or adjacency weights down. These were added for tuning. \\
+--residual-mode relative measures misfit in units of the expected noise. A deviation of 10% of an edge’s copy number costs about one unit, at any copy number. This come from the idea that weighting residuals by their expected standard deviation, like weighted least squares or a χ²-type fit. It is based on an assumption of proportional noise (10% of the copy number), which is usually what is produced by multiplicative biases like GC content. \\
+--rank-residual sum ranks on residual plus structure cost.
 
 ### 5.4 Long-read constraints
 

@@ -446,8 +446,7 @@ ecDNA violates it.
 
 Not every focal amplification is circular. AmpliconArchitect and CoRAL also report linear
 amplicons (breakage–fusion–bridge, heavily rearranged or tandem-duplicated), and reach a segment's
-end through their source edges [Deshpande et al. 2019](pipeline/references.md#deshpande2019) [Zhu et al. 2024](pipeline/references.md#zhu2024). The ecDNA layer may therefore
-start or stop at a set $\mathcal L$ of extremities chosen by `--linear-ends`:
+end through their source edges [Deshpande et al. 2019](pipeline/references.md#deshpande2019) [Zhu et al. 2024](pipeline/references.md#zhu2024). Therefore, the RCK-ecDNA algorithm adds an addition to RCK that allows the ecDNA layer to start or stop at a set $\mathcal L$ of extremities chosen by `--linear-ends`:
 
 - `boundaries` (default): extremity $v$ of segment $s$ is in $\mathcal L$ when it has no reference
   adjacency, or its reference neighbour has no segment (a region flank), or, for a neighbouring
@@ -458,13 +457,11 @@ start or stop at a set $\mathcal L$ of extremities chosen by `--linear-ends`:
 - `none`: the strictly circular model.
 
 Each copy-end costs $\kappa_{\mathrm{end}}$ = `--linear-end-penalty` (0.25), so a linear walk costs
-0.5 per copy. These values are heuristic. An imputed closing edge costs `--imputed-penalty` (2.0) once, so with 4 or more copies
+0.5 per copy. These values are heuristic and I tested them on a bench of simulated data, but I'm open to tweaking these values. An imputed closing edge costs `--imputed-penalty` (2.0) once, so with 4 or more copies
 an affordable imputed closure wins, while a long gap with no other support is explained as linear.
 
 *Why:* without ends, an amplicon with no closing junction can only be explained by forcing a
-circle, an imputed join, or deviations. The first run with linear ends is demo4 in
-amplicon-allele-analysis `results/rck_ecdna_plan1/` ("Plan 1"). Neither the commit nor the CHANGELOG
-records a before/after score for it.
+circle, an imputed join, or deviations, which results in poor results. I first introduced this idea after poor results in an initial run on demo4, and after adding linear ends, was able to deconvolve demo4 correctly, it is in amplicon-allele-analysis `results/rck_ecdna_plan1/` ("Plan 1").
 
 ### 4.5 Objective
 
@@ -495,7 +492,25 @@ w_s=\max\!\left(\min\!\left(\tfrac{\ell_s}{\ell_{\mathrm{cap}}},1\right), w_{\mi
 n_s=\frac{1}{\sqrt{\max(\hat c_s,1)}}
 ```
 
-where:
+The segment data term is adopted from the original RCK algorithm. It was modified in the following ways: \\
+\begin{itemize}
+  \item RCK sums deviations over clones, but RCK-ecDNA compares the sum of its two layers (background and ecDNA), $x_{s,h} = x^e_{s,h} + x^b_{s,h}$, with one bulk observation.
+  \item RCK weights by $L_s = \lceil \ell_s/10\rceil$, which is linear in length with no cap. RCK-ecDNA uses $w_s = \min(\ell_s/50\text{ kb}, 1)$ with a floor of 0.02, so long background segments can’t outweigh short amplified ones. This was created in response to initial poor results on demo3 and demo4.
+  \item RCK-ecDNA is now scaling by observation size, $n_s = 1/\sqrt{\max(\hat c_s,1)}$. A deviation counts relative to the observed copy number, as with a Poisson standard deviation. On the ohter hand, RCK took copy numbers from a caller and didn’t model read noise.
+  \item A total-only case for segments without enough heterozygous SNPs. RCK didn't need this because it always received allele-specific copy numbers.
+\end{itemize}
+
+\\
+The adjacency read term, $\dfrac{\alpha_j}{\sqrt{\max(\hat c_j,1)}}\lvert y_j - \hat c_j\rvert$	is based on AmpliconArchitect’s read model for breakpoint-graph edges, which fits copy numbers to read counts on discordant and concordant edges (CoRAL keeps the idea, with long reads). AA maximises a Poisson likelihood, but RCK-ecDNA uses an absolute deviation scaled by $1/\sqrt{\hat c}$, a linear stand-in for Poisson noise that keeps the model a MILP. Weights $\alpha$ = 0.5 (novel) and 0.25 (reference) are hand-set and can be tweaked. \\
+The linear copy-end cost, $\kappa_{\mathrm{end}}\sum e_{v,h}$, is based on AA’s source edges and CoRAL’s source/sink nodes, which let linear structures end. The per-copy cost and its value 0.25 are new (section 4.4). \\
+The novel-adjacency cost, $\pi_j p_{j,\varphi}$ with $\pi_j$ = 0.05, replaces RCK’s constraint that at least $1-\mathrm{fp}$ (90%) of novel adjacencies be used. This is based on the parsimony principle and the value was hand-set. \\
+The background prior, $\beta\sum_s w_s \lvert\sum_h x^b_{s,h} - \hat c^{\mathrm{bg}}_s\rvert$, pulls the background layer towards the flank copy number, so chromosomal copies stay out of the ecDNA layer. It stands in for the whole-genome context RCK has and that my subgraph does not have (section 3.5). $\beta = 0.1$, hand-set. \\
+The balance tie-break, $\varepsilon_{\mathrm{bal}}\sum\lvert x^b_{s,A}-x^b_{s,B}\rvert$, stops background copies from swapping haplotype at no cost. Added together with the linear ends. \\
+The imputed-candidate cost, $\pi_j$ = 2.0, makes a candidate adjacency without read evidence win only when it explains several copies (4 or more, against linear ends). encourages parsimony. value hand-set. \\
+The Soft-label cost, $\pi_{\mathrm{soft}}$ (only with --soft-junction-hap), allows a labelling that the reads don’t support, at a cost, instead of forbidding it. Labels are defined in (subgraph_construct.md, section 3.3). This flag is off by default and honestly not used much, I only used it to try exploring other options for one of the demos, but I don't use it for solving for ecDNA and wouldn't recommend using it. \\
+The flip cost, $\kappa_b f_b$ ($10^{-6}$), is a very small tie-break for a block with no evidence either way. When flipping and not flipping fit the data equally well, that cost makes pushes the labeling to not flip so that the block keeps its observed A/B labelling. I added this because for a lot of the unoriented blocks, the data gives no reason either way. The segments may have little allele imbalance, or no novel adjacency with a haplotype label nearby. Then $f_b = 0$ and $f_b = 1$ have exactly the same objective. Without the cost, the solver’s choice would be arbitrary and the block_flips.tsv report would be misleading because it would list blocks as “flipped” when nothing supported flipping them. \\
+
+
 
 | Symbol | Meaning | Default (option) |
 |---|---|---|

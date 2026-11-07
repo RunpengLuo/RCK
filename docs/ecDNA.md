@@ -356,6 +356,8 @@ a **background layer** for the chromosomal copies under the amplicon.
 
 ### 4.1 What RCK solves
 
+Section 4.1 is for reference and does not describe the modified RCK-ecDNA pipeline.
+
 For reference, RCK's model (`rck/core/ilp_gurobi.py::OptModelMultiClone` at upstream `4c6c288`,
 unchanged by `rck/version-fix`) infers, for each clone $i$, integer copy numbers $c_{i,s,h}$ of
 every segment haplotype and $y_{i,j,\varphi}$ of every adjacency labelling. Given input
@@ -384,18 +386,18 @@ $b_f\in\{0,1\}$ is the allele flip of the *fragment* $f(s)$ containing $s$. A fr
 which the input copy-number tool inferred allele-specific copy numbers, so its A/B labelling is
 arbitrary and shared by its segments (`docs/Segments.md`, "Segments vs fragments").
 
-### 4.2 Variables
+### 4.2 Variables in RCK-ecDNA
 
 | Symbol | Domain | Meaning | Code |
 |---|---|---|---|
-| $x^{e}_{s,h}$ | $\mathbb Z\cap[0,U_s]$ | ecDNA-layer copy number of segment $s$ on haplotype $h\in\{A,B\}$ | `xe` |
-| $x^{b}_{s,h}$ | $\mathbb Z\cap[0,\beta_{\max}]$ | background copy number | `xb` |
-| $y^{e}_{j,\varphi}$ | $\mathbb Z\cap[0,M_j]$ | ecDNA-layer copy number of adjacency $j$ with labelling $\varphi\in\Phi(j)$ | `ye` |
+| $x^{e}_{s,h}$ | $\mathbb Z\cap[0,U_s]$ | ecDNA-layer copy number of segment $s$ on haplotype $h\in\{A,B\}$. This is similar to $c_{i,s,h}$ in the original RCK (integer copy number of segment $s$ on haplotype $h$ in clone $i$). The clone index is replaced by a layer index. Although RCK has one karyotype per clone, RCK-ecDNA has one bulk sample split into two components that add up: $x_{s,h} = x^e_{s,h} + x^b_{s,h}$ | `xe` |
+| $x^{b}_{s,h}$ | $\mathbb Z\cap[0,\beta_{\max}]$ | background copy number. See above. | `xb` |
+| $y^{e}_{j,\varphi}$ | $\mathbb Z\cap[0,M_j]$ | ecDNA-layer copy number of adjacency $j$ with labelling $\varphi\in\Phi(j)$. This is similar to $y_{i,j,\varphi}$: copy number of adjacency $j$ with labelling $\varphi$ in clone $i$. The clone index is replaced by a layer index: $y^_{j,\varphi} = y^{e}_{j,\varphi} + y^{b}_{j,\varphi}$. | `ye` |
 | $y^{b}_{j,\varphi}$ | $\mathbb Z\cap[0,\beta_{\max}]$ | background copy number; only for reference adjacencies and (unless `--no-background-novel`) observed novel ones, never imputed | `yb` |
-| $p_{j,\varphi}$ | $\{0,1\}$ | labelling $\varphi$ of novel or imputed $j$ is used | `pv` |
-| $t_{v,h}$ | $\mathbb Z\cap[0,4\beta_{\max}]$ | background copies ending at terminal $v$ | `t` |
-| $e_{v,h}$ | $\mathbb Z\cap[0,U_{s(v)}]$ | ecDNA-layer copies ending at linear-end extremity $v\in\mathcal L$ (§4.4) | `te` |
-| $f_b$ | $\{0,1\}$ | phase block $b$'s A and B are swapped (§4.6) | `flip` |
+| $p_{j,\varphi}$ | $\{0,1\}$ | labelling $\varphi$ of novel or imputed $j$ is used. This is the same variable and use case as RCK’s presence indicator per novel-adjacency labelling. New uses: it carries the --novel-penalty and --imputed-penalty costs, and it no longer feeds RCK’s at-least-$1-\mathrm{fp}$ usage constraint. | `pv` |
+| $t_{v,h}$ | $\mathbb Z\cap[0,4\beta_{\max}]$ | background copies ending at terminal $v$. $t$ is similar to the telomeres used in RCK and the source and sink nodes in CoRAL and AmpliconArchitect. In RCK-ecDNA, t is allowed at subgraph terminals. | `t` |
+| $e_{v,h}$ | $\mathbb Z\cap[0,U_{s(v)}]$ | ecDNA-layer copies ending at linear-end extremity $v\in\mathcal L$ (§4.4). This is based on AA’s source edges and CoRAL’s s–t paths, which allow linear amplicons to end instead of becoming circles. RCK-ecDNA adopts this same method here to let the ecDNA layer explain a linear amplicon, at a cost per copy-end (--linear-end-penalty) so circles stay the default. | `te` |
+| $f_b$ | $\{0,1\}$ | phase block $b$'s A and B are swapped (§4.6). This is similar to $b_f$ in the original RCK, which was the allele flip of fragment $f$. In RCK-ecDNA, it is the same variable and has the same mechanism, ther eis one binary flip shared by every segment in a span whose A/B labelling is arbitrary. The span is a phase block instead of a copy-number fragment, and only blocks subgraph construction couldn’t orient get a flip. | `flip` |
 
 where $U_s=\lceil 1.5\max(\hat c_s,1)\rceil+3$ (`ub_factor`, `ub_add`); $\beta_{\max}$ is `--bg-max`
 (4); $M_j=\max$ of $U_s$ over the segments at $j$'s ends (or $\beta_{\max}$ if none), halved for a

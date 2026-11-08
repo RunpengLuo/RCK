@@ -592,15 +592,19 @@ haplotype-specific flow. `--block-flip off` reproduces the earlier output exactl
 
 ### 4.7 Differences from RCK, in one table
 
-| | RCK `OptModelMultiClone` | `rck-ecdna` `OptModelCircular` |
-|---|---|---|
-| copy numbers | per clone; integer | one bulk sample; integer, two layers (ecDNA + background) |
-| telomeres | allowed at listed telomere extremities ($\ge$ balance) | ecDNA layer: only at linear ends, each copy-end costs `--linear-end-penalty`; background: at terminals |
-| novel adjacency use | at least $1-\mathrm{fp}$ of them used | no requirement; each used costs `--novel-penalty` |
-| missing adjacencies | n/a | imputed candidates, each costing `--imputed-penalty`; background may not use them |
-| allele flips | per input fragment, free | per unoriented phase block, $10^{-6}$; oriented blocks fixed unless `--flip-oriented-penalty` |
-| objective | length-weighted L1 to input allele copy numbers | length-capped, $1/\sqrt{c}$-normalised L1 to allele-specific (or total) segment observations, plus adjacency read term, background prior and penalties |
-| infinite sites | on | optional (`--enforce-is`) |
+This table summarises §4.1–§4.6. The last column says why each change was made, and which other
+method, if any, the change is based on.
+
+| | RCK `OptModelMultiClone` | `rck-ecdna` `OptModelCircular` | Why, and what it is based on |
+|---|---|---|---|
+| copy numbers | per clone; integer | one bulk sample; integer, two layers (ecDNA + background) | A subgraph is one bulk sample, and the ecDNA layer must close into cycles while the chromosomal copies under the amplicon must not. The split into a circular part and a linear part follows AA's and CoRAL's separation of cycles from s–t paths (§4.2) |
+| telomeres | allowed at listed telomere extremities ($\ge$ balance) | ecDNA layer: only at linear ends, each copy-end costs `--linear-end-penalty`; background: at terminals | RCK's telomere relaxation, moved to the edges of a cut-out subgraph (terminals, §2.4) for the background, and made a per-copy cost for the ecDNA layer after AA's source edges and CoRAL's source and sink (§4.4) |
+| novel adjacency use | at least $1-\mathrm{fp}$ of them used | no requirement; each used costs `--novel-penalty` | Not every novel adjacency in a union subgraph is on the ecDNA, and read-based adjacency copy numbers now decide use (§4.5) |
+| missing adjacencies | n/a | imputed candidates, each costing `--imputed-penalty`; background may not use them | Stage 2 proposes candidate joins where no novel adjacency was observed; each must explain several copies to be used (§4.5) |
+| allele flips | per input fragment, free | per unoriented phase block, $10^{-6}$; oriented blocks fixed unless `--flip-oriented-penalty` | RCK's fragment flip $b_f$, applied to phase blocks the subgraph could not orient; the tiny cost keeps a block with no evidence as observed (§4.6) |
+| objective | length-weighted L1 to input allele copy numbers | length-capped, $1/\sqrt{c}$-normalised L1 to allele-specific (or total) segment observations, plus adjacency read term, background prior and penalties | RCK's length-weighted L1, adapted to raw observations; the adjacency read term follows AA's read model for breakpoint-graph edges; the other terms are new and heuristic (§4.5) |
+| bounds | input `--scnb`; big-M from them | $U_s$ from the observations; same big-M rule; background capped at $\beta_{\max}$ | RCK's bounds and big-M, derived automatically; the background cap is new (§4.2) |
+| infinite sites | on | optional (`--enforce-is`) | RCK's extremity exclusivity; off by default because chromothripsis-derived ecDNA violates it (§4.3) |
 
 ---
 
@@ -711,6 +715,21 @@ $(C_i, C_j)$ of components of slot $k$, a lazy cut
 is added, where $\delta(C_i)$ is the set of edges with exactly one endpoint in $C_i$ and $e_i\in C_i$,
 $e_j\in C_j$. A connected, balanced, alternating multiset is one alternating closed walk (§7).
 
+**Where it comes from.** Requiring a species to be one connected walk is needed in every cycle
+decomposition, and CoRAL has it too. The method here is different from CoRAL's:
+
+- CoRAL writes connectivity as spanning-tree / node-order constraints, added to the model before
+  it is solved (`coral/models/constraints.py`).
+- `rck-ecdna` uses **subtour-elimination cuts**, the standard way to forbid disconnected pieces
+  in the travelling-salesman problem [Dantzig et al. 1954](pipeline/references.md#dantzig1954). The cut above is
+  the cut-set form for walks that need not visit every node: if a slot uses an edge in $C_i$ and
+  one in $C_j$, at least one used edge must leave $C_i$.
+- The cuts are **lazy**: Gurobi calls back at each integer solution, and a cut is added only for
+  the components that solution actually has [Gurobi](pipeline/references.md#gurobi). This keeps
+  the model small, because most of the exponentially many possible cuts are never needed. Writing
+  connectivity up front, as CoRAL does, adds variables and constraints for every slot and node
+  whether or not they bind.
+
 ### 5.3 Residual weights, including the noise-tolerant modes
 
 > **Provenance:** default weights (c) new, `3c82929`; noise-tolerant modes (c) new, `2fdf73d`.
@@ -791,6 +810,27 @@ constraints must be. `rck-ecdna` requires only the path's novel adjacencies to b
 weighs paths by read support, and checks order afterwards. `--path-fraction 0.9` is therefore a
 share of read support, not of path count.
 
+**Where each part comes from.**
+
+- *Using multi-junction long reads as constraints on the decomposition* is CoRAL's idea: a read
+  that spans several novel adjacencies shows they lie on one molecule. Its optional threshold,
+  `--path-fraction`, plays the role of CoRAL's `p_subpaths` (0.9).
+- *Writing "slot $k$ contains read $p$" with binaries* ($o$, $z$, $x$ as ORs and ANDs of other
+  binaries) is a standard way to express logical conditions as linear constraints.
+- *What a read must match* was loosened. CoRAL ties each path edge to the multiplicity of the
+  cycle that explains it. `rck-ecdna` only requires the read's novel adjacencies to be in one
+  species, and checks their order afterwards against the walks (§7). The decomposition MILP has no
+  order, only multiplicities, so order cannot be checked inside it. Adjacency containment is the
+  part that can, and order is checked where it exists.
+- *Weighting reads by support* (summed over identical or reversed paths) is new. A path seen in 10
+  reads is stronger evidence than one seen once, and CoRAL counts paths, not reads.
+- *A soft reward, capped below one species* ($\pi_{\mathrm{path}}$ = 0.5 against $\rho$ = 1) is
+  new. Reads then choose between decompositions that fit the flow equally well, which is where
+  they are most useful (§5.7), but cannot add a species on their own. The cap is a design choice,
+  not a tuned value. CoRAL instead makes path constraints hard in its exact model.
+- *Fixed by the slot supports:* $z$ and $x$ are fully determined by the $y_{ke}$, so they do not
+  create extra pool solutions that differ only in these binaries (`c5e0b9c`).
+
 ### 5.5 Alternatives
 
 > **Provenance:** (a) Gurobi's solution pool [Gurobi](pipeline/references.md#gurobi) and a standard no-good cut, `3c82929`.
@@ -806,6 +846,20 @@ share of read support, not of path count.
 
 Every solution is re-checked for balance, connectivity and 0 or 2 ends, and deduplicated by its
 multiset of (weight, edge multiplicities).
+
+**Where each part comes from.**
+
+- *The solution pool* is a Gurobi feature: with `PoolSearchMode=2` Gurobi searches for the best
+  `PoolSolutions` solutions within `PoolGap` of the optimum [Gurobi](pipeline/references.md#gurobi).
+- *The no-good cut* is the standard cut that removes one binary solution and nothing else: at least
+  one support indicator must change `[citation needed: canonical cuts on the unit hypercube, Balas &
+  Jeroslow 1972 proposed, not verified]`. It is the fallback when the pool is not wanted.
+- *Reporting ranked alternatives, rather than one answer,* is this pipeline's choice. Nested and
+  repeated structures often have several decompositions that fit equally well (§5.7, §5.8), and a
+  single answer would hide that.
+- *Re-checking and deduplicating* is new. Pool solutions are integer-feasible but can differ only
+  in slot order or in a repeated circle written two ways, so they are validated and merged before
+  ranking (`3c82929`, `f84faff`).
 
 ### 5.6 Post-processing: repeated circles and `low_weight`
 
@@ -827,6 +881,23 @@ multiset of (weight, edge multiplicities).
   with $\phi_{\mathrm{lw}}$ = `--min-species-weight-frac` (0.10). A flagged species is kept in the
   output but is usually flow residue, not a molecule. The ranking (§5.7) and the evaluation ignore it
   (`rck-ecdna-eval --include-low-weight` scores it).
+
+**Where each part comes from.** Both rules are new, and both came from the first runs on ionic
+(`41f5804`).
+
+- *Repeated circle.* A slot that goes round one circle $g$ times reproduces the same flow as one
+  circle at $g$ times the weight, and it is the same molecule. Before this rule, a species at
+  weight 5 traversing its circle twice was reported as its own species, instead of one at weight
+  10. Dividing the multiplicities by their greatest common divisor gives the simplest description.
+  This is plain arithmetic, not taken from another method.
+- *`low_weight`.* The integer flow is uneven (§6), and reproducing it exactly needs small leftover
+  species. On demo3 the true species came with two weight-1 multi-megabase circles that were only
+  residue. Flagging, rather than deleting, keeps them visible in the output while keeping them out
+  of the ranking and the scores.
+- *The 10% threshold* is heuristic, chosen so that a weight-1 leftover next to a 10-copy molecule is
+  flagged. The Task 1 scorer uses the same 10% rule as its default *strict* cut for AA's and CoRAL's
+  cycles (§9), so every method is judged by the same rule. It is a known weak point for light
+  nested species (§10).
 
 ### 5.7 Ranking and the step penalty
 
@@ -867,6 +938,25 @@ With $\lambda>0$ the widened pool is first pruned (`pool_keeps`). Solution $D$ i
 
 where $\ast$ is the best pool solution and $g_{\mathrm{pool}}$ is `--pool-gap` (0.10). That is, it is kept if it is within the usual gap, or if
 the prior can prefer it.
+
+**Where each part comes from.** Everything in this section is new to this pipeline.
+
+- *Residual first.* A decomposition that fits the flow better beats a simpler one that fits worse.
+  This needs the two-sided residual of §5.1, which gives every pool solution a number. CoRAL's
+  one-sided fit with 90% coverage thresholds is pass or fail, so it cannot rank a pool.
+- *Then structure cost, then species count.* Among equally good fits, the simpler explanation wins.
+  The species count $\rho\, n_{\mathrm{sig}}$ is the same parsimony as CoRAL's cycle count (§5.1),
+  but only significant species count, so weight-1 leftovers (§5.6) do not make the true answer lose
+  (demo3, `f84faff`).
+- *The step penalty $\lambda S$* is a minimum-description-length prior on walks: among explanations
+  that fit equally well, prefer the one that is shorter to write down [MacKay 2003](pipeline/references.md#mackay2003).
+  A walk is described by its steps, so a merged walk that re-traverses shared sequence costs more.
+  CoRAL's objective has no term like it.
+- *The pruning rule* keeps only solutions the prior could still prefer, so the widened pool does not
+  slow the ranking.
+- *λ = 0.2 recommended* comes from the 40-case bench (`results/bench_nested/`), as the smallest λ
+  on the plateau of best mean composite with no control or demo case losing. The default stays 0, so
+  earlier results do not change.
 
 *Why ranking by significant species* (`f84faff`): "one molecule plus weight-1 leftovers" should beat
 "the molecule split in two" when the solver scores them equally (demo3).
@@ -952,6 +1042,18 @@ $K(K-1)/2$ binaries per edge.
 *Why:* demo8's correct answer won by 0.004 through the $10^{-4}$ edge-traversal tie-break, and
 nothing in the output said so.
 
+**Where each part comes from.** The report is new; no other method here reports it.
+
+- *Fixing the covered flow* ($\sum_k w_k m_{ke}$ equal to the top decomposition's on every edge)
+  makes the fit identical by construction. Any alternative found can only differ in structure, which
+  is exactly the question: is there another set of molecules the data cannot tell apart?
+- *The distinctness constraint* forbids two slots with the same support, so a walk split into
+  identical copies is not counted as a different answer.
+- *`decided_by` and the gap* say which part of the ranking (§5.7) chose rank 1, and by how much.
+  This makes visible when rank 1 rests on a prior or a tie-break rather than on the data, which is
+  what most of the bench's remaining failures turned out to be.
+- *The window* (`--ambiguity-window`, 2.0, about two species) is heuristic.
+
 ### 5.9 Offline re-ranking over λ (`--keep-pool`, `rerank`)
 
 > **Provenance:** (c) new, `949f796`. **Code:** `rck/ecdna/decompose.py::rank_pool`, `::_pool_record`,
@@ -967,6 +1069,12 @@ the run's own `pool_keeps` and `ranking_key` per λ. λ = 0 is only emulated (so
 (demo3: 12.77 copies at λ = 0, an equivalent 12.70 at λ > 0). *Effect:* on the bench, re-ranked
 composites and ambiguity fields matched direct runs at 32/32 (case, λ), so each case needs two runs
 (λ = 0 and one pool run) instead of one per λ.
+
+**Where it comes from.** New, and an engineering step rather than a modelling one. It relies on one
+property of the design in §5.7: because λ acts only in the ranking, the MILP and its pool are the
+same for every λ > 0, so a saved pool can be re-ranked for any λ without solving again. Putting the
+penalty in the MILP, as the first design did, would have made this impossible. It made the λ sweep
+on the bench affordable under a 2-session Gurobi licence.
 
 ### 5.10 Amplicon call
 
@@ -984,6 +1092,22 @@ The call is `ecDNA` if $f_{\mathrm{circ}}\ge\phi_{\mathrm{ec}}$, `linear` if
 $f_{\mathrm{circ}}\le 1-\phi_{\mathrm{ec}}$, `mixed` in between, and `none` when the denominator is
 0. Here $c_{\min}$ = `--min-ecdna-copies` (2) and $\phi_{\mathrm{ec}}$ = `--ecdna-call-fraction`
 (0.8). It is recomputed after the refit.
+
+**Where each part comes from.**
+
+- *Classifying an amplicon from its reconstruction* follows AmpliconArchitect
+  [Deshpande et al. 2019](pipeline/references.md#deshpande2019), whose amplicons are classified as ecDNA,
+  breakage–fusion–bridge, complex non-cyclic or linear by its companion tool AmpliconClassifier
+  `[citation needed: AmpliconClassifier paper and repository, not verified]`, and CoRAL, which
+  reports cycles and linear paths [Zhu et al. 2024](pipeline/references.md#zhu2024). AmpliconClassifier's rules are not
+  reproduced here.
+- *The rule here is new:* the share of copy-weighted length ($w_k L_k$) that lies on circles. Weighting
+  by copies and length measures how much of the amplified DNA is circular, so a long, high-copy
+  circle outweighs a short linear leftover.
+- *Circles below $c_{\min}$ = 2 copies do not count* towards the circular share, so a weight-1
+  leftover circle cannot turn a linear amplicon into an ecDNA call.
+- *The 80% threshold* and the 2-copy minimum are heuristic. They were added with the linear ends
+  (`10416aa`), when the model first had to choose between circular and linear explanations.
 
 ---
 
@@ -1021,6 +1145,28 @@ amplicon call are recomputed from them, and `data_objective` / `data_objective_i
 with the refitted and integer weights. `--no-refit` reports the integer weights. The LP needs no
 Gurobi licence.
 
+**Where each part comes from.**
+
+- *Fractional species weights* follow CoRAL, whose cycle weights are continuous
+  [CoRAL 3.1.1 code](pipeline/references.md#coral_code). Real ecDNA copy numbers are cell averages, not integers. The
+  decomposition MILP uses integer weights only because it splits an integer flow and because of the
+  exact linearisation (§5.1); the refit restores continuous weights once the structures are chosen.
+- *Fitting to the observations, not to the flow,* is new. The integer flow is already a rounded fit
+  of the observations, so fitting weights to it would carry its unevenness into the copy numbers.
+  The rows are the flow MILP's own data terms (§4.5), so "fit" means the same thing in both
+  stages.
+- *Least absolute deviations* (the weighted L1 misfit) is the same misfit as the flow MILP, and is
+  less pulled by a single outlying segment than least squares. Written as an LP, it is solved by
+  HiGHS [Huangfu & Hall 2018](pipeline/references.md#huangfu2018) through SciPy [Virtanen et al. 2020](pipeline/references.md#virtanen2020).
+- *The small weight penalty* $\eta = 10^{-3}$ per copy prefers fewer copies among equal fits
+  (`weight_penalty`), the same tie-break device as elsewhere in the model.
+- *Dropping species refitted below 0.5 copies* is new. It removes leftovers that only absorbed flow
+  unevenness, so they no longer take copies from the real molecule: on demo4 tumor2 the integer
+  answer was 6 + 1 copies against a true 7.44 (`c5e0b9c`). The 0.5 threshold is heuristic: half a
+  copy per cell.
+- *The structures and the ranking are not changed,* so the refit only adjusts copy numbers; it
+  cannot turn a wrong structure into a right one.
+
 ---
 
 ## 7. Walks and orderings
@@ -1045,6 +1191,26 @@ a closed walk exists.
 - Orderings of one multiset have identical copy numbers, so only long reads can tell them apart.
   They are ranked by the summed support of `--paths` reads with ≥ 2 novel adjacencies found in that
   order (cyclically for a circle), then by the number of matched paths.
+
+**Where each part comes from.**
+
+- *Turning a balanced, connected multiset into a closed walk* is Hierholzer's algorithm for Euler
+  circuits [Hierholzer & Wiener 1873](pipeline/references.md#hierholzer1873): build a closed trail, then splice in
+  sub-trails until every edge is used.
+- *Alternation* is the adaptation needed for a breakpoint graph: segments and adjacencies must take
+  turns, so sub-trails are spliced in only before a segment step. That such an alternating circuit
+  always exists when every extremity is balanced is a known result for Euler trails in graphs with
+  two edge colours `[citation needed: Kotzig 1968 proposed, not verified]`. AA's and CoRAL's cycles
+  are alternating walks in the same sense.
+- *Closing a linear species with a pseudo segment* reduces a linear walk to the circular case, so
+  one algorithm serves both. It was added with the linear ends (`10416aa`).
+- *Enumerating several orderings* is new. One multiset can often be walked in more than one order
+  (for example when a segment is visited twice), and the orders imply different molecules. A bounded
+  depth-first search lists them, up to rotation and reversal, which describe the same molecule.
+- *Ranking orderings by long reads* is new, and uses the same reads as §5.4. Copy numbers cannot
+  separate orderings, so reads that span several novel adjacencies in a specific order are the only
+  evidence. CoRAL uses the same kind of evidence inside its decomposition, with path constraints on
+  cycle edges; `rck-ecdna` checks order here, where a walk with an order exists.
 
 ---
 
@@ -1084,6 +1250,13 @@ log file and disposes each model as soon as its values are read, because an open
 a `.nfsXXXX` file. Test folders fall back when `/tmp` is full. `evaluation.json` writes missing
 scores as `null` instead of `NaN`, which strict JSON forbids.
 
+**Why these matter for the comparison.** The `rck/version-fix` patches and the `b26bb96` fixes touch
+only original RCK (`rck`, `rck/core/*`), not `rck-ecdna`. They matter because original RCK is also
+a baseline in the benchmark, run on the same graphs as an allele-specific karyotype method with no
+ecDNA species (results/graph_route/NEXT_STEPS.md). The patches let it run on current software
+without changing its answers; the `--scnb` fix changes answers only when that option is used, and
+should be stated whenever original RCK is run with it.
+
 ---
 
 ## 9. Evaluation
@@ -1099,6 +1272,18 @@ Scoring against simulator truth is documented in
 Passing `--truth-dir` (and optionally `--truth-sample`, `--eval-tol-bp`, `--min-truth-fraction`,
 `--all-truth-species`) to `rck-ecdna` writes `evaluation.tsv`, `evaluation.json`,
 `truth_cycles.tsv` and `recovery_matrix.tsv`.
+
+**Which metrics come from which method.** The definitions, equations and sources are in
+[evaluation.md](pipeline/evaluation.md); in short:
+
+| Metric | Level | From |
+|---|---|---|
+| Segment and haplotype Jaccard, phasing accuracy, junction F1, order match, copy-number error, composite | species | (c) new to this pipeline, built on the Jaccard index [Jaccard 1912](pipeline/references.md#jaccard1912) |
+| composite-H0 (no phasing) | species | (c) new, for comparisons with methods that do not phase |
+| Error-free reconstruction | graph | (a) AmpliconArchitect's simulation benchmark [Deshpande et al. 2019](pipeline/references.md#deshpande2019); `error_free_merged` is (c) |
+| Breakpoint-graph accuracy, cycle-interval overlap, cyclic LCS, length error | graph, species | (a) CoRAL [Zhu et al. 2024](pipeline/references.md#zhu2024); both the code and the supplementary-methods versions are reported |
+| Novel-adjacency FNR and FDR; allele-specific copy-number error; infinite-sites violations | graph | (a) RCK [Aganezov & Raphael 2020](pipeline/references.md#aganezov2020); FDR instead of FPR is (c) |
+| Strict and best-of modes | all | best-of follows CoRAL's paper; strict uses the 10% rule of §5.6 for every method |
 
 ---
 
@@ -1129,6 +1314,18 @@ Passing `--truth-dir` (and optionally `--truth-sample`, `--eval-tol-bp`, `--min-
   copy number against the junction ones (bench `nest_cross_3sp_s403` at class 6). Rebuild the
   subgraph with `--rck-ploidy`.
 - Long decompositions: three-species nested cases can take tens of minutes (`--time-limit` per MILP).
+- **The answer can depend on which equally good flow the solver returns.** The flow MILP often has
+  several integer flows with the same objective, and Gurobi's choice depends on model size and
+  variable order. In the graph-route round trip, removing candidate adjacencies the flow never used
+  left the flow objective unchanged but changed the decomposition in 29 of 36 cases
+  (`results/graph_route/`). Results are therefore single-seed; repeats with several Gurobi seeds are
+  planned, and preferring the most decomposable flow among equal ones is a candidate fix.
+- **Most weights are heuristic and untuned.** The objective weights of §4.5 and §5.1 (for example
+  `--novel-penalty` 0.05, `--linear-end-penalty` 0.25, `--imputed-penalty` 2.0, `--bg-max` 4,
+  `--species-penalty` 1.0, `--max-multiplicity` 3) were set by hand, most of them on demo3 and
+  demo4, and kept fixed. Only
+  λ (`--step-penalty`) has been swept on the bench. Linear ends (`--linear-ends boundaries`) are on in
+  every run and have not been compared against `none`.
 
 ---
 

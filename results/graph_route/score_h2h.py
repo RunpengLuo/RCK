@@ -149,6 +149,27 @@ def tasks(drop_paths=False):
     return out
 
 
+def partition_rows(todo):
+    """The confusion-matrix metrics (M1, M2) of every scored run, read from the
+    aa_partition_metrics.tsv aa_eval wrote, and pooled per graph x method (scenario "all") and per
+    scenario x graph x method over (case, amplicon) runs (rck.ecdna.aa_eval.pool_partition).
+    Returns (per_run, pooled)."""
+    parts = []
+    for kind, case, arm, amp, method, _c, _a, _g, outdir, _d in todo:
+        path = os.path.join(outdir, "aa_partition_metrics.tsv")
+        if os.path.exists(path):
+            parts.append(pd.read_csv(path, sep="\t").assign(case=case, scenario=scenario_of(case), graph=arm, method=method,
+                                                            amplicon=amp))
+    if not parts:
+        return None, None
+    per_run = pd.concat(parts, ignore_index=True)
+    front = ["case", "scenario", "graph", "method", "amplicon"]
+    per_run = per_run[front + [c for c in per_run.columns if c not in front]]
+    pooled = pd.concat([aa_eval.pool_partition(per_run, ["graph", "method"]).assign(scenario="all"),
+                        aa_eval.pool_partition(per_run, ["scenario", "graph", "method"])], ignore_index=True)
+    return per_run, pooled[["scenario"] + [c for c in pooled.columns if c != "scenario"]]
+
+
 def graph_rows():
     """Graph-level metrics once per input graph: truth graph_reads_paths amplicons and the inferred
     export (against every truth mixture amplicon its in-scope species belong to), plus native."""
@@ -227,6 +248,10 @@ def main():
     table.to_csv(os.path.join(HERE, "h2h_table%s.tsv" % sfx), sep="\t", index=False, float_format="%.4f")
     scen = scenario_summary(table)
     scen.to_csv(os.path.join(HERE, "h2h_scenario%s.tsv" % sfx), sep="\t", index=False, float_format="%.4f")
+    per_run, pooled = partition_rows(todo)
+    if per_run is not None:  # new files; no existing table changes
+        per_run.to_csv(os.path.join(HERE, "h2h_partition%s.tsv" % sfx), sep="\t", index=False, float_format="%.4f")
+        pooled.to_csv(os.path.join(HERE, "h2h_partition_pooled%s.tsv" % sfx), sep="\t", index=False, float_format="%.4f")
     if not a.drop_paths:
         graph_rows().to_csv(os.path.join(HERE, "h2h_graph_metrics.tsv"), sep="\t", index=False, float_format="%.4f")
     print("{n} runs scored, {e} errors".format(n=len(todo) - len(errors), e=len(errors)))

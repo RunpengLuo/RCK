@@ -20,7 +20,7 @@ CoRAL, the original RCK (once converted) and ``rck-ecdna`` all go through the sa
   amplicon-allele-analysis ``simulations/truth_mixture.py`` (``truth/aa/mixture_amplicon<N>_*``,
   or ``--mixture-dir``).
 
-Metrics (definitions and sources in docs/ecDNA.md, section 6, "Method-agnostic scorer"):
+Metrics (definitions and sources in docs/pipeline/evaluation.md, section 4):
 
 graph level, per truth amplicon, at ``--graph-tol`` (100 bp, the AA and CoRAL convention)
     ``error_free`` (AA) and ``error_free_merged`` (the same after merging benign copy-number
@@ -34,7 +34,11 @@ species level, after one-to-one matching
     ``length_error``; ``exact_cycle``; ``composite_h0``;
 sample level
     species-count error, missed and false species, ``cn_explained_top1`` / ``_top3``
-    (CoRAL), ``subwalks_satisfied``.
+    (CoRAL), ``subwalks_satisfied``;
+confusion-matrix metrics (``aa_partition_metrics.tsv``, docs/pipeline/evaluation.md section 4.7)
+    species detection (M1: TP, FP, FN, precision, recall, F1 of species, exact and over a
+    composite threshold) and pairwise co-membership of novel adjacencies (M2: TP, FP, FN, TN,
+    precision, recall, FPR, F1 of adjacency pairs, which charge merged and split species).
 
 Two modes, both always reported: ``strict`` (the method's own answer, after ``--strict-rule``;
 counts false species) and ``best_of`` (per truth species, the best of every cycle the method
@@ -45,6 +49,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import itertools
 import json
 import logging
 import math
@@ -551,6 +556,222 @@ def best_of_rows(truth: Sequence[Cycle], candidates: Sequence[Cycle], phased: bo
 
 
 # ---------------------------------------------------------------------------------------------- #
+# confusion-matrix metrics: species detection (M1) and pairwise co-membership of novel
+# adjacencies (M2). Definitions and sources: docs/pipeline/evaluation.md, section 4.7.
+# ---------------------------------------------------------------------------------------------- #
+
+DETECTION_TAUS = (0.5, 0.6, 0.7, 0.8, 0.9, 0.95)  # the precision-recall curve of M1; 0.95 = bench FAIL_COMPOSITE
+PARTITION_COLUMNS = ["metric", "mode", "haplotype", "criterion", "tol_bp", "universe", "headline", "n_truth", "n_predicted",
+                     "n_items", "tp", "fp", "fn", "tn", "precision", "recall", "fpr", "f1"]
+POOLED_RATES = ("precision", "recall", "fpr", "f1")
+HEADLINE_POOLING = {"species_detection": "micro", "adjacency_pairs": "macro"}
+
+Junction = Tuple[Breakend, Breakend, str, str]
+
+
+def _ratio(num: float, den: float) -> float:
+    return num / den if den else float("nan")
+
+
+def confusion_rates(tp: float, fp: Optional[float], fn: float, tn: Optional[float] = None) -> Dict[str, float]:
+    """Precision TP/(TP+FP), recall TP/(TP+FN), FPR FP/(FP+TN) and F1 2TP/(2TP+FP+FN) (the Dice
+    form, defined whenever anything is positive). A zero denominator, or a count that is not
+    defined (None), gives NaN, never 1."""
+    nan = float("nan")
+    has_fp = fp is not None and not (isinstance(fp, float) and math.isnan(fp))
+    has_tn = tn is not None and not (isinstance(tn, float) and math.isnan(tn))
+    return {"precision": _ratio(tp, tp + fp) if has_fp else nan,
+            "recall": _ratio(tp, tp + fn),
+            "fpr": _ratio(fp, fp + tn) if (has_fp and has_tn) else nan,
+            "f1": _ratio(2 * tp, 2 * tp + fp + fn) if has_fp else nan}
+
+
+def detection_rows(species: pd.DataFrame, n_truth: int, n_strict: int, phased: bool, species_tol: int = SPECIES_TOL,
+                   graph_tol: int = GRAPH_TOL) -> List[dict]:
+    """M1, species detection, from the species rows of ``score``. The unit is a species; the
+    matching is the existing one-to-one matching (haplotype-blind for ``blind``, phased for
+    ``phased``). A truth species is a TP when its partner passes the criterion: ``exact``
+    (``exact_cycle`` / ``exact_cycle_phased``, at the graph tolerance) or ``composite_h0`` /
+    ``composite`` >= tau (at the species tolerance). FN = |T| - TP; strict FP = |S| - TP, so a
+    matched partner that fails the criterion is a false positive too. Best-of has no claimed set,
+    so only recall is defined there. No TN: the walks that are not truth species cannot be listed."""
+    rows = []
+    variants = [("blind", "exact_cycle", "composite_h0")]
+    if phased:
+        variants.append(("phased", "exact_cycle_phased", "composite"))
+    for mode in ("strict", "best_of"):
+        mine = species[species["mode"] == mode]
+        for hap, exact_col, comp_col in variants:
+            crits = [("exact", graph_tol, pd.to_numeric(mine[exact_col], errors="coerce").fillna(0) >= 1)]
+            for tau in DETECTION_TAUS:
+                crits.append(("%s>=%g" % (comp_col, tau), species_tol, pd.to_numeric(mine[comp_col], errors="coerce").fillna(0) >= tau))
+            for criterion, tol, hit in crits:
+                tp = int(hit.sum())
+                fp = n_strict - tp if mode == "strict" else None
+                row = {"metric": "species_detection", "mode": mode, "haplotype": hap, "criterion": criterion, "tol_bp": tol,
+                       "universe": "species", "headline": mode == "strict" and criterion == "exact",
+                       "n_truth": n_truth, "n_predicted": n_strict if mode == "strict" else None, "n_items": None,
+                       "tp": tp, "fp": fp, "fn": n_truth - tp, "tn": None}
+                row.update(confusion_rates(tp, fp, n_truth - tp))
+                rows.append(row)
+    return rows
+
+
+def junction_distance(j: Junction, k: Junction, phased: bool) -> Optional[int]:
+    """The larger of the two breakend distances between novel adjacencies ``j`` and ``k``, in the
+    orientation that matches (either direction), or None if chromosomes or strands differ (or,
+    when ``phased``, the haplotype labelling, swapped with the direction)."""
+    (a1, b1, h1, k1), (a2, b2, h2, k2) = j, k
+    best = None
+    for (p, q), haps in (((a2, b2), (h2, k2)), ((b2, a2), (k2, h2))):
+        if p[0] != a1[0] or p[2] != a1[2] or q[0] != b1[0] or q[2] != b1[2]:
+            continue
+        if phased and haps != (h1, k1):
+            continue
+        d = max(abs(p[1] - a1[1]), abs(q[1] - b1[1]))
+        best = d if best is None else min(best, d)
+    return best
+
+
+def _distinct(js: Sequence[Junction], phased: bool) -> List[Junction]:
+    out: List[Junction] = []
+    for j in js:
+        if not any(junction_distance(j, k, phased) == 0 for k in out):
+            out.append(j)
+    return out
+
+
+def walk_adjacencies(c: Cycle, phased: bool) -> List[Junction]:
+    """The distinct novel adjacencies (``evaluate.junctions``) of a walk: on the haplotype-stripped
+    walk when not ``phased``, so a haplotype switch between reference neighbours is not one; no
+    wrap-around adjacency for a linear walk."""
+    steps = c.steps if phased else strip_haplotypes(c).steps
+    return _distinct(ev.junctions(steps, circular=c.circular), phased)
+
+
+def graph_adjacencies(graph: aaf.AAGraph) -> List[Junction]:
+    """The graph's discordant edges as unphased novel adjacencies in the walk frame (AA position - 1)."""
+    return [((e.a[0], e.a[1] - 1, e.a[2]), (e.b[0], e.b[1] - 1, e.b[2]), ".", ".") for e in graph.discordant]
+
+
+def adjacency_items(truth: Sequence[Cycle], predicted: Sequence[Cycle], tol: int, phased: bool,
+                    extra: Sequence[Junction] = ()) -> Tuple[List[Junction], List[set], List[set], int]:
+    """The universe U of M2 and each species' set of item indices.
+
+    * Truth items: every distinct novel adjacency of the truth species; one shared exactly by two
+      species is one item, so no two distinct truth adjacencies are merged, at any tolerance.
+    * Predicted adjacencies (distinct over the whole answer) are matched one to one to truth items,
+      nearest first, within ``tol``; an unmatched one becomes a new (false) item.
+    * ``extra`` (the graph route's shared candidate set) adds every adjacency that matches no item
+      within ``tol``; such items are in no species, so they only add true-negative pairs.
+
+    Returns (items, truth_sets, predicted_sets, n_truth_items)."""
+    t_js = [walk_adjacencies(t, phased) for t in truth]
+    items = _distinct([j for js in t_js for j in js], phased)
+    n_truth_items = len(items)
+
+    def exact_index(j, pool):
+        return next(i for i, k in enumerate(pool) if junction_distance(j, k, phased) == 0)
+
+    truth_sets = [{exact_index(j, items) for j in js} for js in t_js]
+    p_js = [walk_adjacencies(c, phased) for c in predicted]
+    distinct = _distinct([j for js in p_js for j in js], phased)
+    candidates = []
+    for a, j in enumerate(distinct):
+        for b in range(n_truth_items):
+            d = junction_distance(j, items[b], phased)
+            if d is not None and d <= tol:
+                candidates.append((d, a, b))
+    assign: Dict[int, int] = {}
+    used = set()
+    for d, a, b in sorted(candidates):
+        if a in assign or b in used:
+            continue
+        assign[a] = b
+        used.add(b)
+    for a, j in enumerate(distinct):
+        if a not in assign:
+            assign[a] = len(items)
+            items.append(j)
+    predicted_sets = [{assign[exact_index(j, distinct)] for j in js} for js in p_js]
+    for j in extra:
+        if not any((d := junction_distance(j, k, phased)) is not None and d <= tol for k in items):
+            items.append(j)
+    return items, truth_sets, predicted_sets, n_truth_items
+
+
+def pair_confusion(n_items: int, truth_sets: Sequence[set], predicted_sets: Sequence[set]) -> Dict[str, int]:
+    """Pair counting over the unordered pairs of distinct items: a pair is positive when some
+    species (truth, or predicted) contains both items. TN = n(n-1)/2 - TP - FP - FN."""
+    def pairs(sets):
+        out = set()
+        for s in sets:
+            out.update(itertools.combinations(sorted(s), 2))
+        return out
+    pt, ps = pairs(truth_sets), pairs(predicted_sets)
+    tp, fp, fn = len(pt & ps), len(ps - pt), len(pt - ps)
+    return {"tp": tp, "fp": fp, "fn": fn, "tn": n_items * (n_items - 1) // 2 - tp - fp - fn}
+
+
+def pair_rows(truth: Sequence[Cycle], strict: Sequence[Cycle], phased: bool, species_tol: int = SPECIES_TOL,
+              graph_tol: int = GRAPH_TOL, graph: Optional[aaf.AAGraph] = None) -> List[dict]:
+    """M2, pairwise co-membership of novel adjacencies, strict mode only. Blind always, phased
+    when the answer is phased; at the species tolerance (headline) and at the graph tolerance; on
+    the ``native`` universe (truth and predicted adjacencies) and, blind only and when a graph is
+    given, the ``graph`` universe (plus every discordant edge of the graph), which changes TN and
+    FPR only."""
+    rows = []
+    extra = graph_adjacencies(graph) if graph is not None else None
+    for hap in (("blind", "phased") if phased else ("blind",)):
+        ph = hap == "phased"
+        for tol in sorted({species_tol, graph_tol}, reverse=True):
+            universes = [("native", ())]
+            if extra is not None and not ph:
+                universes.append(("graph", extra))
+            for universe, ex in universes:
+                items, ts, ps, _ = adjacency_items(truth, strict, tol, ph, ex)
+                counts = pair_confusion(len(items), ts, ps)
+                row = {"metric": "adjacency_pairs", "mode": "strict", "haplotype": hap, "criterion": "co_membership", "tol_bp": tol,
+                       "universe": universe, "headline": tol == species_tol and universe == "native",
+                       "n_truth": len(truth), "n_predicted": len(strict), "n_items": len(items)}
+                row.update(counts)
+                row.update(confusion_rates(counts["tp"], counts["fp"], counts["fn"], counts["tn"]))
+                rows.append(row)
+    return rows
+
+
+def partition_metrics(truth: Sequence[Cycle], strict: Sequence[Cycle], species: pd.DataFrame, phased: bool,
+                      species_tol: int = SPECIES_TOL, graph_tol: int = GRAPH_TOL, graph: Optional[aaf.AAGraph] = None) -> pd.DataFrame:
+    """M1 and M2 of one answer: the rows of ``aa_partition_metrics.tsv``."""
+    rows = detection_rows(species, len(truth), len(strict), phased, species_tol, graph_tol)
+    rows += pair_rows(truth, strict, phased, species_tol, graph_tol, graph)
+    return pd.DataFrame(rows, columns=PARTITION_COLUMNS)
+
+
+def pool_partition(frame: pd.DataFrame, keys: Sequence[str] = ()) -> pd.DataFrame:
+    """Pool per-case partition rows over cases. Micro: sum the counts, then the rates. Macro: the
+    mean of the per-case rates over the cases where each is defined (``n_cases_<rate>``).
+    ``headline_pooling`` says which one the docs report: micro for species detection (every species
+    weighs the same), macro for adjacency pairs (pair counts grow quadratically with a case's size)."""
+    group = list(keys) + ["metric", "mode", "haplotype", "criterion", "tol_bp", "universe"]
+    out = []
+    for key, g in frame.groupby(group, sort=False, dropna=False):
+        key = key if isinstance(key, tuple) else (key,)
+        row = dict(zip(group, key))
+        fp = g["fp"].sum() if g["fp"].notna().all() else None
+        tn = g["tn"].sum() if g["tn"].notna().all() else None
+        row.update({"headline": bool(g["headline"].astype(bool).all()), "headline_pooling": HEADLINE_POOLING.get(row["metric"]),
+                    "n_cases": len(g), "tp": g["tp"].sum(), "fp": fp, "fn": g["fn"].sum(), "tn": tn})
+        row.update({"micro_" + k: v for k, v in confusion_rates(row["tp"], fp, row["fn"], tn).items()})
+        for rate in POOLED_RATES:
+            vals = pd.to_numeric(g[rate], errors="coerce")
+            row["macro_" + rate] = vals.mean() if vals.notna().any() else float("nan")
+            row["n_cases_" + rate] = int(vals.notna().sum())
+        out.append(row)
+    return pd.DataFrame(out)
+
+
+# ---------------------------------------------------------------------------------------------- #
 # sample level
 # ---------------------------------------------------------------------------------------------- #
 
@@ -702,6 +923,7 @@ class ScoreResult:
     strict: List[Cycle] = field(default_factory=list)
     candidates: List[Cycle] = field(default_factory=list)
     info: Dict[str, object] = field(default_factory=dict)
+    partition: pd.DataFrame = field(default_factory=lambda: pd.DataFrame(columns=PARTITION_COLUMNS))  # M1 and M2
 
 
 def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = None, alt_cycles: Sequence[str] = (),
@@ -728,6 +950,7 @@ def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = 
     rows, counts = strict_rows(scored, strict, phased, species_tol, graph_tol)
     rows += best_of_rows(scored, candidates, phased, species_tol, graph_tol)
     species = pd.DataFrame(rows, columns=SPECIES_COLUMNS)
+    partition = partition_metrics(scored, strict, species, phased, species_tol, graph_tol, graph)
 
     graph_rows, mixture_graphs = [], []
     if mixture is not None and graph is not None:
@@ -768,16 +991,18 @@ def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = 
             "species_tol_bp": species_tol, "graph_tol_bp": graph_tol, "n_truth_total": len(truth),
             "truth_in_scope": [t.name for t in scored], "regions": regions,
             "mixture_graphs": mixture_graphs}
-    return ScoreResult(graph_frame, species, pd.DataFrame(sample_rows), list(scored), list(strict), candidates, info)
+    return ScoreResult(graph_frame, species, pd.DataFrame(sample_rows), list(scored), list(strict), candidates, info, partition)
 
 
 def write(outdir: str, result: ScoreResult) -> Dict[str, str]:
     os.makedirs(outdir, exist_ok=True)
     paths = {"graph": os.path.join(outdir, "aa_graph_metrics.tsv"), "species": os.path.join(outdir, "aa_species_metrics.tsv"),
-             "sample": os.path.join(outdir, "aa_sample_metrics.tsv"), "summary": os.path.join(outdir, "aa_eval.json")}
+             "sample": os.path.join(outdir, "aa_sample_metrics.tsv"), "summary": os.path.join(outdir, "aa_eval.json"),
+             "partition": os.path.join(outdir, "aa_partition_metrics.tsv")}
     result.graph.to_csv(paths["graph"], sep="\t", index=False)
     result.species.to_csv(paths["species"], sep="\t", index=False)
     result.sample.to_csv(paths["sample"], sep="\t", index=False)
+    result.partition.to_csv(paths["partition"], sep="\t", index=False)
     with open(paths["summary"], "w") as handle:
         json.dump({"info": result.info, "sample": ev._json_records(result.sample), "graph": ev._json_records(result.graph)},
                   handle, indent=2, default=str)

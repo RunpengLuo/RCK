@@ -419,7 +419,7 @@ output the same way. `aa_eval` reads AA-format cycles and graph files only, and 
 `rck-ecdna`'s own files. Species matching and the species scores are §3's functions, called
 unchanged (`evaluate.score_decomposition` and `evaluate.score_pair`). Truth species are read and
 scoped as in §2. `aa_eval` adds the AA-file reading, the graph- and sample-level metrics, CoRAL's
-cycle metrics, and two scoring modes.
+cycle metrics, two scoring modes, and the confusion-matrix metrics of §4.7.
 
 ### 4.1 Reading AA files
 
@@ -886,7 +886,303 @@ whether the ambiguity report contains the right answer. **Effect** at λ = 0.2 o
 best-of mean composite 0.931 against 0.853 strict; 55 of 72 truth species are exact cycles in
 strict mode and 61 in best-of (RCK `results/bench_nested/README.md`).
 
-### 4.7 Regression against `rck-ecdna-eval`
+### 4.7 Confusion-matrix metrics: species detection (M1) and adjacency pairs (M2)
+
+> **Provenance:** (c) new, RCK yubi_dev, 2026-11-07. The building blocks are (a): the
+> confusion-matrix rates and the F-measure, precision-recall reporting without true negatives
+> [Krusche et al. 2019](references.md#krusche2019), pair counting [Rand 1971](references.md#rand1971) generalised to overlapping
+> clusters [Collins & Dent 1988](references.md#collins1988). Their combination for ecDNA species is (c). **Code:**
+> `rck/ecdna/aa_eval.py::partition_metrics`, `::detection_rows`, `::pair_rows`, `::adjacency_items`,
+> `::junction_distance`, `::pair_confusion`, `::confusion_rates`, `::pool_partition`. Output:
+> `aa_partition_metrics.tsv` (Appendix B).
+
+**Why these metrics.** The goal is to reconstruct each ecDNA molecule on its own. Two errors defeat
+that goal while leaving most other scores high:
+
+- a *merge*: one inferred walk carries two molecules;
+- a *split*: one molecule is reported as several walks.
+
+The composite (§3.7) charges them only in part. A merged walk is matched to one of the two truth
+species and loses some segment Jaccard, junction precision and its order match. The other truth
+species is missed, but the merged walk is never counted as a false species. The bench's own
+`merged` flag (`results/bench_nested/collect.py::merged_flag`) detects merges but gives no rate.
+Two metrics are defined here:
+
+- **M1** asks, for each molecule: *was it reconstructed?*
+- **M2** asks, for each pair of novel adjacencies: *did the answer put them in the same molecule
+  exactly when the truth does?*
+
+Both report the counts of true positives (TP), false positives (FP), false negatives (FN) and,
+where defined, true negatives (TN), with these rates:
+
+```math
+\mathrm{precision} = \frac{TP}{TP + FP},
+\qquad
+\mathrm{recall} = \frac{TP}{TP + FN},
+\qquad
+\mathrm{FPR} = \frac{FP}{FP + TN},
+\qquad
+F_1 = \frac{2\,TP}{2\,TP + FP + FN}
+```
+
+Conventions:
+
+- $F_1$ is written in the form above, which equals the harmonic mean of precision and recall and is
+  Dice's coefficient [Dice 1945](references.md#dice1945). It is defined whenever anything is positive, even
+  when precision or recall is not.
+- A rate whose denominator is 0, or whose count is undefined, is *undefined*: written empty (NaN),
+  never 1. `junction_scores` (§3.3) returns 1 for an empty set; that convention would score an
+  empty answer as perfect, so it is not used here.
+
+Notation used in both metrics:
+
+| Symbol | Meaning |
+|---|---|
+| $\mathcal T$ | the in-scope truth species (§2.3) |
+| $\mathcal S$ | the method's strict answer (§4.6: `status`, else `cn-frac:0.1`) |
+| $\mu(T)$, $\mu^0(T)$ | $T$'s partner in the phased, resp. haplotype-blind, one-to-one matching (§3.6, §4.4), or $\varnothing$ |
+| $\tau_s$, $\tau_g$ | the species and graph tolerances, 10 000 bp and 100 bp (§1) |
+| $\mathcal J(X)$ | the distinct novel adjacencies of walk $X$ (§1 `junctions`; no wrap-around adjacency for a linear walk) |
+
+A *novel adjacency* is the code's "junction" (§1): RCK's novel adjacency, AA's and CoRAL's
+discordant edge [Aganezov & Raphael 2020](references.md#aganezov2020) [Deshpande et al. 2019](references.md#deshpande2019) [Zhu et al. 2024](references.md#zhu2024).
+
+#### M1. Species detection (`metric` = `species_detection`)
+
+**Unit and classes.** The unit is a species. A truth species is *positive in the truth*; a strict
+species is *positive in the prediction*. For a criterion $\kappa(T, C) \in \lbrace 0, 1 \rbrace$:
+
+```math
+TP_\kappa = \big\lvert \lbrace T \in \mathcal T : \mu(T) \ne \varnothing,\ \kappa\big(T, \mu(T)\big) = 1 \rbrace \big\rvert,
+\qquad
+FN_\kappa = \lvert \mathcal T \rvert - TP_\kappa,
+\qquad
+FP_\kappa = \lvert \mathcal S \rvert - TP_\kappa
+```
+
+```math
+\mathrm{precision}_\kappa = \frac{TP_\kappa}{\lvert \mathcal S \rvert},
+\qquad
+\mathrm{recall}_\kappa = \frac{TP_\kappa}{\lvert \mathcal T \rvert},
+\qquad
+F_{1,\kappa} = \frac{2\,TP_\kappa}{2\,TP_\kappa + FP_\kappa + FN_\kappa} = \frac{2\,TP_\kappa}{\lvert \mathcal T \rvert + \lvert \mathcal S \rvert}
+```
+
+TN and FPR are **undefined**.
+
+The criteria ($\mu$ is the blind matching $\mu^0$ for the blind rows):
+
+| `haplotype` | `criterion` | $\kappa(T, C) = 1$ when | tolerance (`tol_bp`) |
+|---|---|---|---|
+| `blind` | `exact` (**headline**) | `exact_cycle` $= 1$ (§4.4): same run sequence, haplotypes ignored | $\tau_g$ |
+| `phased` | `exact` | `exact_cycle_phased` $= 1$: the same with haplotypes | $\tau_g$ |
+| `blind` | `composite_h0>=`$\theta$ | `composite_h0` $\ge \theta$ (§4.4) | $\tau_s$ |
+| `phased` | `composite>=`$\theta$ | `composite` $\ge \theta$ (§3.7) | $\tau_s$ |
+
+for $\theta \in \Theta = \lbrace 0.5, 0.6, 0.7, 0.8, 0.9, 0.95 \rbrace$ (`DETECTION_TAUS`). Phased rows are
+written only for a phased answer, as for `composite`.
+
+**Best-of** (`mode` = `best_of`). $\mathcal C(T)$ is $T$'s candidates (§4.6), and the TP count is the
+number of truth species with *some* candidate that passes:
+
+```math
+TP^{\mathrm{best}}_\kappa = \big\lvert \lbrace T \in \mathcal T : \exists\, C \in \mathcal C(T),\ \kappa(T, C) = 1 \rbrace \big\rvert,
+\qquad
+\mathrm{recall}^{\mathrm{best}}_\kappa = \frac{TP^{\mathrm{best}}_\kappa}{\lvert \mathcal T \rvert}
+```
+
+FP, precision and $F_1$ are undefined in best-of, and so are TN and FPR.
+
+**Worked example** (truth: two molecules O and I):
+
+| Answer | TP | FP | FN | precision | recall | $F_1$ |
+|---|---|---|---|---|---|---|
+| O and I, both exact | 2 | 0 | 0 | 1 | 1 | 1 |
+| one walk carrying O and I (merge) | 0 | 1 | 2 | 0 | 0 | 0 |
+| O exact; I reported as two walks (split) | 1 | 2 | 1 | 1/3 | 1/2 | 2/5 |
+
+**Reasoning, decision by decision.**
+
+- **The unit is the species.** The goal is each molecule, so the molecule is the unit. Gene-structure
+  benchmarks score at several levels (nucleotide, exon, protein), the exon level counting the exons
+  identified exactly [Burset & Guigó 1996](references.md#burset1996). Transcript assemblers are scored on whole transcripts
+  whose intron chain matches exactly [Pertea & Pertea 2020](references.md#pertea2020). Both are the
+  analogue of a species: a whole walk through a splice graph or a breakpoint graph.
+- **FP $= \lvert\mathcal S\rvert - TP$.** Precision's denominator is every prediction, as in variant
+  benchmarking, where every query call that matches no truth call is a false positive
+  [Krusche et al. 2019](references.md#krusche2019). So a matched partner that fails $\kappa$ is a false
+  positive as well as a false negative. Counting only *unmatched* inferred species as FP would score
+  a merge as FP 0 and precision 1: the merged walk is matched, so nothing would be false.
+- **The matching is the existing one (§3.6).** Then $TP_\theta$ is the number of recovery-matrix rows
+  with composite $\ge \theta$, and $TP_\theta$ cannot increase with $\theta$, so the precision-recall
+  points form a curve. An exact pair has Jaccard close to 1, so the greedy matching takes it first.
+- **Exact is the headline.** The order match at $\tau_g$ is AA's and CoRAL's criterion for a correct
+  cycle [Deshpande et al. 2019](references.md#deshpande2019) [Zhu et al. 2024](references.md#zhu2024). It ignores the copy number,
+  which the composite does not. With the composite, a walk of the right structure but 30% copy-number
+  error falls below 0.95.
+- **The composite thresholds are a curve, not one number.** No published threshold exists for a
+  partly correct ecDNA reconstruction [citation needed: a published threshold for a partly correct
+  ecDNA reconstruction]. The full precision-recall curve is reported instead, which compares methods
+  without choosing a threshold [Davis & Goadrich 2006](references.md#davis2006). The highest point, 0.95, is
+  the bench's own failure threshold (`results/bench_nested/collect.py::FAIL_COMPOSITE`); it is a
+  project choice, not a published value.
+- **No TN, no FPR.** A true negative would be a walk that is not a truth species and is not reported.
+  The walks of a breakpoint graph cannot be listed, and with multiplicity there are infinitely many,
+  so TN cannot be counted. Variant-calling benchmarks report precision and recall instead of
+  specificity for the same reason [Krusche et al. 2019](references.md#krusche2019); precision-recall is also the
+  more informative summary when negatives far outnumber positives [Saito & Rehmsmeier 2015](references.md#saito2015).
+- **Best-of has recall only.** Best-of picks, per truth species, the best of every cycle the method
+  returned (CoRAL's convention, §4.6); those candidates are not a set the method claims, so there is
+  nothing to compute a precision on.
+- **Pooling over cases: micro (headline).** Counts are summed over cases, then the rates are
+  computed, so every molecule weighs the same [Sokolova & Lapalme 2009](references.md#sokolova2009). Cases have
+  1 to 3 in-scope species, so a per-case $F_1$ takes few values. Micro pooling also gives more weight
+  to the multi-species cases, where merges and splits happen. The macro mean (the mean of the per-case
+  rates) is reported beside it (§6.3).
+
+#### M2. Pairwise co-membership of novel adjacencies (`metric` = `adjacency_pairs`)
+
+**Items.** The unit is an unordered pair of distinct *items*. An item is a novel adjacency
+(`haplotype` = `blind`, on haplotype-stripped walks), or a novel adjacency with its haplotype
+labelling, AA, AB, BA or BB (`phased`) [Aganezov & Raphael 2020](references.md#aganezov2020). The universe $U$ of
+items is built per tolerance $\tau \in \lbrace \tau_s, \tau_g \rbrace$:
+
+1. **Truth items:** $\bigcup_{T \in \mathcal T} \mathcal J(T)$. A novel adjacency that two truth
+   species share exactly is one item, so two distinct truth adjacencies are never one item, at any
+   tolerance.
+2. **Predicted adjacencies** $\bigcup_{C \in \mathcal S} \mathcal J(C)$, distinct over the whole answer,
+   are matched **one to one** to truth items, nearest first, within $\tau$. The distance between
+   adjacencies $j = (a, b)$ and $k = (a', b')$ is
+
+   ```math
+   d(j, k) = \min\Big( \max\big(\lvert a - a' \rvert,\ \lvert b - b' \rvert\big),\ \max\big(\lvert a - b' \rvert,\ \lvert b - a' \rvert\big) \Big)
+   ```
+
+   over the directions in which both breakends agree in chromosome and strand (and, when phased, the
+   labelling, swapped with the direction); otherwise $d = \infty$. A predicted adjacency that is left
+   unmatched becomes a new, *false* item.
+3. **Universe** (`universe`):
+   - `native`: $U$ = items 1 and 2;
+   - `graph` (blind only, when `--graph` is given): $U$ also holds every discordant edge of the
+     graph that matches no item within $\tau$. In the graph route, every method decomposes the same
+     graph, so they all have the same set of negative pairs.
+
+Each species becomes the set of its items: $\iota(T) \subseteq U$ and $\iota(C) \subseteq U$.
+
+**Classes.** For a pair $\lbrace u, v \rbrace$ with $u \ne v \in U$:
+
+```math
+y_{\mathcal T}(u, v) = \mathbb 1\big[\exists\, T \in \mathcal T : u, v \in \iota(T)\big],
+\qquad
+y_{\mathcal S}(u, v) = \mathbb 1\big[\exists\, C \in \mathcal S : u, v \in \iota(C)\big]
+```
+
+```math
+TP = \sum_{\lbrace u, v \rbrace} y_{\mathcal T}\, y_{\mathcal S},
+\quad
+FP = \sum_{\lbrace u, v \rbrace} (1 - y_{\mathcal T})\, y_{\mathcal S},
+\quad
+FN = \sum_{\lbrace u, v \rbrace} y_{\mathcal T}\, (1 - y_{\mathcal S}),
+\quad
+TN = \binom{\lvert U \rvert}{2} - TP - FP - FN
+```
+
+Precision, recall, FPR and $F_1$ are as above. Their meaning here:
+
+- **FPR is the merge rate:** the share of the pairs that the truth keeps apart which the answer puts
+  together.
+- **$1 - \mathrm{recall}$ is the split rate:** the share of the pairs that the truth keeps together
+  which the answer separates.
+- A false item contributes false-positive pairs with the items of its walk, and a missed truth item
+  contributes false-negative pairs.
+
+**When the rates are undefined.**
+
+| Rate | Undefined when | Example |
+|---|---|---|
+| recall | no truth pair, $TP + FN = 0$ | every truth species has at most one novel adjacency |
+| precision | no predicted pair, $TP + FP = 0$ | every inferred species has at most one novel adjacency |
+| FPR | no negative pair, $FP + TN = 0$ | one truth species and no false items (the bench's `ctrl_dup` cases) |
+| $F_1$ | nothing positive, $TP + FP + FN = 0$ | |
+
+**Worked example** (`tests/ecdna/test_aa_partition.py`). O has the novel adjacencies $j_1, j_2$, I
+has $j_3, j_4$, and they share reference segments only. $U = \lbrace j_1, j_2, j_3, j_4 \rbrace$
+gives 6 pairs: 2 positive in the truth ($j_1 j_2$, $j_3 j_4$) and 4 negative.
+
+| Answer | TP | FP | FN | TN | precision | recall | FPR | $F_1$ |
+|---|---|---|---|---|---|---|---|---|
+| O and I | 2 | 0 | 0 | 4 | 1 | 1 | 0 | 1 |
+| one walk, the Euler union of O and I (merge) | 2 | 4 | 0 | 0 | 1/3 | 1 | 1 | 1/2 |
+| truth is the single figure-8 walk; the answer splits it into O and I (split) | 2 | 0 | 4 | 0 | 1 | 1/3 | undefined | 1/2 |
+
+**Reasoning, decision by decision.**
+
+- **Pairs of items, not species.** Pair counting compares two groupings of the same items through the
+  pairs each puts together. It yields all four counts, so a TN and an FPR exist
+  [Rand 1971](references.md#rand1971) [Hubert & Arabie 1985](references.md#hubert1985). Pair precision and recall are the
+  two factors of the Fowlkes-Mallows index [Fowlkes & Mallows 1983](references.md#fowlkes1983). A merge
+  creates pairs that the truth keeps apart (FP); a split loses pairs that the truth keeps together
+  (FN). M1 tells whether a molecule is right; M2 tells how far its novel adjacencies are grouped
+  wrongly.
+- **Novel adjacencies, not bases.** A nested molecule lies inside its outer one in base space, so
+  every pair of its bases is also a pair of the outer molecule's bases, and positive in the truth. A
+  merged walk therefore adds no false pair of bases, and a base-level co-membership cannot see the
+  nested merge, which is the failure the bench tests. The novel adjacencies of the two molecules are
+  distinct: in all 40 bench cases, truth species share no novel adjacency, at 100 bp or at 10 kb,
+  phased or blind (checked 2026-11-07 on the cases' `truth_cycles.tsv`).
+- **"Together in at least one species".** A novel adjacency may lie on two species (nested species
+  can share one on real data), so the truth's groups can overlap. The relation "some species holds
+  both" is defined for overlapping groups, as the Omega index's generalisation of the Rand index to
+  non-disjoint clusterings is [Collins & Dent 1988](references.md#collins1988). The Omega index also counts *how
+  many* groups hold both. That count differs from the 0/1 relation only when species share an
+  adjacency, which no bench case has, so it is not computed.
+- **Phased items.** A labelled item separates two traversals of one adjacency on different
+  haplotypes (the bench's `ctrl_dup` duplications), and charges a walk on the wrong haplotype. A
+  haplotype switch between reference neighbours is a novel adjacency of the phased walk (§1, §3.3),
+  as it is in `junction_scores`. It is absent from the blind walk.
+- **One-to-one matching, nearest first.** Without it, two predicted adjacencies near one truth
+  adjacency would both be credited to it. One-to-one matching of calls to truth is also the
+  variant-benchmarking rule [Krusche et al. 2019](references.md#krusche2019).
+- **Tolerance: $\tau_s$ = 10 kb is the headline (`headline` = true), $\tau_g$ = 100 bp the sensitivity
+  rows.** M2 measures grouping. Breakpoint accuracy is measured by `exact_cycle` and `bp_accuracy`.
+  At 100 bp, an RCK-ecDNA imputed breakpoint (on the subgraph's 10 kb grid) would be charged twice:
+  once as a wrong adjacency, and again in every pair it takes part in. The composite's junction $F_1$
+  (§3.3) uses $\tau_s$ for the same reason. On the bench, only one pair of truth adjacencies matches at
+  10 kb but not at 100 bp, and both lie in one species (demo3). Truth items are merged only when
+  identical, so the wider tolerance cannot merge them.
+- **The `graph` universe changes TN and FPR only.** The extra items lie in no species, so TP, FP, FN,
+  precision, recall and $F_1$ are the same in both universes. The FPR is comparable between methods
+  only in the graph route, where every method has the same candidate edges; in the native universe
+  each method's false items add their own negative pairs. A background SV the method leaves unused
+  adds true-negative pairs only. One that it routes into a walk becomes a false item.
+- **Strict mode only.** M2 is a property of a whole answer. A best-of answer assembled from different
+  decompositions is not a partition of anything. Scoring rank 1's alternative decompositions as whole
+  answers is left for later.
+- **Pooling over cases: macro (headline).** Pair counts grow with the square of a case's size: demo3
+  has 14 novel adjacencies (91 pairs), a three-adjacency case has 3 pairs. Summed counts (micro)
+  would let demo3 outweigh such a case about 30 to 1, so the headline is the mean of the per-case
+  rates over the cases where each is defined (macro) [Sokolova & Lapalme 2009](references.md#sokolova2009). The
+  micro rates are reported beside it (§6.3).
+- **A known weakness.** Amigó et al. compare clustering metrics against formal constraints and argue
+  that pair-counting metrics fail one that B-cubed satisfies [Amigó et al. 2009](references.md#amigo2009) (this
+  claim was not checked against the paper's text; see [references](references.md#not-verified)). In pair
+  counting, an error in a large cluster costs more pairs than the same error in a small one. B-cubed
+  gives averaged precision and recall per item, but no TP, FP and TN counts, so it cannot give the FPR
+  asked for here; it is not computed.
+
+#### How M1 and M2 handle methods, modes, linear walks, `low_weight` and tolerance
+
+| | M1 species detection | M2 adjacency pairs |
+|---|---|---|
+| **Haplotype-blind methods (AA, CoRAL, CycleExtractor, original RCK)** | `blind` rows only: blind matching $\mu^0$, `exact_cycle`, `composite_h0` | `blind` rows only: items are novel adjacencies of the haplotype-stripped walks |
+| **Phased answers (`rck-ecdna`)** | `blind` and `phased` rows; compare methods on `blind` | the same |
+| **Strict mode** | TP, FP, FN, precision, recall, $F_1$ | TP, FP, FN, TN, precision, recall, FPR, $F_1$ |
+| **Best-of mode** | TP, FN, recall only | not computed |
+| **Linear walks** | count in $\lvert\mathcal S\rvert$; never `exact` (truth species are circular); may pass a composite threshold | no wrap-around adjacency, so a linear walk has one fewer item. CoRAL's and CycleExtractor's `Path=` lines are read only once rewritten (§4.1, §7) |
+| **`low_weight` species** | not in $\mathcal S$ (`status` rule; `cn-frac:0.1` for AA and CoRAL), so neither a prediction nor an FP. A molecule split into sub-threshold walks (bench `nest_samehap_6to1`) is an FN | not in $\mathcal S$: their adjacencies are not predicted items. `--strict-rule all` scores every walk |
+| **10 kb against 100 bp** | `exact` at $\tau_g$; the composite thresholds at $\tau_s$, as the composite itself | both, in rows with `tol_bp` 10000 (headline) and 100 |
+
+### 4.8 Regression against `rck-ecdna-eval`
 
 > **Code:** `results/bench_nested/diag/aa_regression.py`; `results/bench_nested/collect.py --aa-metrics`.
 
@@ -1085,7 +1381,8 @@ advantage.
 ## 6. Benchmark-level summaries built on these metrics
 
 The λ choice rule and the failure-stage rule of `results/bench_nested/` are defined in that
-README. Two summaries defined on the composite are used across documents.
+README. Two summaries defined on the composite are used across documents, and §6.3 pools the
+confusion-matrix metrics of §4.7.
 
 ### 6.1 Mean composite of a benchmark
 
@@ -1116,6 +1413,41 @@ broke as many cases as it fixed. **Effect** at λ = 0.2 (`results/bench_nested/N
 $\mathrm{set}_2 = 0.9229$, $\mathrm{set}_5 = 0.9373$; pool best 0.9470. The set metric changes no
 case downward. It is not a ranking: it scores what an ambiguity report would let a user see.
 
+### 6.3 Pooled confusion-matrix metrics (M1, M2)
+
+> **Provenance:** (c) new, RCK yubi_dev, 2026-11-07. Micro and macro averaging as defined by
+> [Sokolova & Lapalme 2009](references.md#sokolova2009). **Code:** `rck/ecdna/aa_eval.py::pool_partition`;
+> `results/bench_nested/collect.py::aa_partition`; `results/graph_route/score_h2h.py::partition_rows`.
+
+For a group of scored answers $k = 1, \dots, K$ (cases, or (case, amplicon) runs in the graph
+route) that share `metric`, `mode`, `haplotype`, `criterion`, `tol_bp` and `universe`, with per-answer
+counts $TP_k, FP_k, FN_k, TN_k$ (§4.7):
+
+```math
+\mathrm{micro\_}r = r\Big(\sum_k TP_k,\ \sum_k FP_k,\ \sum_k FN_k,\ \sum_k TN_k\Big),
+\qquad
+\mathrm{macro\_}r = \frac{1}{\lvert K_r \rvert} \sum_{k \in K_r} r\big(TP_k, FP_k, FN_k, TN_k\big)
+```
+
+where
+
+- $r$ is precision, recall, FPR or $F_1$;
+- $K_r$ is the answers whose $r$ is defined, and `n_cases_<r>` = $\lvert K_r \rvert$;
+- a micro rate is undefined when any answer's count is undefined (best-of FP and TN).
+
+`headline_pooling` names the one the docs report: `micro` for M1, so that every molecule weighs the
+same, and `macro` for M2, so that one large case does not dominate (§4.7).
+
+Files, written only with these options and in addition to the existing tables, which are unchanged:
+
+- `python results/bench_nested/collect.py --aa-metrics`: `aa_partition_metrics.tsv` (every case's
+  rows with `case`, `kind`, `step_penalty`) and `aa_partition_pooled.tsv` (per λ, with `cases` =
+  `all` or `bench`).
+- `python results/graph_route/score_h2h.py`: `h2h_partition.tsv` (every run's rows with `case`,
+  `scenario`, `graph`, `method`, `amplicon`) and `h2h_partition_pooled.tsv` (per graph and method,
+  with `scenario` = `all`, and per scenario). The `_cycles_only` sensitivity run writes the same files
+  with that suffix. The unit of macro pooling is the (case, amplicon) run.
+
 ---
 
 ## 7. Known limitations
@@ -1142,6 +1474,16 @@ case downward. It is not a ranking: it scores what an ambiguity report would let
   in either repository (amplicon-allele-analysis `data/COLO320/coral_paper_supplement/` holds its
   README only).
 - **Truth alleles exist for the first tumor sample only** (§4.2).
+- **M1 has no true negatives**, so it has no FPR (§4.7). Its composite thresholds include the
+  copy-number error, and the 0.95 operating point is the bench's failure threshold, not a published
+  value.
+- **M2 sees only novel adjacencies.** A molecule with at most one novel adjacency forms no pair, so
+  its own grouping is not scored (bench `nest_samehap_3to1_s306`'s nested species has one). Two
+  molecules with the same novel adjacencies but different multiplicities (for example a segment
+  traversed twice) are the same set of items: M1's `exact` separates them, M2 does not.
+- **M2 is strict-only** and is not computed over rank 1's alternative decompositions.
+- **M2's `graph` universe** adds every discordant edge of `--graph`, not only those within the truth
+  amplicon. It is meant for the graph route, where that graph is the amplicon's shared input.
 - **Unobserved concordant joins** (at imputed grid points, 10 in demo7) get the smaller
   neighbouring segment CN in the exported AA graph; RCK-ecDNA has no observation there.
 - **Truth and inferred read paths differ.** The truth graph gets every read of `obs/path.tsv`
@@ -1289,6 +1631,26 @@ The supplementary-methods versions were named `cycle_overlap` and `cyclic_lcs` b
 **`aa_sample_metrics.tsv`**: one row per mode: `mode`, `strict_rule`, `phased`, `n_truth`,
 `n_inferred`, and the columns of §4.5.
 
+**`aa_partition_metrics.tsv`** (§4.7): one row per (metric, mode, haplotype, criterion,
+tolerance, universe):
+
+| Column | Meaning |
+|---|---|
+| `metric` | `species_detection` (M1) or `adjacency_pairs` (M2) |
+| `mode` | `strict` or `best_of` (M1 only) |
+| `haplotype` | `blind` or `phased` (phased answers only) |
+| `criterion` | M1: `exact`, `composite_h0>=θ` or `composite>=θ`; M2: `co_membership` |
+| `tol_bp` | tolerance: $\tau_g$ for `exact`, $\tau_s$ for the composite thresholds; M2 both |
+| `universe` | M1: `species`; M2: `native` or `graph` |
+| `headline` | the headline rows: M1 strict `exact`; M2 at $\tau_s$ on the `native` universe (blind for comparing methods, phased for `rck-ecdna` against the truth) |
+| `n_truth`, `n_predicted` | $\lvert\mathcal T\rvert$ and $\lvert\mathcal S\rvert$ (`n_predicted` empty in best-of) |
+| `n_items` | M2: $\lvert U \rvert$ |
+| `tp`, `fp`, `fn`, `tn` | the counts; empty where undefined |
+| `precision`, `recall`, `fpr`, `f1` | the rates; empty where undefined |
+
+The pooled files of §6.3 add `n_cases`, `headline_pooling`, `micro_<rate>`, `macro_<rate>` and
+`n_cases_<rate>`.
+
 **`aa_eval.json`**: `info` (inputs, rule, tolerances, `truth_in_scope`, `regions`,
 `mixture_graphs`), `sample`, `graph`.
 
@@ -1299,6 +1661,7 @@ The supplementary-methods versions were named `cycle_overlap` and `cyclic_lcs` b
 | `test_evaluate.py` | truth reading, several-phasing assignment, species metrics | no |
 | `test_recovery.py` | recovery matrix, composite, `best_*` | no |
 | `test_aa_eval.py` | AA parsing, graph metrics incl. `error_free_merged` and `merge_benign_splits`, CoRAL metrics (code and supplement), modes, sample metrics | no |
+| `test_aa_partition.py` | M1 and M2 (§4.7): a merge, a split, a nested pair sharing a novel adjacency (blind and phased), a background SV left unused (graph universe) and one routed into a walk, 10 kb against 100 bp, one-to-one matching, a linear walk, undefined rates, micro and macro pooling, the AA-file path end to end | no |
 | `test_aa_import.py` | subgraph export, import, scale fit, round trip; reference tokens written by CoRAL in `tests/ecdna/data/graph_route/` | no |
 | `test_coral_flank.py` | flank lengths, residual copy numbers, renumbered constraints | no |
 

@@ -447,6 +447,32 @@ def aa_metrics(table, jobs=16):
     return frame
 
 
+def aa_partition(frame):
+    """The confusion-matrix metrics (M1 species detection, M2 adjacency pairs) of every scored
+    (case, λ), read from the aa_partition_metrics.tsv that aa_eval wrote, and pooled per λ over
+    the bench cases and over all cases (rck.ecdna.aa_eval.pool_partition: micro and macro; the
+    docs report micro for M1 and macro for M2). Returns (per_case, pooled)."""
+    import aa_regression
+    from rck.ecdna import aa_eval
+
+    out = os.environ.get("BENCH_NESTED_AA_OUT", aa_regression.DEFAULT_OUT)
+    ok = frame[frame["error"].isna()] if "error" in frame else frame
+    parts = []
+    for r in ok[["case", "kind", "step_penalty"]].drop_duplicates().itertuples():
+        path = os.path.join(out, r.case, "lambda_%g" % r.step_penalty, "aa_partition_metrics.tsv")
+        if os.path.exists(path):
+            parts.append(pd.read_csv(path, sep="\t").assign(case=r.case, kind=r.kind, step_penalty=r.step_penalty))
+    if not parts:
+        return None, None
+    per_case = pd.concat(parts, ignore_index=True)
+    front = ["case", "kind", "step_penalty"]
+    per_case = per_case[front + [c for c in per_case.columns if c not in front]]
+    pooled = pd.concat([aa_eval.pool_partition(per_case, ["step_penalty"]).assign(cases="all"),
+                        aa_eval.pool_partition(per_case[per_case["kind"] == "bench"], ["step_penalty"]).assign(cases="bench")],
+                       ignore_index=True)
+    return per_case, pooled[["cases"] + [c for c in pooled.columns if c != "cases"]]
+
+
 def aa_appended(table, frame):
     """bench_sweep.tsv: the existing columns, then AA_COLUMNS."""
     cols = ["%s.%s" % (m, c) for m, cs in AA_COLUMNS.items() for c in cs]
@@ -558,6 +584,10 @@ def main():
     print(text)
     if aa is not None:
         aa.to_csv(os.path.join(RESULTS, "aa_metrics.tsv"), sep="\t", index=False)
+        per_case, pooled = aa_partition(aa)
+        if per_case is not None:  # new files; no existing table changes
+            per_case.to_csv(os.path.join(RESULTS, "aa_partition_metrics.tsv"), sep="\t", index=False)
+            pooled.to_csv(os.path.join(RESULTS, "aa_partition_pooled.tsv"), sep="\t", index=False)
         aa_text = aa_markdown(aa.merge(table[["case", "step_penalty", "kind"]], on=["case", "step_penalty"], how="left",
                                        suffixes=("_aa", "")), reported)
         write_aa_readme(aa_text)

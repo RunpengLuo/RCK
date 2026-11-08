@@ -1,6 +1,7 @@
 # References
 
-Every reference cited in the pipeline documentation. Each entry was checked on 2026-11-06
+Every reference cited in the pipeline documentation. Each entry was checked on 2026-11-06 (the
+entries under "Clustering comparison and benchmarking statistics": on 2026-11-07)
 against Crossref (`api.crossref.org/works/<DOI>`) or Europe PMC (which also gives the PMID), and
 each software entry against its repository. Entries that could only be checked in part say so.
 References that could not be verified are not listed here. Where the docs need one, they show
@@ -182,6 +183,76 @@ Algorithms*. Cambridge University Press (2003). Title, publisher and year were c
 through published reviews (e.g. doi:[10.1145/1189056.1189063](https://doi.org/10.1145/1189056.1189063)).
 No book DOI or ISBN was found.
 
+## Clustering comparison and benchmarking statistics
+
+Cited by the confusion-matrix metrics M1 and M2 ([evaluation.md §4.7](evaluation.md#47-confusion-matrix-metrics-species-detection-m1-and-adjacency-pairs-m2)).
+Each bibliographic record (authors, title, venue, volume, pages, year) was checked against Crossref
+on 2026-11-07. "Abstract checked" means the claim the docs make was checked against the abstract
+(Europe PMC). The others' claims are well-known definitions that were not re-read in the full text,
+which is paywalled; the [last section](#not-verified) lists the claims that go beyond a definition.
+
+<a id="rand1971"></a>**[Rand 1971] Rand index (pair counting).**
+Rand WM. Objective criteria for the evaluation of clustering methods. *Journal of the American
+Statistical Association* 66(336):846–850 (1971).
+doi:[10.1080/01621459.1971.10482356](https://doi.org/10.1080/01621459.1971.10482356).
+
+<a id="hubert1985"></a>**[Hubert & Arabie 1985] Adjusted Rand index.**
+Hubert L, Arabie P. Comparing partitions. *Journal of Classification* 2(1):193–218 (1985).
+doi:[10.1007/BF01908075](https://doi.org/10.1007/BF01908075).
+
+<a id="fowlkes1983"></a>**[Fowlkes & Mallows 1983] Fowlkes-Mallows index.**
+Fowlkes EB, Mallows CL. A method for comparing two hierarchical clusterings. *Journal of the American
+Statistical Association* 78(383):553–569 (1983).
+doi:[10.1080/01621459.1983.10478008](https://doi.org/10.1080/01621459.1983.10478008).
+
+<a id="collins1988"></a>**[Collins & Dent 1988] Omega index (overlapping clusters).**
+Collins LM, Dent CW. Omega: a general formulation of the Rand index of cluster recovery suitable for
+non-disjoint solutions. *Multivariate Behavioral Research* 23(2):231–242 (1988).
+doi:[10.1207/s15327906mbr2302_6](https://doi.org/10.1207/s15327906mbr2302_6). Abstract checked: a
+generalisation of the Hubert-Arabie adjusted Rand index to non-disjoint (overlapping) solutions.
+
+<a id="amigo2009"></a>**[Amigó et al. 2009] Formal constraints for clustering metrics; extended B-cubed.**
+Amigó E, Gonzalo J, Artiles J, Verdejo F. A comparison of extrinsic clustering evaluation metrics
+based on formal constraints. *Information Retrieval* 12(4):461–486 (2009).
+doi:[10.1007/s10791-008-9066-8](https://doi.org/10.1007/s10791-008-9066-8).
+
+<a id="krusche2019"></a>**[Krusche et al. 2019] GA4GH variant-calling benchmarking.**
+Krusche P, Trigg L, Boutros PC, et al. Best practices for benchmarking germline small-variant calls in
+human genomes. *Nature Biotechnology* 37(5):555–560 (2019).
+doi:[10.1038/s41587-019-0054-x](https://doi.org/10.1038/s41587-019-0054-x). Abstract checked: a
+benchmarking framework that matches calls with different representations to the truth and defines
+standard performance metrics.
+
+<a id="burset1996"></a>**[Burset & Guigó 1996] Gene-structure prediction accuracy at several levels.**
+Burset M, Guigó R. Evaluation of gene structure prediction programs. *Genomics* 34(3):353–367 (1996).
+doi:[10.1006/geno.1996.0298](https://doi.org/10.1006/geno.1996.0298). Abstract checked: accuracy
+measured at the nucleotide, exon and protein levels, including the share of exons exactly
+identified.
+
+<a id="pertea2020"></a>**[Pertea & Pertea 2020] GffCompare.**
+Pertea G, Pertea M. GFF Utilities: GffRead and GffCompare. *F1000Research* 9:304 (2020), version 2.
+doi:[10.12688/f1000research.23297.2](https://doi.org/10.12688/f1000research.23297.2). Abstract
+checked: GffCompare compares annotations (transcripts) against a reference.
+
+<a id="davis2006"></a>**[Davis & Goadrich 2006] Precision-recall curves.**
+Davis J, Goadrich M. The relationship between precision-recall and ROC curves. *Proceedings of the
+23rd International Conference on Machine Learning (ICML '06)*, 233–240 (2006).
+doi:[10.1145/1143844.1143874](https://doi.org/10.1145/1143844.1143874).
+
+<a id="saito2015"></a>**[Saito & Rehmsmeier 2015] Precision-recall under class imbalance.**
+Saito T, Rehmsmeier M. The precision-recall plot is more informative than the ROC plot when
+evaluating binary classifiers on imbalanced datasets. *PLoS ONE* 10(3):e0118432 (2015).
+doi:[10.1371/journal.pone.0118432](https://doi.org/10.1371/journal.pone.0118432). Abstract checked.
+
+<a id="sokolova2009"></a>**[Sokolova & Lapalme 2009] Micro and macro averaging.**
+Sokolova M, Lapalme G. A systematic analysis of performance measures for classification tasks.
+*Information Processing & Management* 45(4):427–437 (2009).
+doi:[10.1016/j.ipm.2009.03.002](https://doi.org/10.1016/j.ipm.2009.03.002).
+
+<a id="dice1945"></a>**[Dice 1945] Dice coefficient (= F1).**
+Dice LR. Measures of the amount of ecologic association between species. *Ecology* 26(3):297–302
+(1945). doi:[10.2307/1932409](https://doi.org/10.2307/1932409).
+
 ## Not verified
 
 These items appear in the docs as `[citation needed: …]`:
@@ -199,6 +270,24 @@ These items appear in the docs as `[citation needed: …]`:
   (`Supplemental_Methods.pdf` is not on disk). The same applies to the section of the AA paper
   that defines error-free reconstruction and the section of the RCK paper that defines the
   novel-adjacency FNR and FDR. The papers are verified; the section pointers are not.
+
+- **Content claims of the §4.7 references that go beyond a standard definition** (the full texts
+  are paywalled and were not read; the bibliographic records are verified):
+  - Amigó et al. 2009: that pair-counting metrics fail a constraint that B-cubed satisfies (in the
+    paper, "cluster size vs. quantity"), and that the paper extends B-cubed to overlapping
+    clusterings;
+  - Krusche et al. 2019: that the framework reports recall, precision and F-measure with no true
+    negatives or specificity, and matches calls to the truth one to one;
+  - Burset & Guigó 1996: that the exon-level "specificity" is the share of predicted exons that
+    are real, which is a precision;
+  - Pertea & Pertea 2020: that GffCompare's transcript level requires an exact intron-chain match;
+  - Sokolova & Lapalme 2009: their wording on micro averaging favouring large classes.
+- **Bagga A, Baldwin B. "Algorithms for scoring coreference chains" (1998)**, the original B-cubed,
+  usually cited from an LREC 1998 workshop. No DOI or Crossref record was found. It is not cited
+  in the docs.
+- **A published threshold for a partly correct ecDNA reconstruction**
+  ([evaluation.md §4.7](evaluation.md#47-confusion-matrix-metrics-species-detection-m1-and-adjacency-pairs-m2), M1's
+  0.95 operating point). None was found.
 
 Also checked: the DOI the previous `simulations/README.md` gave for NanoSim
 (10.1093/bioinformatics/btw753) is a different paper (Šošić & Šikić, Edlib, *Bioinformatics*

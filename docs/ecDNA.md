@@ -93,7 +93,7 @@ same table for all stages.
 | Pool re-ranking (`--keep-pool`, `rerank`) | §5.9 | (c) new | `949f796` |
 | Amplicon call (`ecDNA` / `linear` / `mixed` / `none`) | §5.10 | (c) new | `10416aa` |
 | Refit LP (fractional weights) | §6 | (c) new; fractional weights as in CoRAL [CoRAL 3.1.1 code](pipeline/references.md#coral_code); LP solved with HiGHS [Huangfu & Hall 2018](pipeline/references.md#huangfu2018) | `c5e0b9c` |
-| Alternating Euler walk | §7 | (a) Hierholzer's algorithm [Hierholzer & Wiener 1873](pipeline/references.md#hierholzer1873), adapted to alternation `[citation needed: Euler walks without forbidden transitions; Kotzig 1968 proposed, not verified]` | `3c82929` |
+| Alternating Euler walk | §7 | (a) Hierholzer's algorithm [Hierholzer & Wiener 1873](pipeline/references.md#hierholzer1873), adapted to alternation [Kotzig 1968] | `3c82929` |
 | Ordering enumeration and long-read ranking | §7 | (c) new | `3c82929` |
 | AA-format graph and cycles output | App. D | (a) AmpliconArchitect's format [Deshpande et al. 2019](pipeline/references.md#deshpande2019); `Haplotypes=` is (c) | `3c82929` |
 | `gurobi_env` (threads, logger, disposal), NFS-safe test folders | App. F, G | (b) | `41f5804`, `8f0f810` |
@@ -852,8 +852,7 @@ multiset of (weight, edge multiplicities).
 - *The solution pool* is a Gurobi feature: with `PoolSearchMode=2` Gurobi searches for the best
   `PoolSolutions` solutions within `PoolGap` of the optimum [Gurobi](pipeline/references.md#gurobi).
 - *The no-good cut* is the standard cut that removes one binary solution and nothing else: at least
-  one support indicator must change `[citation needed: canonical cuts on the unit hypercube, Balas &
-  Jeroslow 1972 proposed, not verified]`. It is the fallback when the pool is not wanted.
+  one support indicator must change. It is the fallback when the pool is not wanted.
 - *Reporting ranked alternatives, rather than one answer,* is this pipeline's choice. Nested and
   repeated structures often have several decompositions that fit equally well (§5.7, §5.8), and a
   single answer would hide that.

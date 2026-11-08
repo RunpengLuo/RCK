@@ -253,6 +253,24 @@ doi:[10.1016/j.ipm.2009.03.002](https://doi.org/10.1016/j.ipm.2009.03.002).
 Dice LR. Measures of the amount of ecologic association between species. *Ecology* 26(3):297–302
 (1945). doi:[10.2307/1932409](https://doi.org/10.2307/1932409).
 
+<a id="avis1983"></a>**[Avis 1983] Greedy heuristic for weighted matching.**
+Avis D. A survey of heuristics for the weighted matching problem. *Networks* 13(4):475–493 (1983).
+doi:[10.1002/net.3230130404](https://doi.org/10.1002/net.3230130404). Cited for the greedy
+matching of [evaluation.md §3.6](evaluation.md#36-one-to-one-matching-of-truth-to-inferred-species).
+
+<a id="kuhn1955"></a>**[Kuhn 1955] Hungarian method (optimal assignment).**
+Kuhn HW. The Hungarian method for the assignment problem. *Naval Research Logistics Quarterly*
+2(1–2):83–97 (1955). doi:[10.1002/nav.3800020109](https://doi.org/10.1002/nav.3800020109). Cited as
+the optimal alternative that §3.6 does not use.
+
+<a id="edge2017"></a>**[Edge et al. 2017] HapCUT2; switch and mismatch errors.**
+Edge P, Bafna V, Bansal V. HapCUT2: robust and accurate haplotype assembly for diverse sequencing
+technologies. *Genome Research* 27(5):801–812 (2017).
+doi:[10.1101/gr.213462.116](https://doi.org/10.1101/gr.213462.116). Full text checked (PMC5411775): a
+switch error is a discordant phase between adjacent variants relative to the truth, and the
+haplotype pair is unordered. Cited for the swap-invariant phasing accuracy of
+[evaluation.md §3.2](evaluation.md#32-phasing-accuracy).
+
 ## Not verified
 
 These items appear in the docs as `[citation needed: …]`:
@@ -282,6 +300,8 @@ These items appear in the docs as `[citation needed: …]`:
     are real, which is a precision;
   - Pertea & Pertea 2020: that GffCompare's transcript level requires an exact intron-chain match;
   - Sokolova & Lapalme 2009: their wording on micro averaging favouring large classes.
+- **Avis 1983: that the survey covers the greedy heuristic and its factor-½ guarantee for maximum
+  weight matching.** The bibliographic record is verified; the full text was not read.
 - **Bagga A, Baldwin B. "Algorithms for scoring coreference chains" (1998)**, the original B-cubed,
   usually cited from an LREC 1998 workshop. No DOI or Crossref record was found. It is not cited
   in the docs.

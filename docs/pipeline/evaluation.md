@@ -47,7 +47,24 @@ linear) is the ordered list of oriented, haplotype-labelled segments it traverse
 ## 1. Common objects and notation
 
 > **Provenance:** (c) new, RCK yubi_dev@c144584. **Code:** `rck/ecdna/evaluate.py::CStep`,
-> `::Cycle`, `::runs`, `::junctions`.
+> `::Cycle`, `::runs`, `::_contiguous`, `::junctions`. Where each object comes from:
+>
+> - **Step $(c, a, b, o)$ and weight $w_C$**: (a) one segment of a cycle in AmpliconArchitect's cycles
+>   file (chromosome, interval, orientation) and the cycle's `Copy_count`
+>   [Deshpande et al. 2019](references.md#deshpande2019). CoRAL writes the same format
+>   [Zhu et al. 2024](references.md#zhu2024).
+> - **Haplotype $h$**: (a) RCK's haplotype labels A and B of a segment, whose adjacencies are
+>   labelled AA, AB, BA or BB [Aganezov & Raphael 2020](references.md#aganezov2020). AA and CoRAL
+>   have no haplotype field. `.` (unphased) is (c).
+> - **Extremity and join**: (a) RCK's segment extremity and adjacency. A join that is not
+>   reference-contiguous is RCK's *novel adjacency*, the *discordant edge* of AA and CoRAL
+>   [Aganezov & Raphael 2020](references.md#aganezov2020) [Deshpande et al. 2019](references.md#deshpande2019).
+> - **Per-base multiplicity $m_C$, reference runs and the 2 bp contiguity slack**: (c). No tool
+>   defines them. The code records no reason for 2 bp. The slack is wide enough to absorb the 1 bp
+>   coordinate-convention differences of §5.1.
+> - **Extremity match within $\tau$**: (a) CoRAL 3.1.1's `is_oriented_breakpoint_match`, with
+>   $\le$ instead of $<$ (box below). $\tau_g$ = 100 bp is (a), the AA and CoRAL breakpoint
+>   tolerance. $\tau_s$ = 10 kb is (c), set by the subgraph's 10 kb imputation grid.
 
 A step is $s = (c, a, b, h, o)$:
 
@@ -239,7 +256,13 @@ segmentation, so these scores are the same on steps and on runs.
 ### 3.2 Phasing accuracy
 
 > **Provenance:** (c) new, RCK yubi_dev@4e53747. **Code:** `rck/ecdna/evaluate.py::score_pair`,
-> `::_swap_hap`.
+> `::_swap_hap`. $O$ and $O_H$ are §3.1's base-pair overlaps without and with haplotype
+> agreement. The A/B labels are RCK's [Aganezov & Raphael 2020](references.md#aganezov2020). Neither
+> AA nor CoRAL scores phasing. The swap-invariant form follows the convention of haplotype-assembly
+> benchmarks, where the two haplotypes are an unordered pair. Their switch error
+> [Edge et al. 2017](references.md#edge2017) counts discordant relative phase between adjacent
+> variants, and so is unchanged when A and B are exchanged. Here the exchange is global, one swap
+> per species, not one per phase block. That makes it coarser than a switch error.
 
 ```math
 \mathrm{phasing\_accuracy} = \frac{O_H(T, C)}{O(T, C)},
@@ -282,7 +305,16 @@ Columns: `junction_recall`, `junction_precision`, `junction_f1` (unphased) and
 ### 3.4 Order match and topology match
 
 > **Provenance:** (c) new, RCK yubi_dev@c144584. The linear case is (c), yubi_dev@10416aa.
-> **Code:** `rck/ecdna/evaluate.py::order_match`, `::_runs_equal`, `::_flip`.
+> **Code:** `rck/ecdna/evaluate.py::order_match`, `::_runs_equal`, `::_flip`. The criterion is (a)
+> the exact-reconstruction criterion of AA's and CoRAL's simulation benchmarks
+> [Deshpande et al. 2019](references.md#deshpande2019) [Zhu et al. 2024](references.md#zhu2024):
+> the same segments in the same cyclic order and orientation. Treating rotations, and the reverse
+> with every orientation flipped, as the same molecule is the usual equivalence for a circular
+> sequence that can be read on either strand. It is the same set $\mathcal R$ that §4.4's CoRAL
+> cyclic LCS searches. The following are (c): the comparison on reference runs rather than
+> segments, the haplotype requirement, the search over every Euler ordering, and the $\tau_s$
+> tolerance.
+> §4.4's `exact_cycle` is the same function at AA's $\tau_g$.
 
 ```math
 \mathrm{order\_match}(T, C) = \mathbb 1\Big[\ \mathrm{circ}(T) = \mathrm{circ}(C)\ \wedge\ \exists\, k,\ \exists\, \rho \in \mathcal R :\ \mathrm{runs}(T) \approx_{\tau} \rho\big(\mathrm{runs}(C^{(k)})\big)\ \Big]
@@ -305,7 +337,13 @@ order match.
 ### 3.5 Copy-number error
 
 > **Provenance:** (c) new, RCK yubi_dev@c144584. The integer variant is (c), yubi_dev@c5e0b9c
-> (with the refit). **Code:** `rck/ecdna/evaluate.py::score_pair`.
+> (with the refit). **Code:** `rck/ecdna/evaluate.py::score_pair`. The quantity compared is (a) a
+> cycle's copy count, AA's and CoRAL's `Copy_count`
+> [Deshpande et al. 2019](references.md#deshpande2019) [Zhu et al. 2024](references.md#zhu2024).
+> The per-species relative error against a truth copy number is (c). CoRAL's copy-number scores
+> (§4.5 `cn_explained_topk`) compare cycles with the graph, not with the truth. $w_C$ comes from
+> the refit LP of `docs/ecDNA.md` §6, and $w^{\mathrm{int}}_C$ from the decomposition MILP
+> (`docs/ecDNA.md` §5, after CoRAL's integer cycle weights).
 
 ```math
 \mathrm{cn\_rel\_err} = \frac{\lvert w_C - w_T \rvert}{w_T},
@@ -326,9 +364,17 @@ species.
 ### 3.6 One-to-one matching of truth to inferred species
 
 > **Provenance:** (c) new, RCK yubi_dev@c144584. **Code:** `rck/ecdna/evaluate.py::score_decomposition`.
+> The procedure is the greedy heuristic for maximum-weight bipartite matching
+> [Avis 1983](references.md#avis1983), here on haplotype Jaccard (§3.1). It is not the optimal
+> assignment (the Hungarian method [Kuhn 1955](references.md#kuhn1955)). One-to-one matching is the
+> choice of the GA4GH benchmarking framework, which pairs each call with at most one truth record
+> [Krusche et al. 2019](references.md#krusche2019). It differs from CoRAL 3.1.1, which takes each
+> metric's best value over all reconstructed cycles independently, so one cycle can serve several
+> truth cycles (§4.6 `best_of`) [CoRAL 3.1.1 code](references.md#coral_code).
 
-All pairs $(T, C)$ are sorted by haplotype Jaccard, highest first. The pairs are then accepted
-greedily: a pair is skipped if either side is already used or if its haplotype Jaccard is 0. A
+All pairs $(T, C)$ are sorted by haplotype Jaccard, highest first. Ties are broken by the truth name
+and then the inferred name, both in reverse lexical order (a Python tuple sort). The pairs are then
+accepted greedily: a pair is skipped if either side is already used or if its haplotype Jaccard is 0. A
 truth species without a partner is *missed*; its row has no inferred species and composite 0. An
 inferred species without a partner is *false*. Matching on haplotype Jaccard means an unphased
 answer (every haplotype `.`) matches nothing. That is why the method-agnostic scorer also matches
@@ -374,7 +420,12 @@ than a moderate one.
 ### 3.8 The recovery matrix, `best_*` and `mean_composite`
 
 > **Provenance:** (c) new, RCK yubi_dev@4e53747. **Code:** `rck/ecdna/evaluate.py::recovery_matrix`,
-> `::evaluate`.
+> `::evaluate`. The ranked alternatives $D_r$ come from the decomposition pool and ambiguity report
+> of `docs/ecDNA.md` §5 (c). Scoring every alternative and keeping the best is an oracle upper
+> bound. It is the same idea as CoRAL's best-of scoring (§4.6), applied over ranked decompositions
+> instead of over the cycles of one answer. `mean_composite` is a plain mean over truth species
+> (macro averaging, [Sokolova & Lapalme 2009](references.md#sokolova2009)). The `low_weight` filter
+> is `rck-ecdna`'s significance rule (`docs/ecDNA.md` §5; §7 below).
 
 `decompositions.tsv` holds ranked decompositions $D_1, D_2, \dots$, with rank 1 being RCK's
 answer. Unless `--include-low-weight` is given, species flagged `low_weight` are left out
@@ -506,7 +557,12 @@ discordant edges, as CoRAL 3.1.1 `path_constraint` lines in CoRAL's sort order.
 ### 4.3 Graph-level metrics (`aa_graph_metrics.tsv`)
 
 > **Code:** `rck/ecdna/aa_eval.py::graph_metrics`, `::edges_match`, `::scoped_edges`,
-> `::scoped_sequences`, `::_segment_match`.
+> `::scoped_sequences`, `::_segment_match`. **Provenance of the shared objects:** sequence and
+> discordant edges, and amplicon intervals, are (a) AmpliconArchitect's breakpoint graph and
+> `interval` lines [Deshpande et al. 2019](references.md#deshpande2019). $e \sim f$ is (a) CoRAL
+> 3.1.1's `is_breakpoint_match` with $\le$ [CoRAL 3.1.1 code](references.md#coral_code). The
+> following are (c): scoping to one truth amplicon ($E_C$ and $S_C$, §4.3 `bp_accuracy`
+> difference 1) and the segment match $g \simeq g'$. Each metric below has its own provenance line.
 
 The metrics are computed once per truth amplicon $A$ that contains an in-scope species. The
 following symbols are used throughout this section:
@@ -643,6 +699,10 @@ in RCK's graphs (RCK `results/bench_nested/README.md`).
 ### 4.4 Species-level metrics (`aa_species_metrics.tsv`)
 
 > **Code:** `rck/ecdna/aa_eval.py::strict_rows`, `::best_of_rows`, `::phased_part`, `::blind_part`.
+> **Provenance:** the column families are §3's functions (c), called unchanged. The haplotype-blind
+> matching (`strip_haplotypes`, `inferred_h0`) is (c), RCK yubi_dev@e4c2409. It exists so that
+> AA, CoRAL and original RCK, which write unphased cycles, can be matched at all. The CoRAL
+> columns are (a), and each has its own provenance line below.
 
 Each in-scope truth species gets one row per mode (§4.6). There are two families of columns:
 
@@ -1184,7 +1244,9 @@ gives 6 pairs: 2 positive in the truth ($j_1 j_2$, $j_3 j_4$) and 4 negative.
 
 ### 4.8 Regression against `rck-ecdna-eval`
 
-> **Code:** `results/bench_nested/diag/aa_regression.py`; `results/bench_nested/collect.py --aa-metrics`.
+> **Provenance:** (c) new, RCK yubi_dev@e4c2409. It is a software regression test, not a metric: it
+> checks that `aa_eval` reproduces §3 and introduces no new definitions. **Code:**
+> `results/bench_nested/diag/aa_regression.py`; `results/bench_nested/collect.py --aa-metrics`.
 
 The AA-format path must reproduce §3 exactly for `rck-ecdna`'s answers. On the 40 bench_nested
 cases at λ = 0 and 0.2 (80 pairs), the following are identical at full precision:
@@ -1386,14 +1448,17 @@ confusion-matrix metrics of §4.7.
 
 ### 6.1 Mean composite of a benchmark
 
-> **Code:** `results/bench_nested/collect.py`.
+> **Provenance:** (c) new, RCK `results/bench_nested/`. A macro average over cases
+> [Sokolova & Lapalme 2009](references.md#sokolova2009). **Code:** `results/bench_nested/collect.py`.
 
 This is the mean over cases of each case's `mean_composite` (§3.8) at the reported λ.
 
 ### 6.2 Set metric (rank 1 plus its first $k$ same-fit alternatives)
 
 > **Provenance:** (c) new, RCK yubi_dev@de5a805. **Code:** `results/bench_nested/diag/grow_rules.py::main`
-> (`set k`).
+> (`set k`). It is §3.8's oracle `best_composite` restricted to rank 1 and its first $k$ same-fit
+> alternatives from the ambiguity report (`docs/ecDNA.md` §5), then macro-averaged over cases as
+> in §6.1.
 
 ```math
 \mathrm{set}_k = \frac{1}{\lvert \mathcal K \rvert} \sum_{\kappa \in \mathcal K} \max\Big( \bar c_\kappa(D_1),\ \max_{j \le k} \bar c_\kappa(A_{\kappa, j}) \Big)

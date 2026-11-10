@@ -1,0 +1,192 @@
+{
+  "graph": {
+    "name": "amplicon_0",
+    "nodes": 64,
+    "segments": 26,
+    "adjacencies": {
+      "reference": 32,
+      "novel": 8,
+      "imputed": 27
+    },
+    "terminals": 12,
+    "regions": [
+      "chr11:81496001-82318000",
+      "chr16:25450001-25590000",
+      "chr16:46675001-46905000",
+      "chr20:48341001-48423000",
+      "chr6:88298001-88966999"
+    ],
+    "normalization": [
+      "contracted 3 phantom segment(s) of <= 2 bp",
+      "merged imputed imputed_adj_inter_chr11_2 into reference ref0008",
+      "merged imputed imputed_adj_inter_chr11_5 into reference ref0009",
+      "merged imputed imputed_adj_inter_chr11_8 into reference ref0010",
+      "merged imputed imputed_adj_inter_chr16_12 into reference ref0016",
+      "merged imputed imputed_adj_inter_chr16_15 into reference ref0017",
+      "merged imputed imputed_adj_inter_chr16_21 into reference ref0019",
+      "merged imputed imputed_adj_inter_chr16_24 into reference ref0020",
+      "merged imputed imputed_adj_inter_chr20_29 into reference ref0027",
+      "merged imputed imputed_adj_inter_chr20_32 into reference ref0028",
+      "merged imputed imputed_adj_anchor_chr6_38 into reference ref0031",
+      "merged imputed imputed_adj_inter_chr6_37 into reference ref0033",
+      "merged imputed imputed_adj_inter_chr6_40 into reference ref0034",
+      "merged imputed imputed_adj_inter_chr6_42 into reference ref0035"
+    ]
+  },
+  "scale": {
+    "depth_per_copy": 13.5,
+    "junction_reads_per_copy": 7.0,
+    "baseline_cn": 2.0,
+    "depth_method": "override",
+    "junction_method": "subgraph_reference_median",
+    "depth_mode": "tumor",
+    "ratio_baseline": null,
+    "details": {
+      "reference_adjacencies_used": 13,
+      "background_flank_cn": {
+        "chr11:81496001-82318000": 2.0,
+        "chr16:25450001-25590000": 2.0,
+        "chr16:46675001-46905000": 2.0,
+        "chr20:48341001-48423000": 2.0,
+        "chr6:88298001-88966999": 2.0
+      }
+    }
+  },
+  "flow": {
+    "status": "optimal",
+    "objective": 7.9748580201787895,
+    "mip_gap": 0.0,
+    "imputed_used": [],
+    "ecdna_copies_total": 253,
+    "linear_end_copies": 2
+  },
+  "amplicon_call": "ecDNA",
+  "ambiguity": {
+    "ambiguous": false,
+    "window": 2.0,
+    "n_alternatives": 0,
+    "n_species": 1,
+    "steps": 18,
+    "alternatives": []
+  },
+  "circular_fraction": 1.0,
+  "decompositions": [
+    {
+      "rank": 1,
+      "objective": 2.0073,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 6.601667,
+      "data_objective_int": 6.704858,
+      "pruned": [],
+      "steps": 18,
+      "ambiguity": {
+        "ambiguous": false,
+        "window": 2.0,
+        "n_alternatives": 0,
+        "n_species": 1,
+        "steps": 18,
+        "alternatives": []
+      },
+      "species": [
+        {
+          "weight": 5.76,
+          "weight_int": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 1773996,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00020",
+            "sim00021",
+            "sim00030",
+            "sim00031",
+            "sim00032",
+            "sim00033",
+            "sim00037"
+          ]
+        },
+        {
+          "weight": 1.08,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 2302998,
+          "n_orderings": 2,
+          "imputed": [],
+          "junctions": [
+            "sim00020",
+            "sim00021",
+            "sim00032",
+            "sim00033",
+            "sim00037"
+          ]
+        }
+      ]
+    },
+    {
+      "rank": 2,
+      "objective": 2.010899999999972,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "reads_total": 0.0,
+      "reads_explained": 0.0,
+      "data_objective": 6.601667,
+      "data_objective_int": 6.704858,
+      "pruned": [],
+      "steps": 18,
+      "ambiguity": null,
+      "species": [
+        {
+          "weight": 4.69,
+          "weight_int": 5,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 1773996,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00020",
+            "sim00021",
+            "sim00030",
+            "sim00031",
+            "sim00032",
+            "sim00033",
+            "sim00037"
+          ]
+        },
+        {
+          "weight": 1.08,
+          "weight_int": 1,
+          "topology": "linear",
+          "status": "low_weight",
+          "length_bp": 4076994,
+          "n_orderings": 4,
+          "imputed": [],
+          "junctions": [
+            "sim00020",
+            "sim00021",
+            "sim00030",
+            "sim00031",
+            "sim00032",
+            "sim00033",
+            "sim00037"
+          ]
+        }
+      ]
+    }
+  ],
+  "inputs": {
+    "mode": "windows",
+    "windows": null,
+    "extremities": null,
+    "paths": null
+  },
+  "runtime_s": 0.72,
+  "paths_loaded": 0
+}

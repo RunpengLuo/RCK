@@ -1,0 +1,599 @@
+"""Collect bench_nested: re-rank every case over the λ grid, choose λ, write the summaries.
+
+    python collect.py              # rerank_validation.tsv, bench_sweep.tsv, pipeline.tsv, README.md results
+    python collect.py --validate   # only the re-ranking check against results/step_sweep/sweep.tsv
+    python collect.py --aa-metrics # also the method-agnostic AA-format metrics (rck.ecdna.aa_eval)
+
+Reads runs/<case>/lambda_0/ (a λ = 0 run) and runs/<case>/pool/ (a --keep-pool run, re-ranked
+with rck.ecdna.rerank for every λ > 0), and amplicon-allele-analysis
+simulations/subgraphs/bench_nested/ for the subgraph-stage checks. Missing runs are skipped.
+BENCH_NESTED_ROOT and BENCH_NESTED_OUT are read as in run_case.py; BENCH_NESTED_RESULTS writes the
+tables and the README results section to another folder (README.md there holds only the results).
+
+Choice of λ: the smallest λ on the plateau, with no control or demo case more than TOL_REGRESSION
+below its λ = 0 score. A λ is on the plateau when its mean composite over all cases is within
+TOL_PLATEAU of the best λ's, or when fewer than MIN_GAIN_CASES cases gain more than TOL_REGRESSION
+from it to the best λ: one case alone cannot pick λ, for example a single case that edges up at
+the end of the grid but stays a failure (v2 nest_samehap_3to1_s301, 0.693 at λ = 0.2 and 0.740 at
+0.5). ``--lambda`` reports another λ in pipeline.tsv and the README scenario table.
+
+Failure stages in pipeline.tsv, the first that applies: ``subgraph`` (a true junction missing, or
+a true segment under 80% covered), ``scale`` (the subgraph's depth per copy is more than
+SCALE_DEPTH_TOL from the bench cases' median, or the flow's segment and junction copy numbers
+against the truth, diag/scale_ratio.py, differ by more than a factor SCALE_RATIO_MAX), else
+``RCK``. SCALE_RATIO_MAX 1.5 lies between the noise seen on v2 (ratio 1.02-1.40) and the
+ploidy-class error (≈ 2, nest_cross_3sp_s403).
+
+``--aa-metrics`` (opt-in) re-scores every (case, λ) through the method-agnostic AA-format path
+(diag/aa_regression.py: rck.ecdna.aa_export, then rck.ecdna.aa_eval against the truth mixture
+graph of amplicon-allele-analysis simulations/truth_mixture.py) and appends its columns
+(AA_COLUMNS, prefixed ``strict.`` or ``best_of.``) to bench_sweep.tsv after the existing ones,
+writes them all to aa_metrics.tsv, and a summary to the README between the aa-metrics markers.
+The λ rule and the failure rule read only the existing columns, so they are unchanged.
+BENCH_NESTED_AA_OUT puts the exported files elsewhere (default /n/fs/yubi-iw/runs/bench_nested_aa).
+"""
+import argparse
+import json
+import os
+import re
+import sys
+
+import numpy as np
+import pandas as pd
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+RESULTS = os.environ.get("BENCH_NESTED_RESULTS", HERE)
+import run_case  # noqa: E402  (puts the RCK root on sys.path)
+from rck.ecdna.evaluate import junction_scores, read_inferred, read_truth_table  # noqa: E402
+from rck.ecdna.rerank import rerank  # noqa: E402
+
+sys.path.insert(0, run_case.SIM)
+import bench_nested as aaa_bench  # noqa: E402  (amplicon-allele-analysis simulations/bench_nested.py)
+import verify_subgraph  # noqa: E402
+
+sys.path.insert(0, os.path.join(HERE, "diag"))
+from scale_ratio import scales  # noqa: E402
+
+SWEEP = os.path.join(run_case.RCK, "results", "step_sweep", "sweep.tsv")
+LAMBDAS = run_case.LAMBDAS
+TOL_REGRESSION = 0.005  # a control or demo case may lose at most this much mean composite against λ = 0
+TOL_PLATEAU = 0.001  # λ within this of the best mean composite over all cases are on the plateau
+FAIL_COMPOSITE = 0.95  # a bench case below this mean composite (or merged, or a wrong species count) is a failure
+MIN_GAIN_CASES = 2  # a λ's shortfall to the best λ counts only if at least this many cases gain over TOL_REGRESSION
+SCALE_DEPTH_TOL = 0.3  # depth per copy more than this (relative) from the bench cases' median is a scale error
+SCALE_RATIO_MAX = 1.5  # segment / junction scale (observed over truth CN) beyond this factor either way is a scale error
+JUNCTION_MATCH = 0.5  # an inferred species "carries" a truth species with at least this junction recall
+# --aa-metrics: the sample-level columns of rck.ecdna.aa_eval appended to bench_sweep.tsv, per mode
+AA_COLUMNS = {
+    "strict": ["mean_composite_h0", "n_exact_cycles", "mean_cycle_overlap_coral_code", "mean_cyclic_lcs_coral_code",
+               "mean_cycle_overlap_supp", "mean_cyclic_lcs_supp", "species_count_error",
+               "n_missed", "n_false", "error_free", "error_free_merged", "bp_accuracy", "novel_adjacency_fnr", "novel_adjacency_fdr",
+               "segment_cn_mae", "is_violations", "cn_explained_top1", "cn_explained_top3", "subwalks_satisfied"],
+    "best_of": ["mean_composite", "mean_composite_h0", "n_exact_cycles", "mean_cycle_overlap_coral_code",
+                "mean_cyclic_lcs_coral_code", "mean_cycle_overlap_supp", "mean_cyclic_lcs_supp", "subwalks_satisfied"],
+}
+COLUMNS = ["case", "kind", "scenario", "step_penalty", "source", "n_species", "n_truth", "weights", "steps", "residual",
+           "composites", "mean_composite", "merged", "merged_note", "ambiguous", "decided_by", "gap", "n_alternatives",
+           "runtime_s"]
+
+
+# ---------------------------------------------------------------------------------------------- #
+# per-decomposition scores
+# ---------------------------------------------------------------------------------------------- #
+
+def merged_flag(folder, rank):
+    """(merged, note) for decomposition ``rank`` of the run (or pool) in ``folder``: an inferred
+    species carries >= 2 truth species, or a truth species is missed while an inferred species
+    carries it. "Carries" is junction recall >= JUNCTION_MATCH: nested species share their
+    reference segments by construction, so segment coverage cannot tell them apart, while in
+    these simulations they share no junction."""
+    evaluation = pd.read_csv(os.path.join(folder, "evaluation.tsv"), sep="\t")
+    mine = evaluation[evaluation["decomposition_rank"] == rank]
+    scope = set(mine["truth"])
+    truth = [t for t in read_truth_table(os.path.join(folder, "truth_cycles.tsv")) if t.name in scope]
+    inferred = read_inferred(os.path.join(folder, "decompositions.tsv")).get(rank, {"cycles": []})["cycles"]
+    carries = {c.name: [t.name for t in truth
+                        if junction_scores(t.steps, c.steps, 10_000, False, t.circular, c.circular)[0] >= JUNCTION_MATCH]
+               for c in inferred}
+    notes = ["{c} carries {t}".format(c=c, t="+".join(ts)) for c, ts in carries.items() if len(ts) >= 2]
+    missed = list(mine.loc[mine["inferred"].isna(), "truth"])
+    for t in missed:
+        holders = [c for c, ts in carries.items() if t in ts]
+        if holders:
+            notes.append("{t} missed, carried by {c}".format(t=t, c="+".join(holders)))
+    return bool(notes), "; ".join(notes)
+
+
+def run_row(case, folder):
+    """The rank-1 row of an actual run (the λ = 0 runs)."""
+    summary = json.load(open(os.path.join(folder, "summary.json")))
+    top = summary["decompositions"][0]
+    significant = [s for s in top["species"] if s["status"] != "low_weight"]
+    matrix = pd.read_csv(os.path.join(folder, "recovery_matrix.tsv"), sep="\t")
+    matrix = matrix[matrix["in_scope"].astype(bool)]
+    amb = summary.get("ambiguity") or {}
+    merged, note = merged_flag(folder, 1)
+    return {"n_species": len(significant), "weights": ",".join("%g" % s["weight"] for s in significant),
+            "steps": top["steps"], "residual": top["residual"],
+            "composites": ",".join("%s=%.3f" % (r.truth, r.composite) for r in matrix.itertuples()),
+            "mean_composite": round(float(matrix["composite"].mean()), 4) if len(matrix) else None,
+            "n_truth": len(matrix), "merged": merged, "merged_note": note, "ambiguous": amb.get("ambiguous"),
+            "decided_by": amb.get("decided_by"), "gap": amb.get("gap"), "n_alternatives": amb.get("n_alternatives"),
+            "runtime_s": summary.get("runtime_s")}
+
+
+def pool_rows(case, folder, lambdas):
+    """One row per λ from the kept pool (rck.ecdna.rerank), with the merged flag."""
+    pool = os.path.join(folder, "pool")
+    runtime = json.load(open(os.path.join(folder, "summary.json"))).get("runtime_s")
+    n_truth = len(pd.read_csv(os.path.join(pool, "evaluation.tsv"), sep="\t")["truth"].unique())
+    rows = []
+    for r in rerank(folder, lambdas).to_dict("records"):
+        merged, note = merged_flag(pool, int(r["pool_index"]) + 1)
+        r.update({"merged": merged, "merged_note": note, "n_truth": n_truth, "runtime_s": runtime})
+        rows.append(r)
+    return rows
+
+
+def case_rows(case):
+    base = os.path.join(run_case.OUT, case["name"])
+    rows = []
+    head = {"case": case["name"], "kind": case["kind"], "scenario": case["scenario"]}
+    if run_case.done(os.path.join(base, "lambda_0")):
+        rows.append(dict(head, step_penalty=0.0, source="run", **run_row(case, os.path.join(base, "lambda_0"))))
+    if run_case.done(os.path.join(base, "pool"), pool=True):
+        for r in pool_rows(case, os.path.join(base, "pool"), [x for x in LAMBDAS if x > 0]):
+            rows.append(dict(head, **r))
+    return rows
+
+
+# ---------------------------------------------------------------------------------------------- #
+# validation against the step sweep
+# ---------------------------------------------------------------------------------------------- #
+
+def validate(table):
+    """Rank-1 composites and ambiguity fields, re-ranked (λ > 0, and λ = 0 emulated) or run
+    (λ = 0), against results/step_sweep/sweep.tsv."""
+    sweep = pd.read_csv(SWEEP, sep="\t")
+    rows = []
+    for case in sweep["case"].unique():
+        base = os.path.join(run_case.OUT, case)
+        ours = {}
+        if run_case.done(os.path.join(base, "pool"), pool=True):
+            for r in rerank(os.path.join(base, "pool"), sorted(sweep["step_penalty"].unique())).to_dict("records"):
+                ours[(r["step_penalty"], "pool" if r["step_penalty"] > 0 else "pool (λ=0 emulated)")] = r
+        mine = table[(table["case"] == case) & (table["source"] == "run")]
+        for r in mine.to_dict("records"):
+            ours[(0.0, "run")] = r
+        for (lam, method), r in sorted(ours.items()):
+            s = sweep[(sweep["case"] == case) & (np.isclose(sweep["step_penalty"], lam))]
+            if not len(s):
+                continue
+            s = s.iloc[0]
+            same_comp = str(r.get("composites")) == str(s["composites"])
+            same_amb = (str(r.get("decided_by") or "") == str(s["decided_by"] if pd.notna(s["decided_by"]) else "")
+                        and (pd.isna(s["gap"]) and r.get("gap") is None
+                             or (r.get("gap") is not None and pd.notna(s["gap"]) and abs(float(r["gap"]) - float(s["gap"])) < 1e-3)))
+            rows.append({"case": case, "step_penalty": lam, "method": method, "sweep_composites": s["composites"],
+                         "composites": r.get("composites"), "composites_match": same_comp,
+                         "sweep_decided_by": s["decided_by"], "decided_by": r.get("decided_by"), "sweep_gap": s["gap"],
+                         "gap": r.get("gap"), "ambiguity_match": same_amb})
+    out = pd.DataFrame(rows)
+    out.to_csv(os.path.join(RESULTS, "rerank_validation.tsv"), sep="\t", index=False)
+    return out
+
+
+# ---------------------------------------------------------------------------------------------- #
+# choice of λ
+# ---------------------------------------------------------------------------------------------- #
+
+def is_control(row):
+    return row["kind"] == "regression" or str(row["scenario"]).startswith("ctrl_")
+
+
+def gain_cases(t, lam, best):
+    """Cases whose mean composite gains more than TOL_REGRESSION from ``lam`` to ``best``."""
+    by = t.pivot_table(index="case", columns="step_penalty", values="mean_composite")
+    return list(by.index[by[best] > by[lam] + TOL_REGRESSION])
+
+
+def choose(table):
+    """The smallest λ on the plateau (see the module docstring) with no control or demo case below
+    its λ = 0 score by more than TOL_REGRESSION; and the λ that give the same rank-1 answers as it."""
+    complete = table.groupby("case")["step_penalty"].nunique()
+    cases = list(complete[complete == len(LAMBDAS)].index)
+    t = table[table["case"].isin(cases)]
+    overall = t.groupby("step_penalty")["mean_composite"].mean()
+    base = t[t["step_penalty"] == 0].set_index("case")["mean_composite"]
+    regress = {}
+    for lam in LAMBDAS:
+        rows = t[t["step_penalty"] == lam]
+        regress[lam] = [r["case"] for r in rows.to_dict("records")
+                        if is_control(r) and r["mean_composite"] < base[r["case"]] - TOL_REGRESSION]
+    best = overall.idxmax()
+    gains = {lam: gain_cases(t, lam, best) for lam in LAMBDAS}
+    plateau = [lam for lam in LAMBDAS
+               if overall[lam] >= overall[best] - TOL_PLATEAU or len(gains[lam]) < MIN_GAIN_CASES]
+    eligible = [lam for lam in plateau if not regress[lam]]
+    chosen = min(eligible) if eligible else None
+    same = []
+    if chosen is not None:
+        key = lambda lam: t[t["step_penalty"] == lam].set_index("case")[["n_species", "composites"]].astype(str).sort_index()
+        same = [lam for lam in LAMBDAS if key(lam).equals(key(chosen))]
+    return {"cases": cases, "overall": overall, "regress": regress, "plateau": plateau, "chosen": chosen, "same": same,
+            "gains": gains, "best": best}
+
+
+# ---------------------------------------------------------------------------------------------- #
+# pipeline table (bench cases at the chosen λ)
+# ---------------------------------------------------------------------------------------------- #
+
+def flip_check(folder, truth_dir):
+    """Block flips of the flow against the truth orientation, for phase blocks over ecDNA segments
+    whose truth orientation is clear (purity >= 0.9) and that the flow resolved."""
+    path = os.path.join(folder, "block_flips.tsv")
+    if not os.path.exists(path):
+        return {}
+    flips = pd.read_csv(path, sep="\t")
+    truth = verify_subgraph.truth_block_orientation(truth_dir, 1_000_000)
+    iv = aaa_bench.merged_intervals(verify_subgraph.load_truth_segments(truth_dir, 0.0))
+    flips = flips[[aaa_bench.block_overlaps(b, iv) for b in flips["phase_block"]]]
+    flips = flips.merge(truth[["truth_orientation", "truth_purity"]], left_on="phase_block", right_index=True, how="left")
+    eff = np.where(flips["orientation"] == 0, 1, flips["orientation"]) * np.where(flips["flip"].astype(bool), -1, 1)
+    known = (flips["status"] != "unresolved") & (flips["truth_purity"] >= 0.9)
+    return {"ecdna_blocks_flipped": int(flips["flip"].astype(bool).sum()),
+            "ecdna_blocks_unresolved": int((flips["status"] == "unresolved").sum()),
+            "ecdna_blocks_after_flow_correct": int(((eff == flips["truth_orientation"]) & known).sum()),
+            "ecdna_blocks_after_flow_wrong": int(((eff != flips["truth_orientation"]) & known).sum())}
+
+
+def scale_check(folder, depth, median_depth):
+    """Scale fields of a bench case: depth per copy against the bench cases' median, and the
+    flow's segment and junction scales against the truth (diag/scale_ratio.py)."""
+    seg, junc, n = scales(folder)
+    ratio = seg / junc if n and junc > 0 else float("nan")
+    rel = depth / median_depth - 1 if depth is not None and median_depth else float("nan")
+    why = []
+    if abs(rel) > SCALE_DEPTH_TOL:
+        why.append("depth per copy {d:.2f} is {r:+.0%} from the median {m:.2f}".format(d=depth, r=rel, m=median_depth))
+    if ratio > SCALE_RATIO_MAX or ratio < 1 / SCALE_RATIO_MAX:
+        why.append("segment / junction scale {r:.2f} (segment CN {s:.2f}x, junction CN {j:.2f}x truth)".format(
+            r=ratio, s=seg, j=junc))
+    return {"depth_per_copy": depth, "depth_vs_median": round(rel, 3), "segment_scale": round(seg, 3),
+            "junction_scale": round(junc, 3), "scale_ratio": round(ratio, 3), "scale_fail": bool(why),
+            "scale_note": "; ".join(why)}
+
+
+def failure_stage(row, sub):
+    """Which stage explains a failing bench case: the subgraph when it misses a true junction or
+    covers under 80% of a true segment, then the scale (scale_check), else RCK (with what went
+    wrong)."""
+    bad = (row["mean_composite"] is None or row["mean_composite"] < FAIL_COMPOSITE or row["merged"]
+           or row["n_species"] != row["n_truth"])
+    if not bad:
+        return "", ""
+    if sub.get("subgraph_fail"):
+        return "subgraph", "missing junctions {j}; min segment coverage {c}%".format(
+            j=sub.get("junctions_missing") or "none", c=sub.get("segment_coverage_min"))
+    if sub.get("scale_fail"):
+        return "scale", sub["scale_note"] + "; composites " + str(row["composites"])
+    why = []
+    if row["merged"]:
+        why.append("merged: " + row["merged_note"])
+    if row["n_species"] != row["n_truth"]:
+        why.append("{n} species for {t} true".format(n=row["n_species"], t=row["n_truth"]))
+    if sub.get("ecdna_blocks_after_flow_wrong"):
+        why.append("{w} ecDNA phase block(s) wrong after the flow".format(w=sub["ecdna_blocks_after_flow_wrong"]))
+    if sub.get("imputed_used"):
+        why.append("imputed edges " + sub["imputed_used"])
+    why.append("composites " + str(row["composites"]))
+    return "RCK", "; ".join(why)
+
+
+def subgraph_check(case):
+    path = os.path.join(run_case.SUBGRAPHS, case["name"], "subgraph_check.json")
+    return json.load(open(path)) if os.path.exists(path) else {}
+
+
+def pipeline(table, chosen):
+    rows = []
+    bench = [c for c in run_case.cases() if c["kind"] == "bench"]
+    depths = [subgraph_check(c).get("depth_per_copy") for c in bench]
+    median_depth = float(np.median([d for d in depths if d is not None])) if any(d is not None for d in depths) else None
+    for case in bench:
+        r = table[(table["case"] == case["name"]) & np.isclose(table["step_penalty"], chosen)]
+        if not len(r):
+            continue
+        r = r.iloc[0].to_dict()
+        folder = os.path.join(run_case.OUT, case["name"], "pool")
+        sub = subgraph_check(case)
+        summary = json.load(open(os.path.join(folder, "summary.json")))
+        flow = {"flow_objective": round(summary["flow"]["objective"], 3), "imputed_used": ",".join(summary["flow"]["imputed_used"]),
+                "n_imputed_used": len(summary["flow"]["imputed_used"])}
+        flow.update(flip_check(folder, case["truth"]))
+        flow.update(scale_check(folder, sub.get("depth_per_copy"), median_depth))
+        stage, why = failure_stage(r, dict(sub, **flow))
+        rows.append({"case": case["name"], "scenario": case["scenario"], "step_penalty": chosen,
+                     "segments_covered": sub.get("segments_covered"), "segments_total": sub.get("segments_total"),
+                     "segment_coverage_min": sub.get("segment_coverage_min"), "junctions_included": sub.get("junctions_included"),
+                     "junctions_total": sub.get("junctions_total"), "subgraph_fail": sub.get("subgraph_fail"),
+                     "ecdna_blocks_correct": sub.get("ecdna_blocks_correct"), "ecdna_blocks_wrong": sub.get("ecdna_blocks_wrong"),
+                     "ecdna_blocks_unoriented": sub.get("ecdna_blocks_unoriented"), "theta_used": sub.get("theta_used"),
+                     "theta_fitted": sub.get("theta_fitted"), **flow,
+                     "n_species": r["n_species"], "n_truth": r["n_truth"], "composites": r["composites"],
+                     "mean_composite": r["mean_composite"], "merged": r["merged"], "ambiguous": r["ambiguous"],
+                     "decided_by": r["decided_by"], "gap": r["gap"], "failure_stage": stage, "failure": why})
+    out = pd.DataFrame(rows)
+    out.to_csv(os.path.join(RESULTS, "pipeline.tsv"), sep="\t", index=False)
+    return out
+
+
+# ---------------------------------------------------------------------------------------------- #
+# README results section
+# ---------------------------------------------------------------------------------------------- #
+
+def fmt(x, digits=3):
+    return "" if x is None or (isinstance(x, float) and np.isnan(x)) else ("{:.%df}" % digits).format(x)
+
+
+def results_markdown(table, choice, validation, pipe, reported):
+    L = []
+    if len(validation):
+        pool = validation[validation["method"] == "pool"]
+        run0 = validation[validation["method"] == "run"]
+        emu = validation[validation["method"].str.contains("emulated")]
+        L.append("**Re-ranking check** (`rerank_validation.tsv`, against `results/step_sweep/sweep.tsv`): "
+                 "re-ranked λ > 0 composites match at {a}/{b} (case, λ), ambiguity fields at {c}/{b}; "
+                 "the λ = 0 runs match at {d}/{e}; λ = 0 emulated from the pool matches at {f}/{g}.".format(
+                     a=int(pool["composites_match"].sum()), b=len(pool), c=int(pool["ambiguity_match"].sum()),
+                     d=int(run0["composites_match"].sum()), e=len(run0), f=int(emu["composites_match"].sum()), g=len(emu)))
+        L.append("")
+    if choice["chosen"] is None:
+        L.append("**No λ qualifies**: every λ on the plateau regresses a control or demo case (table below).")
+    else:
+        L.append("**Recommended `--step-penalty`: {c:g}**, the smallest λ on the plateau of best mean composite over "
+                 "all {n} cases ({p}; a λ whose shortfall to the best comes from fewer than {g} cases is on it), "
+                 "with no control or demo case more than {t} below its λ = 0 score. "
+                 "λ giving the same rank-1 answers on every case: {s}. The default stays 0.".format(
+                     c=choice["chosen"], n=len(choice["cases"]), p=", ".join("%g" % x for x in choice["plateau"]), g=MIN_GAIN_CASES,
+                     t=TOL_REGRESSION, s=", ".join("%g" % x for x in choice["same"])))
+    L.append("")
+    L.append("| λ | " + " | ".join("%g" % x for x in LAMBDAS) + " |")
+    L.append("|---|" + "---|" * len(LAMBDAS))
+    L.append("| mean composite, all cases | " + " | ".join(fmt(choice["overall"].get(x), 4) for x in LAMBDAS) + " |")
+    L.append("| control / demo cases below λ = 0 | " + " | ".join(", ".join(choice["regress"][x]) or "none" for x in LAMBDAS) + " |")
+    L.append("| cases gaining from λ to the best λ | " + " | ".join(", ".join(choice["gains"][x]) or "none" for x in LAMBDAS) + " |")
+    L.append("")
+    chosen = reported
+    t = table[table["case"].isin(choice["cases"])]
+    by = t.groupby(["scenario", "step_penalty"])["mean_composite"].mean().unstack()
+    merged = t.groupby(["scenario", "step_penalty"])["merged"].sum().unstack()
+    L.append("Mean composite per scenario (mean over seeds; merged = rank-1 decompositions flagged merged):")
+    L.append("")
+    L.append("| scenario | cases | λ = 0 | λ = {c:g} | merged at 0 | merged at {c:g} |".format(c=chosen))
+    L.append("|---|---|---|---|---|---|")
+    for scenario in by.index:
+        n = t[(t["scenario"] == scenario) & (t["step_penalty"] == 0)]["case"].nunique()
+        L.append("| {s} | {n} | {a} | {b} | {m0:g} | {m1:g} |".format(s=scenario, n=n, a=fmt(by.loc[scenario, 0.0]),
+                                                                    b=fmt(by.loc[scenario, chosen]), m0=merged.loc[scenario, 0.0],
+                                                                    m1=merged.loc[scenario, chosen]))
+    L.append("")
+    if len(pipe):
+        fails = pipe[pipe["failure_stage"] != ""]
+        L.append("Remaining failures at λ = {c:g} (mean composite < {f}, merged, or a wrong species count; `pipeline.tsv`): "
+                 "{n} of {m} bench cases.".format(c=chosen, f=FAIL_COMPOSITE, n=len(fails), m=len(pipe)))
+        L.append("")
+        if len(fails):
+            L.append("| case | stage | why |")
+            L.append("|---|---|---|")
+            for r in fails.itertuples():
+                L.append("| {c} | {s} | {w} |".format(c=r.case, s=r.failure_stage, w=str(r.failure).replace("|", "/")))
+            L.append("")
+        scalefail = pipe[pipe["scale_fail"].astype(str) == "True"]
+        L.append("Scale: {n} of {m} cases have depth per copy more than {d:.0%} from the median or segment / junction "
+                 "scales apart by more than {r:g}x{x}.".format(n=len(scalefail), m=len(pipe), d=SCALE_DEPTH_TOL, r=SCALE_RATIO_MAX,
+                                                               x=" (" + ", ".join(scalefail["case"]) + ")" if len(scalefail) else ""))
+        subfail = pipe[pipe["subgraph_fail"].astype(str) == "True"]
+        L.append("Subgraph stage: {n} of {m} subgraphs miss a true junction or cover under 80% of a true segment{x}.".format(
+            n=len(subfail), m=len(pipe), x=" (" + ", ".join(subfail["case"]) + ")" if len(subfail) else ""))
+    runtime = t.drop_duplicates(["case", "source"])["runtime_s"].astype(float).sum()
+    L.append("")
+    L.append("Compute: {s:.0f} s of RCK wall time over {n} cases (one λ = 0 run and one pool run each, 4 threads).".format(
+        s=runtime, n=t["case"].nunique()))
+    return "\n".join(L)
+
+
+def write_readme(text):
+    path = os.path.join(RESULTS, "README.md")
+    start, end = "<!-- results:start -->", "<!-- results:end -->"
+    os.makedirs(RESULTS, exist_ok=True)
+    readme = open(path).read() if os.path.exists(path) else start + "\n" + end + "\n"
+    readme = re.sub(re.escape(start) + ".*?" + re.escape(end), start + "\n" + text + "\n" + end, readme, flags=re.S)
+    with open(path, "w") as handle:
+        handle.write(readme)
+
+
+# ---------------------------------------------------------------------------------------------- #
+# method-agnostic AA-format metrics (--aa-metrics)
+# ---------------------------------------------------------------------------------------------- #
+
+def aa_metrics(table, jobs=16):
+    """Every (case, λ) of ``table`` scored by rck.ecdna.aa_eval (diag/aa_regression.py), with the
+    check that the AA path reproduces the existing columns."""
+    from multiprocessing import Pool
+
+    import aa_regression
+
+    out = os.environ.get("BENCH_NESTED_AA_OUT", aa_regression.DEFAULT_OUT)
+    os.makedirs(out, exist_ok=True)
+    cases = {c["name"]: c for c in run_case.cases()}
+    keys = table[["case", "step_penalty"]].drop_duplicates().to_dict("records")
+    with Pool(max(1, min(jobs, len(cases)))) as pool:
+        pool.starmap(aa_regression.mixture_dir, [(c, out) for c in cases.values() if c["name"] in set(table["case"])])
+        results = pool.map(aa_regression.one, [(cases[k["case"]], float(k["step_penalty"]), out) for k in keys])
+    rows = [r[0] for r in results if r is not None]
+    frame = pd.DataFrame(rows)
+    errors = frame[frame["error"].notna()] if "error" in frame else frame.iloc[:0]
+    for r in errors.itertuples():
+        print("aa-metrics error: {c} λ={l}\n{e}".format(c=r.case, l=r.step_penalty, e=r.error))
+    merged = table.merge(frame, on=["case", "step_penalty"], how="left", suffixes=("", "_aa"))
+    same = []
+    for c in ("composites", "mean_composite", "n_species", "n_truth", "merged"):
+        if c + "_aa" in merged:
+            same.append(merged.apply(lambda r: aa_regression.same(r[c], r[c + "_aa"]), axis=1))
+    frame["aa_path_matches"] = (pd.concat(same, axis=1).all(axis=1) & merged.get("parts_mismatches", pd.Series("", index=merged.index))
+                                .fillna("").eq("")).values if same else False
+    return frame
+
+
+def aa_partition(frame):
+    """The confusion-matrix metrics (M1 species detection, M2 adjacency pairs) of every scored
+    (case, λ), read from the aa_partition_metrics.tsv that aa_eval wrote, and pooled per λ over
+    the bench cases and over all cases (rck.ecdna.aa_eval.pool_partition: micro and macro; the
+    docs report micro for M1 and macro for M2). Returns (per_case, pooled)."""
+    import aa_regression
+    from rck.ecdna import aa_eval
+
+    out = os.environ.get("BENCH_NESTED_AA_OUT", aa_regression.DEFAULT_OUT)
+    ok = frame[frame["error"].isna()] if "error" in frame else frame
+    parts = []
+    for r in ok[["case", "kind", "step_penalty"]].drop_duplicates().itertuples():
+        path = os.path.join(out, r.case, "lambda_%g" % r.step_penalty, "aa_partition_metrics.tsv")
+        if os.path.exists(path):
+            parts.append(pd.read_csv(path, sep="\t").assign(case=r.case, kind=r.kind, step_penalty=r.step_penalty))
+    if not parts:
+        return None, None
+    per_case = pd.concat(parts, ignore_index=True)
+    front = ["case", "kind", "step_penalty"]
+    per_case = per_case[front + [c for c in per_case.columns if c not in front]]
+    pooled = pd.concat([aa_eval.pool_partition(per_case, ["step_penalty"]).assign(cases="all"),
+                        aa_eval.pool_partition(per_case[per_case["kind"] == "bench"], ["step_penalty"]).assign(cases="bench")],
+                       ignore_index=True)
+    return per_case, pooled[["cases"] + [c for c in pooled.columns if c != "cases"]]
+
+
+def aa_appended(table, frame):
+    """bench_sweep.tsv: the existing columns, then AA_COLUMNS."""
+    cols = ["%s.%s" % (m, c) for m, cs in AA_COLUMNS.items() for c in cs]
+    keep = frame[["case", "step_penalty", "aa_path_matches"] + [c for c in cols if c in frame]]
+    return table.merge(keep, on=["case", "step_penalty"], how="left")
+
+
+def aa_markdown(frame, reported):
+    """README summary of the new metrics at λ = 0 and the reported λ, over the bench cases and
+    over all cases."""
+    L = []
+    t = frame.copy()
+    t["bench"] = t["kind"] == "bench"
+    n_match = int(t["aa_path_matches"].sum())
+    L.append("**Method-agnostic metrics** (`python collect.py --aa-metrics`; `aa_metrics.tsv`; definitions in "
+             "docs/ecDNA.md, section 6, \"Method-agnostic scorer\"). Every case and λ was scored again from AA-format "
+             "files only (`rck.ecdna.aa_export` + `rck.ecdna.aa_eval`): {k} of {n} (case, λ) reproduce the existing "
+             "composites, species counts and merged flags exactly.".format(k=n_match, n=len(t)))
+    L.append("")
+    lams = [0.0] + ([reported] if reported else [])
+    head = "| metric | " + " | ".join("{w}, λ = {l:g}".format(w=w, l=l) for l in lams for w in ("bench", "all")) + " |"
+    L.append(head)
+    L.append("|---|" + "---|" * (2 * len(lams)))
+
+    def cell(col, lam, bench, how="mean", digits=3):
+        rows = t[np.isclose(t["step_penalty"], lam) & (t["bench"] if bench else True)]
+        v = rows[col].astype(float)
+        if how == "share":
+            return "{a:.0f} / {b:.0f}".format(a=v.sum(), b=rows[col.replace("n_exact_cycles", "n_truth")].astype(float).sum())
+        if how == "count":
+            return "{a:.0f}".format(a=v.sum())
+        if how == "abs":
+            v = v.abs()
+        return fmt(v.mean(), digits)
+
+    spec = [("composite, strict (rank 1, as today)", "strict.mean_composite", "mean"),
+            ("composite, best-of (rank 1 + 2 same-fit alternatives, every cycle)", "best_of.mean_composite", "mean"),
+            ("composite-H0, strict", "strict.mean_composite_h0", "mean"),
+            ("composite-H0, best-of", "best_of.mean_composite_h0", "mean"),
+            ("exact cycles (100 bp), strict", "strict.n_exact_cycles", "share"),
+            ("exact cycles (100 bp), best-of", "best_of.n_exact_cycles", "share"),
+            ("CoRAL cycle-interval overlap (CoRAL code), strict", "strict.mean_cycle_overlap_coral_code", "mean"),
+            ("CoRAL cyclic LCS (CoRAL code), strict", "strict.mean_cyclic_lcs_coral_code", "mean"),
+            ("CoRAL cyclic LCS (CoRAL code), best-of", "best_of.mean_cyclic_lcs_coral_code", "mean"),
+            ("secondary: cycle-interval overlap (CoRAL supplementary methods), strict", "strict.mean_cycle_overlap_supp", "mean"),
+            ("secondary: cyclic LCS (CoRAL supplementary methods), strict", "strict.mean_cyclic_lcs_supp", "mean"),
+            ("secondary: cyclic LCS (CoRAL supplementary methods), best-of", "best_of.mean_cyclic_lcs_supp", "mean"),
+            ("species-count error (mean absolute, inferred − true)", "strict.species_count_error", "abs"),
+            ("missed species", "strict.n_missed", "count"),
+            ("false species", "strict.n_false", "count"),
+            ("AA error-free reconstruction (share of cases, every amplicon, 100 bp)", "strict.error_free", "mean"),
+            ("AA error-free, benign copy-number splits merged (share of cases)", "strict.error_free_merged", "mean"),
+            ("CoRAL breakpoint-graph accuracy", "strict.bp_accuracy", "mean"),
+            ("novel-adjacency FNR", "strict.novel_adjacency_fnr", "mean"),
+            ("novel-adjacency FDR", "strict.novel_adjacency_fdr", "mean"),
+            ("allele segment CN error (copies per base)", "strict.segment_cn_mae", "mean"),
+            ("infinite-sites violations (sum)", "strict.is_violations", "count"),
+            ("CN explained, heaviest cycle", "strict.cn_explained_top1", "mean"),
+            ("CN explained, 3 heaviest cycles", "strict.cn_explained_top3", "mean"),
+            ("long-read subwalks satisfied, strict", "strict.subwalks_satisfied", "mean")]
+    for label, col, how in spec:
+        if col not in t:
+            continue
+        L.append("| " + label + " | " + " | ".join(cell(col, l, b, how) for l in lams for b in (True, False)) + " |")
+    return "\n".join(L)
+
+
+def write_aa_readme(text):
+    path = os.path.join(RESULTS, "README.md")
+    start, end = "<!-- aa-metrics:start -->", "<!-- aa-metrics:end -->"
+    readme = open(path).read() if os.path.exists(path) else ""
+    block = start + "\n" + text + "\n" + end
+    if start in readme:
+        readme = re.sub(re.escape(start) + ".*?" + re.escape(end), lambda _: block, readme, flags=re.S)
+    elif "<!-- results:end -->" in readme:
+        readme = readme.replace("<!-- results:end -->", "<!-- results:end -->\n\n" + block, 1)
+    else:
+        readme += "\n" + block + "\n"
+    with open(path, "w") as handle:
+        handle.write(readme)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--validate", action="store_true", help="only check the re-ranking against the step sweep")
+    parser.add_argument("--lambda", dest="lam", type=float, default=None,
+                        help="λ to report in pipeline.tsv and the scenario table (default: the chosen λ)")
+    parser.add_argument("--aa-metrics", action="store_true",
+                        help="also score every case through the method-agnostic AA-format path (rck.ecdna.aa_eval)")
+    args = parser.parse_args()
+    rows = []
+    for case in run_case.cases():
+        if args.validate and case["name"] not in pd.read_csv(SWEEP, sep="\t")["case"].unique():
+            continue
+        rows.extend(case_rows(case))
+    table = pd.DataFrame(rows, columns=COLUMNS)
+    validation = validate(table)
+    if len(validation):
+        print(validation.to_string(index=False))
+    if args.validate:
+        return 0
+    aa = aa_metrics(table) if args.aa_metrics else None
+    (aa_appended(table, aa) if aa is not None else table).to_csv(os.path.join(RESULTS, "bench_sweep.tsv"), sep="\t", index=False)
+    choice = choose(table)
+    reported = args.lam if args.lam is not None else (choice["chosen"] if choice["chosen"] is not None else max(LAMBDAS))
+    pipe = pipeline(table, reported)
+    text = results_markdown(table, choice, validation, pipe, reported)
+    write_readme(text)
+    print(text)
+    if aa is not None:
+        aa.to_csv(os.path.join(RESULTS, "aa_metrics.tsv"), sep="\t", index=False)
+        per_case, pooled = aa_partition(aa)
+        if per_case is not None:  # new files; no existing table changes
+            per_case.to_csv(os.path.join(RESULTS, "aa_partition_metrics.tsv"), sep="\t", index=False)
+            pooled.to_csv(os.path.join(RESULTS, "aa_partition_pooled.tsv"), sep="\t", index=False)
+        aa_text = aa_markdown(aa.merge(table[["case", "step_penalty", "kind"]], on=["case", "step_penalty"], how="left",
+                                       suffixes=("_aa", "")), reported)
+        write_aa_readme(aa_text)
+        print(aa_text)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

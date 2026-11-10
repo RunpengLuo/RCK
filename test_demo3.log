@@ -1,0 +1,79 @@
+test_fixed_scales_from_subgraph (tests.ecdna.test_demo3.TestDemo3.test_fixed_scales_from_subgraph) ... Set parameter WLSAccessID
+Set parameter WLSSecret
+Set parameter LicenseID to value 2876160
+Academic license 2876160 - for non-commercial use only - registered to ym___@princeton.edu
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+ok
+test_scales_from_observations (tests.ecdna.test_demo3.TestDemo3.test_scales_from_observations) ... 
+demo3 (fixed scales): {
+ "n_decompositions": 5,
+ "n_truth_species": 1,
+ "first_rank_with_all_orders_matched": 1,
+ "best_mean_jaccard_hap": 0.9999991463935126,
+ "best_mean_jaccard_rank": 1,
+ "top_decomposition": [
+  {
+   "truth": "ecdna1",
+   "inferred": "ec1",
+   "jaccard_hap": 0.9999991463935126,
+   "jaccard_total": 0.9999991463935126,
+   "junction_recall": 1.0,
+   "junction_precision": 1.0,
+   "phased_junction_recall": 1.0,
+   "phased_junction_precision": 1.0,
+   "order_match": true,
+   "order_match_ordering": 1,
+   "truth_weight": 16.0,
+   "inferred_weight": 13.0,
+   "cn_rel_err": 0.1875,
+   "decomposition_rank": 1,
+   "n_species_inferred": 1,
+   "n_low_weight": 2,
+   "n_species_truth": 1
+  }
+ ],
+ "tol_bp": 10000
+}
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+Set parameter OutputFlag to value 1
+Set parameter LogToConsole to value 0
+ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 14.906s
+
+OK
+
+demo3 (estimated scales): {
+ "n_decompositions": 5,
+ "n_truth_species": 1,
+ "first_rank_with_all_orders_matched": 1,
+ "best_mean_jaccard_hap": 0.9999991463935126,
+ "best_mean_jaccard_rank": 1,
+ "top_decomposition": [
+  {
+   "truth": "ecdna1",
+   "inferred": "ec1",
+   "jaccard_hap": 0.9999991463935126,
+   "jaccard_total": 0.9999991463935126,
+   "junction_recall": 1.0,
+   "junction_precision": 1.0,
+   "phased_junction_recall": 1.0,
+   "phased_junction_precision": 1.0,
+   "order_match": true,
+   "order_match_ordering": 1,
+   "truth_weight": 16.0,
+   "inferred_weight": 14.0,
+   "cn_rel_err": 0.125,
+   "decomposition_rank": 1,
+   "n_species_inferred": 1,
+   "n_low_weight": 2,
+   "n_species_truth": 1
+  }
+ ],
+ "tol_bp": 10000
+}

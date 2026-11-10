@@ -1,0 +1,7 @@
+SAMPLE	KIND	ID	U	V	GENOME_LENGTH	CLONE	PSI	PHI
+normal	clone	normal	1.0	1.0	5487268000.0			
+tumor1	clone	normal	0.2	0.20186220654523987	5487268000.0			
+tumor1	clone	clone1	0.8	0.7912423671707077	5377132000.0			
+.	ecdna_psi	ecdna1	1.0			clone1	20.0	
+normal	ecdna_burden	ecdna1						0.0
+tumor1	ecdna_burden	ecdna1						16.0

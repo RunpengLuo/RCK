@@ -1,0 +1,2339 @@
+{
+  "format": "rck-ecdna-pool/1",
+  "params": {
+    "species_penalty": 1.0,
+    "step_penalty": 0.2,
+    "pool_gap": 0.1,
+    "ambiguity_window": 2.0,
+    "num_alternatives": 10,
+    "max_species": 4,
+    "max_multiplicity": 3,
+    "mode": "pool",
+    "min_species_weight": null,
+    "min_species_weight_frac": 0.1,
+    "adj_residual_weight": 1.0,
+    "seg_residual_scale": 1.0,
+    "residual_mode": "relative",
+    "residual_sigma": 0.1,
+    "rank_residual": "sum"
+  },
+  "lambdas": [
+    0.0,
+    0.02,
+    0.05,
+    0.1,
+    0.2,
+    0.5
+  ],
+  "rank1": {
+    "0": 0,
+    "0.02": 0,
+    "0.05": 0,
+    "0.1": 0,
+    "0.2": 0,
+    "0.5": 0
+  },
+  "entries": [
+    {
+      "index": 0,
+      "objective": 4.025099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 3,
+      "steps": 83,
+      "weights_int": [
+        12,
+        7,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "index": 1,
+      "objective": 4.027299999999997,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 3,
+      "steps": 92,
+      "weights_int": [
+        13,
+        8,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "index": 2,
+      "objective": 4.0272999999999985,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 3,
+      "steps": 92,
+      "weights_int": [
+        13,
+        8,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "index": 3,
+      "objective": 4.027499999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 137,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 4,
+      "objective": 4.028499999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 142,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 5,
+      "objective": 4.028499999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 142,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 6,
+      "objective": 4.028699999999997,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 143,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 7,
+      "objective": 4.029099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 145,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 8,
+      "objective": 4.029099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 145,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 9,
+      "objective": 4.029099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 145,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 10,
+      "objective": 4.029099999999999,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 145,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 11,
+      "objective": 4.029299999999999,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 146,
+      "weights_int": [
+        7,
+        6,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 12,
+      "objective": 4.029699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 148,
+      "weights_int": [
+        7,
+        6,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 13,
+      "objective": 4.029699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 148,
+      "weights_int": [
+        7,
+        6,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 14,
+      "objective": 4.029699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 148,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 15,
+      "objective": 4.029699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 148,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 16,
+      "objective": 4.029899999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 149,
+      "weights_int": [
+        7,
+        6,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 17,
+      "objective": 4.030099999999996,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 150,
+      "weights_int": [
+        8,
+        5,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 18,
+      "objective": 4.030099999999997,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 150,
+      "weights_int": [
+        8,
+        5,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 19,
+      "objective": 4.030099999999997,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 150,
+      "weights_int": [
+        8,
+        5,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 20,
+      "objective": 4.030099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 150,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 21,
+      "objective": 4.030099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 150,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 22,
+      "objective": 4.030099999999999,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 150,
+      "weights_int": [
+        8,
+        5,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 23,
+      "objective": 4.030299999999995,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 151,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 24,
+      "objective": 4.030299999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 151,
+      "weights_int": [
+        8,
+        5,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 25,
+      "objective": 4.030299999999999,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 151,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 26,
+      "objective": 4.030299999999999,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 151,
+      "weights_int": [
+        8,
+        5,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 27,
+      "objective": 4.030699999999995,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 153,
+      "weights_int": [
+        8,
+        5,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 28,
+      "objective": 4.030699999999996,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 153,
+      "weights_int": [
+        8,
+        5,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 29,
+      "objective": 4.031099999999997,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 155,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 30,
+      "objective": 4.031099999999997,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 155,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 31,
+      "objective": 4.0312999999999395,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 156,
+      "weights_int": [
+        8,
+        5,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 32,
+      "objective": 4.031299999999941,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 156,
+      "weights_int": [
+        8,
+        5,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 33,
+      "objective": 4.031299999999997,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 156,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 34,
+      "objective": 4.031299999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 156,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 35,
+      "objective": 4.031299999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 156,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 36,
+      "objective": 4.031299999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 156,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 37,
+      "objective": 4.031299999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 156,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 38,
+      "objective": 4.031499999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 157,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 39,
+      "objective": 4.031499999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 157,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 40,
+      "objective": 4.031499999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 157,
+      "weights_int": [
+        9,
+        4,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 41,
+      "objective": 4.0318999999999985,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 159,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 42,
+      "objective": 4.0318999999999985,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 159,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 43,
+      "objective": 4.0320999999999945,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 160,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 44,
+      "objective": 4.032099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 160,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 45,
+      "objective": 4.032099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 160,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 46,
+      "objective": 4.032099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 160,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 47,
+      "objective": 4.032099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 160,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 48,
+      "objective": 4.032299999999996,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 161,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 49,
+      "objective": 4.032299999999996,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 161,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 50,
+      "objective": 4.0322999999999976,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 161,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 51,
+      "objective": 4.0322999999999976,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 161,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 52,
+      "objective": 4.032299999999999,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 161,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 53,
+      "objective": 4.032499999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 162,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 54,
+      "objective": 4.032499999999999,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 162,
+      "weights_int": [
+        8,
+        5,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 55,
+      "objective": 4.032499999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 162,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 56,
+      "objective": 4.032699999999997,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 57,
+      "objective": 4.032699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 58,
+      "objective": 4.032699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 59,
+      "objective": 4.032699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 60,
+      "objective": 4.032699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 61,
+      "objective": 4.032699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 62,
+      "objective": 4.032699999999997,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 63,
+      "objective": 4.032699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 64,
+      "objective": 4.032699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 65,
+      "objective": 4.0326999999999975,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 66,
+      "objective": 4.032699999999997,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        8,
+        5,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 67,
+      "objective": 4.032699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 68,
+      "objective": 4.0326999999999975,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 69,
+      "objective": 4.032699999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 163,
+      "weights_int": [
+        10,
+        4,
+        1,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 70,
+      "objective": 4.032899999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 164,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 71,
+      "objective": 4.032899999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 164,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 72,
+      "objective": 4.032899999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 164,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 73,
+      "objective": 4.033099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 165,
+      "weights_int": [
+        8,
+        5,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 74,
+      "objective": 4.0330999999999975,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 165,
+      "weights_int": [
+        8,
+        5,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 75,
+      "objective": 4.033099999999998,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 165,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 76,
+      "objective": 4.0330999999999975,
+      "residual": 0.0,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 165,
+      "weights_int": [
+        10,
+        3,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 77,
+      "objective": 5.576341331760607,
+      "residual": 1.551041,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 126,
+      "weights_int": [
+        10,
+        6,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 78,
+      "objective": 5.576541331761299,
+      "residual": 1.551041,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 127,
+      "weights_int": [
+        10,
+        6,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 79,
+      "objective": 5.576741331761367,
+      "residual": 1.551041,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 128,
+      "weights_int": [
+        9,
+        7,
+        4,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 80,
+      "objective": 5.578141331761202,
+      "residual": 1.551041,
+      "n_species": 4,
+      "n_significant": 3,
+      "steps": 92,
+      "weights_int": [
+        13,
+        8,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "index": 81,
+      "objective": 5.578141331761368,
+      "residual": 1.551041,
+      "n_species": 4,
+      "n_significant": 3,
+      "steps": 92,
+      "weights_int": [
+        13,
+        8,
+        2,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "index": 82,
+      "objective": 5.578341331761382,
+      "residual": 1.551041,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 136,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 83,
+      "objective": 5.578341331761541,
+      "residual": 1.551041,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 136,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 84,
+      "objective": 5.578341331761656,
+      "residual": 1.551041,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 136,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 85,
+      "objective": 5.579541331761325,
+      "residual": 1.551041,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 142,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 86,
+      "objective": 5.579541331761677,
+      "residual": 1.551041,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 142,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "index": 87,
+      "objective": 5.579541331761764,
+      "residual": 1.551041,
+      "n_species": 4,
+      "n_significant": 4,
+      "steps": 142,
+      "weights_int": [
+        9,
+        4,
+        3,
+        1
+      ],
+      "low_weight": [
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  ],
+  "same_fit": {
+    "0": [
+      {
+        "objective": 4.0272999999999985,
+        "n_species": 3,
+        "steps": 92,
+        "weights": [
+          13,
+          8,
+          2
+        ]
+      },
+      {
+        "objective": 4.0272999999999985,
+        "n_species": 3,
+        "steps": 92,
+        "weights": [
+          13,
+          8,
+          2
+        ]
+      },
+      {
+        "objective": 4.027499999999998,
+        "n_species": 4,
+        "steps": 137,
+        "weights": [
+          9,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.028499999999998,
+        "n_species": 4,
+        "steps": 142,
+        "weights": [
+          9,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.028499999999998,
+        "n_species": 4,
+        "steps": 142,
+        "weights": [
+          9,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.028699999999999,
+        "n_species": 4,
+        "steps": 143,
+        "weights": [
+          9,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.029099999999998,
+        "n_species": 4,
+        "steps": 145,
+        "weights": [
+          9,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.029099999999998,
+        "n_species": 4,
+        "steps": 145,
+        "weights": [
+          9,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.029099999999998,
+        "n_species": 4,
+        "steps": 145,
+        "weights": [
+          9,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.029099999999999,
+        "n_species": 4,
+        "steps": 145,
+        "weights": [
+          9,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.029299999999999,
+        "n_species": 4,
+        "steps": 146,
+        "weights": [
+          7,
+          6,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.029699999999998,
+        "n_species": 4,
+        "steps": 148,
+        "weights": [
+          7,
+          6,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.029699999999998,
+        "n_species": 4,
+        "steps": 148,
+        "weights": [
+          7,
+          6,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.029699999999998,
+        "n_species": 4,
+        "steps": 148,
+        "weights": [
+          9,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.029699999999998,
+        "n_species": 4,
+        "steps": 148,
+        "weights": [
+          9,
+          4,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.029899999999998,
+        "n_species": 4,
+        "steps": 149,
+        "weights": [
+          7,
+          6,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.030099999999998,
+        "n_species": 4,
+        "steps": 150,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.030099999999998,
+        "n_species": 4,
+        "steps": 150,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.030099999999998,
+        "n_species": 4,
+        "steps": 150,
+        "weights": [
+          8,
+          5,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.030099999999999,
+        "n_species": 4,
+        "steps": 150,
+        "weights": [
+          8,
+          5,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.030099999999999,
+        "n_species": 4,
+        "steps": 150,
+        "weights": [
+          8,
+          5,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.030099999999999,
+        "n_species": 4,
+        "steps": 150,
+        "weights": [
+          8,
+          5,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.030299999999998,
+        "n_species": 4,
+        "steps": 151,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.030299999999999,
+        "n_species": 4,
+        "steps": 151,
+        "weights": [
+          8,
+          5,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.030299999999999,
+        "n_species": 4,
+        "steps": 151,
+        "weights": [
+          8,
+          5,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.030299999999999,
+        "n_species": 4,
+        "steps": 151,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.030699999999999,
+        "n_species": 4,
+        "steps": 153,
+        "weights": [
+          8,
+          5,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.030699999999999,
+        "n_species": 4,
+        "steps": 153,
+        "weights": [
+          8,
+          5,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.031099999999999,
+        "n_species": 4,
+        "steps": 155,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.031099999999999,
+        "n_species": 4,
+        "steps": 155,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.031299999999998,
+        "n_species": 4,
+        "steps": 156,
+        "weights": [
+          8,
+          5,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.031299999999998,
+        "n_species": 4,
+        "steps": 156,
+        "weights": [
+          8,
+          5,
+          3,
+          1
+        ]
+      },
+      {
+        "objective": 4.031299999999998,
+        "n_species": 4,
+        "steps": 156,
+        "weights": [
+          10,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.031299999999998,
+        "n_species": 4,
+        "steps": 156,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.031299999999998,
+        "n_species": 4,
+        "steps": 156,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.031299999999998,
+        "n_species": 4,
+        "steps": 156,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.031299999999998,
+        "n_species": 4,
+        "steps": 156,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.031499999999998,
+        "n_species": 4,
+        "steps": 157,
+        "weights": [
+          10,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.031499999999998,
+        "n_species": 4,
+        "steps": 157,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.0314999999999985,
+        "n_species": 4,
+        "steps": 157,
+        "weights": [
+          9,
+          4,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.0318999999999985,
+        "n_species": 4,
+        "steps": 159,
+        "weights": [
+          10,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.0318999999999985,
+        "n_species": 4,
+        "steps": 159,
+        "weights": [
+          10,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.032099999999998,
+        "n_species": 4,
+        "steps": 160,
+        "weights": [
+          10,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.032099999999998,
+        "n_species": 4,
+        "steps": 160,
+        "weights": [
+          10,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.032099999999998,
+        "n_species": 4,
+        "steps": 160,
+        "weights": [
+          10,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.032099999999998,
+        "n_species": 4,
+        "steps": 160,
+        "weights": [
+          10,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.032099999999998,
+        "n_species": 4,
+        "steps": 160,
+        "weights": [
+          10,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.032299999999998,
+        "n_species": 4,
+        "steps": 161,
+        "weights": [
+          10,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "objective": 4.032299999999999,
+        "n_species": 4,
+        "steps": 161,
+        "weights": [
+          10,
+          3,
+          2,
+          1
+        ]
+      }
+    ]
+  }
+}

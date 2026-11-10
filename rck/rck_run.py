@@ -114,6 +114,8 @@ def main():
     run_group.add_argument("--run-haploid", action="store_true", dest="run_haploid")
     run_group.add_argument("--run-presolve-nas-threshold", type=int, default=5000)
     run_group.add_argument("--run-g-mip-gap", type=float, default=0.015)
+    run_group.add_argument("--run-g-mip-gap-abs", type=float, default=None,
+                           help="Absolute MIP gap (Gurobi MIPGapAbs); default leaves Gurobi's own default in place")
     run_group.add_argument("--run-g-time-limit", type=int, default=28800)
     run_group.add_argument("--run-g-threads", type=int, default=4)
     run_group.add_argument("--run-g-mip-focus", type=int, choices=[0, 1, 2, 3], default=0)
@@ -214,7 +216,7 @@ def main():
                                                                                                                                 raw_input_dir=raw_input_dir_path))
             shutil.copy2(src=scnb_file_path, dst=raw_input_dir_path)
             logger.info("Trying to read segment copy number boundaries data from file {scnb_path}.".format(scnb_path=scnb_file_path))
-            segments_from_scnb_file, scnb_from_file = read_scnb_from_file(file_name=scnt_file_path, clone_ids=clone_ids, allow_missing=True,
+            segments_from_scnb_file, scnb_from_file = read_scnb_from_file(file_name=scnb_file_path, clone_ids=clone_ids, allow_missing=True,
                                                                           separator=args.scnb_separator, extra_separator=args.scnb_extra_separator)
             logger.info("Successfully extracted (at least some) segment copy numbers from {scnb_path}. Updating previous segment copy number boundaries data (if exists)."
                         "".format(scnb_path=scnb_from_file))
@@ -525,7 +527,8 @@ def main():
             ilp_model.build_gurobi_model()
             logger.debug("Setting gurobi parameters")
             ilp_model.gm.setParam("MIPGap", args.run_g_mip_gap)
-            ilp_model.gm.setParam("MIPGapAbs", args.run_g_mip_gap)
+            if args.run_g_mip_gap_abs is not None:
+                ilp_model.gm.setParam("MIPGapAbs", args.run_g_mip_gap_abs)
             ilp_model.gm.setParam("MIPFocus", args.run_g_mip_focus)
             ilp_model.gm.setParam("LogFile", gurobi_log_path)
             ilp_model.gm.setParam("TimeLimit", args.run_g_time_limit)
@@ -596,7 +599,8 @@ def main():
     ilp_model.build_gurobi_model()
     logger.debug("Setting gurobi parameters")
     ilp_model.gm.setParam("MIPGap", args.run_g_mip_gap)
-    ilp_model.gm.setParam("MIPGapAbs", args.run_g_mip_gap)
+    if args.run_g_mip_gap_abs is not None:
+        ilp_model.gm.setParam("MIPGapAbs", args.run_g_mip_gap_abs)
     ilp_model.gm.setParam("MIPFocus", args.run_g_mip_focus)
     ilp_model.gm.setParam("LogFile", gurobi_log_path)
     ilp_model.gm.setParam("TimeLimit", args.run_g_time_limit)

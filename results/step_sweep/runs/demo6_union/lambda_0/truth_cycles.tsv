@@ -1,0 +1,9 @@
+species	order	chrom	start	end	strand	hap	weight
+ecdna1	1	chr17	5783000	5785999	+	A	8.0
+ecdna1	2	chr17	4925000	5782999	-	A	8.0
+ecdna1	3	chr17	3906000	4924999	-	A	8.0
+ecdna1	4	chr17	61941000	62059999	-	A	8.0
+ecdna2	1	chr15	52659000	52724999	+	B	8.0
+ecdna2	2	chr15	50256000	52098999	-	B	8.0
+ecdna2	3	chr15	50227000	50255999	-	B	8.0
+ecdna2	4	chr15	52725000	52785999	-	B	8.0

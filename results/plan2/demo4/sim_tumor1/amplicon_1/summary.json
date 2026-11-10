@@ -1,0 +1,96 @@
+{
+  "graph": {
+    "name": "amplicon_1",
+    "nodes": 42,
+    "segments": 17,
+    "adjacencies": {
+      "reference": 21,
+      "novel": 4,
+      "imputed": 17
+    },
+    "terminals": 8,
+    "regions": [
+      "chr16:25450001-25640000",
+      "chr4:144711001-145252000",
+      "chr5:9350001-10580000",
+      "chr6:50744001-50796999"
+    ],
+    "normalization": [
+      "merged imputed imputed_adj_inter_chr16_2 into reference ref0004",
+      "merged imputed imputed_adj_inter_chr16_5 into reference ref0005",
+      "merged imputed imputed_adj_anchor_chr4_20 into reference ref0007",
+      "merged imputed imputed_adj_inter_chr4_19 into reference ref0009",
+      "merged imputed imputed_adj_inter_chr4_22 into reference ref0010",
+      "merged imputed imputed_adj_inter_chr4_24 into reference ref0011",
+      "merged imputed imputed_adj_inter_chr5_28 into reference ref0016",
+      "merged imputed imputed_adj_inter_chr5_31 into reference ref0017",
+      "merged imputed imputed_adj_inter_chr5_34 into reference ref0018"
+    ]
+  },
+  "scale": {
+    "depth_per_copy": 13.692478122660969,
+    "junction_reads_per_copy": 4.364062345014132,
+    "baseline_cn": 2.0,
+    "depth_method": "tumor_mode",
+    "junction_method": "extremities",
+    "depth_mode": "tumor",
+    "ratio_baseline": null,
+    "details": {
+      "blocks_total": 2776,
+      "blocks_background": 2725,
+      "blocks_balanced": 2479,
+      "blocks_used": 2479,
+      "block_bp": 1000000,
+      "tumor_depth_mode": 27.384956245321938,
+      "extremities_used": 72,
+      "background_flank_cn": {
+        "chr16:25450001-25640000": 2.056413774950366,
+        "chr4:144711001-145252000": 1.9867026971377382,
+        "chr5:9350001-10580000": 2.1322072325916395,
+        "chr6:50744001-50796999": 2.053647551079219
+      }
+    }
+  },
+  "flow": {
+    "status": "optimal",
+    "objective": 6.113076353418695,
+    "mip_gap": 0.0,
+    "imputed_used": [],
+    "ecdna_copies_total": 144,
+    "linear_end_copies": 0
+  },
+  "amplicon_call": "ecDNA",
+  "circular_fraction": 1.0,
+  "decompositions": [
+    {
+      "rank": 1,
+      "objective": 1.0024,
+      "residual": 0.0,
+      "call": "ecDNA",
+      "circular_fraction": 1.0,
+      "species": [
+        {
+          "weight": 6,
+          "topology": "circular",
+          "status": "species",
+          "length_bp": 1997996,
+          "n_orderings": 1,
+          "imputed": [],
+          "junctions": [
+            "sim00012",
+            "sim00013",
+            "sim00014",
+            "sim00017"
+          ]
+        }
+      ]
+    }
+  ],
+  "inputs": {
+    "windows": "/u/ym3292/amplicon-allele-analysis/simulations/runs/demo4_clone3_ecdna/obs/windows",
+    "extremities": "/u/ym3292/amplicon-allele-analysis/simulations/runs/demo4_clone3_ecdna/obs/extremity.tsv",
+    "paths": "/u/ym3292/amplicon-allele-analysis/simulations/runs/demo4_clone3_ecdna/obs/path.tsv"
+  },
+  "runtime_s": 3.09,
+  "paths_loaded": 4
+}

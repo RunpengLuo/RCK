@@ -1,0 +1,331 @@
+{
+  "scale": {
+    "depth_per_copy": 14.703012530834643,
+    "junction_reads_per_copy": 6.5,
+    "baseline_cn": 1.8329749458184041,
+    "depth_method": "subgraph_scale",
+    "junction_method": "subgraph_scale",
+    "depth_mode": "tumor",
+    "ratio_baseline": null,
+    "details": {
+      "subgraph_sample": "sim_tumor1",
+      "subgraph_purity": 0.8000000000000005,
+      "subgraph_tumor_ploidy": 1.7461594732991954,
+      "subgraph_cell_ploidy": 1.8329749458184041,
+      "subgraph_ploidy_class": 2,
+      "subgraph_method": "segment lattice fit, ploidy class chosen jointly over 1 tumor sample(s)",
+      "subgraph_junction_sample": "sim_tumor1",
+      "subgraph_alternatives": {
+        "2": {
+          "score": 0.11411203249598512,
+          "depth_per_copy": 14.703012530834643,
+          "purity": 0.8000000000000005,
+          "tumor_ploidy": 1.7461594732991954
+        },
+        "4": {
+          "score": 0.11983525332088306,
+          "depth_per_copy": 8.803514501355114,
+          "purity": 0.6700000000000004,
+          "tumor_ploidy": 3.605340160936357
+        },
+        "6": {
+          "score": 0.1261231708718373,
+          "depth_per_copy": 6.8780799810101305,
+          "purity": 0.5700000000000003,
+          "tumor_ploidy": 5.356986100950987
+        }
+      },
+      "background_flank_cn": {
+        "chr4:171132001-187232000": 2.4288379647091265
+      }
+    }
+  },
+  "segments": {
+    "s0001": {
+      "sid": "s0001",
+      "depth": 68.99535660219465,
+      "total": 4.6926,
+      "a": null,
+      "b": null,
+      "n_bins": 4.0,
+      "source": "subgraph_cn"
+    },
+    "s0002": {
+      "sid": "s0002",
+      "depth": 307.5605567225052,
+      "total": 20.9182,
+      "a": 0.9377,
+      "b": 19.9805,
+      "n_bins": 286.0,
+      "source": "subgraph_cn"
+    },
+    "s0003": {
+      "sid": "s0003",
+      "depth": 328.10507613184046,
+      "total": 22.3155,
+      "a": null,
+      "b": null,
+      "n_bins": 7.0,
+      "source": "subgraph_cn"
+    },
+    "s0004": {
+      "sid": "s0004",
+      "depth": 489.1162960557575,
+      "total": 33.2664,
+      "a": 1.0188,
+      "b": 32.2476,
+      "n_bins": 40.999,
+      "source": "subgraph_cn"
+    },
+    "s0006": {
+      "sid": "s0006",
+      "depth": 430.3836422000855,
+      "total": 29.2718,
+      "a": 1.0494,
+      "b": 28.2224,
+      "n_bins": 183.0,
+      "source": "subgraph_cn"
+    },
+    "s0008": {
+      "sid": "s0008",
+      "depth": 416.15700727524995,
+      "total": 28.3042,
+      "a": 0.912,
+      "b": 27.3922,
+      "n_bins": 109.001,
+      "source": "subgraph_cn"
+    },
+    "s0009": {
+      "sid": "s0009",
+      "depth": 393.098272723142,
+      "total": 26.7359,
+      "a": 0.9865,
+      "b": 25.7494,
+      "n_bins": 220.999,
+      "source": "subgraph_cn"
+    },
+    "s0011": {
+      "sid": "s0011",
+      "depth": 395.12434784989097,
+      "total": 26.8737,
+      "a": 0.9252,
+      "b": 25.9485,
+      "n_bins": 405.0,
+      "source": "subgraph_cn"
+    },
+    "s0012": {
+      "sid": "s0012",
+      "depth": 306.410781142594,
+      "total": 20.84,
+      "a": 1.1447,
+      "b": 19.6953,
+      "n_bins": 14.0,
+      "source": "subgraph_cn"
+    },
+    "s0013": {
+      "sid": "s0013",
+      "depth": 29.241351321323936,
+      "total": 1.9888,
+      "a": 0.9977,
+      "b": 0.9911,
+      "n_bins": 13090.001,
+      "source": "subgraph_cn"
+    },
+    "s0014": {
+      "sid": "s0014",
+      "depth": 114.99373130491084,
+      "total": 7.8211,
+      "a": null,
+      "b": null,
+      "n_bins": 2.0,
+      "source": "subgraph_cn"
+    },
+    "s0015": {
+      "sid": "s0015",
+      "depth": 303.47753014269244,
+      "total": 20.6405,
+      "a": 0.9624,
+      "b": 19.6781,
+      "n_bins": 308.0,
+      "source": "subgraph_cn"
+    },
+    "s0016": {
+      "sid": "s0016",
+      "depth": 304.98164832459685,
+      "total": 20.7428,
+      "a": null,
+      "b": null,
+      "n_bins": 2.0,
+      "source": "subgraph_cn"
+    },
+    "s0017": {
+      "sid": "s0017",
+      "depth": 426.54762623079074,
+      "total": 29.0109,
+      "a": 1.071,
+      "b": 27.9399,
+      "n_bins": 428.0,
+      "source": "subgraph_cn"
+    },
+    "s0018": {
+      "sid": "s0018",
+      "depth": 374.03140607315555,
+      "total": 25.4391,
+      "a": 0.8942,
+      "b": 24.5449,
+      "n_bins": 110.0,
+      "source": "subgraph_cn"
+    },
+    "s0019": {
+      "sid": "s0019",
+      "depth": 442.47392940419087,
+      "total": 30.0941,
+      "a": null,
+      "b": null,
+      "n_bins": 1.999,
+      "source": "subgraph_cn"
+    },
+    "s0020": {
+      "sid": "s0020",
+      "depth": 285.77216245306136,
+      "total": 19.4363,
+      "a": 0.8843,
+      "b": 18.552,
+      "n_bins": 95.0,
+      "source": "subgraph_cn"
+    },
+    "s0022": {
+      "sid": "s0022",
+      "depth": 297.01261553288447,
+      "total": 20.2008,
+      "a": 1.0257,
+      "b": 19.1751,
+      "n_bins": 393.001,
+      "source": "subgraph_cn"
+    },
+    "s0023": {
+      "sid": "s0023",
+      "depth": 381.9886764548433,
+      "total": 25.9803,
+      "a": 1.1888,
+      "b": 24.7915,
+      "n_bins": 260.0,
+      "source": "subgraph_cn"
+    },
+    "s0024": {
+      "sid": "s0024",
+      "depth": 452.6998746193863,
+      "total": 30.7896,
+      "a": 1.0617,
+      "b": 29.7279,
+      "n_bins": 21.999,
+      "source": "subgraph_cn"
+    },
+    "s0026": {
+      "sid": "s0026",
+      "depth": 427.5430201791283,
+      "total": 29.0786,
+      "a": 1.3951,
+      "b": 27.6835,
+      "n_bins": 108.001,
+      "source": "subgraph_cn"
+    },
+    "s0027": {
+      "sid": "s0027",
+      "depth": 419.97537962950764,
+      "total": 28.5639,
+      "a": null,
+      "b": null,
+      "n_bins": 4.999,
+      "source": "subgraph_cn"
+    },
+    "s0028": {
+      "sid": "s0028",
+      "depth": 44.99709954936634,
+      "total": 3.0604,
+      "a": null,
+      "b": null,
+      "n_bins": 5.001,
+      "source": "subgraph_cn"
+    }
+  },
+  "adjacencies": {
+    "ref0001": 1.8461538461538463,
+    "ref0002": 22.153846153846153,
+    "ref0009": 24.46153846153846,
+    "ref0010": 1.2307692307692308,
+    "ref0011": 2.1538461538461537,
+    "ref0012": 26.46153846153846,
+    "ref0013": 23.23076923076923,
+    "ref0018": 1.5384615384615385,
+    "ref0019": null,
+    "ref0020": null,
+    "ref0021": null,
+    "ref0022": null,
+    "ref0023": null,
+    "ref0024": null,
+    "ref0025": null,
+    "ref0026": null,
+    "ref0027": null,
+    "ref0028": null,
+    "ref0029": null,
+    "sim00003": 19.692307692307693,
+    "sim00004": 6.153846153846154,
+    "sim00005": 6.461538461538462,
+    "sim00006": 6.615384615384615,
+    "sim00007": 6.3076923076923075,
+    "sim00008": 6.153846153846154,
+    "sim00009": 20.615384615384617,
+    "sim00010": 18.615384615384617,
+    "sim00011": 19.23076923076923,
+    "sim00012": 19.384615384615383,
+    "imputed_adj_intra_chr4_1": null,
+    "imputed_adj_anchor_chr4_3": null,
+    "imputed_adj_intra_chr4_4": null,
+    "imputed_adj_anchor_chr4_6": null,
+    "imputed_adj_intra_chr4_7": null,
+    "imputed_adj_inter_chr4_8": null,
+    "imputed_adj_intra_chr4_9": null,
+    "imputed_adj_anchor_chr4_11": null,
+    "imputed_adj_intra_chr4_12": null,
+    "imputed_adj_anchor_chr4_14": null,
+    "imputed_adj_intra_chr4_15": null,
+    "imputed_adj_intra_chr4_17": null,
+    "imputed_adj_anchor_chr4_19": null,
+    "imputed_adj_intra_chr4_20": null,
+    "imputed_adj_intra_chr4_22": null,
+    "imputed_adj_anchor_chr4_24": null,
+    "imputed_adj_intra_chr4_25": null,
+    "imputed_adj_anchor_chr4_26": null,
+    "ref_c001": 22.384615384615383,
+    "ref_c002": 19.53846153846154,
+    "ref_c003": 8.538461538461538,
+    "ref_c004": 2.230769230769231,
+    "ref_c005": 1.8461538461538463
+  },
+  "background_total_cn": {
+    "s0001": 2.4288379647091265,
+    "s0002": 2.4288379647091265,
+    "s0003": 2.4288379647091265,
+    "s0004": 2.4288379647091265,
+    "s0006": 2.4288379647091265,
+    "s0008": 2.4288379647091265,
+    "s0009": 2.4288379647091265,
+    "s0011": 2.4288379647091265,
+    "s0012": 2.4288379647091265,
+    "s0013": 2.4288379647091265,
+    "s0014": 2.4288379647091265,
+    "s0015": 2.4288379647091265,
+    "s0016": 2.4288379647091265,
+    "s0017": 2.4288379647091265,
+    "s0018": 2.4288379647091265,
+    "s0019": 2.4288379647091265,
+    "s0020": 2.4288379647091265,
+    "s0022": 2.4288379647091265,
+    "s0023": 2.4288379647091265,
+    "s0024": 2.4288379647091265,
+    "s0026": 2.4288379647091265,
+    "s0027": 2.4288379647091265,
+    "s0028": 2.4288379647091265
+  }
+}

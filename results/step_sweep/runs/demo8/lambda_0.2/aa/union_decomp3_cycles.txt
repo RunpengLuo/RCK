@@ -1,0 +1,28 @@
+Interval	1	chr4	171132001	187232000
+List of cycle segments
+Segment	1	chr4	171132001	171136000
+Segment	2	chr4	171136001	171422000
+Segment	3	chr4	171422001	171429000
+Segment	4	chr4	171429001	171469999
+Segment	5	chr4	171470000	171652999
+Segment	6	chr4	171653000	171762000
+Segment	7	chr4	171762001	171982999
+Segment	8	chr4	171983000	172387999
+Segment	9	chr4	172388000	172401999
+Segment	10	chr4	172402000	185492000
+Segment	11	chr4	185492001	185494000
+Segment	12	chr4	185494001	185802000
+Segment	13	chr4	185802001	185804000
+Segment	14	chr4	185804001	186232000
+Segment	15	chr4	186232001	186342000
+Segment	16	chr4	186342001	186343999
+Segment	17	chr4	186344000	186438999
+Segment	18	chr4	186439000	186832000
+Segment	19	chr4	186832001	187092000
+Segment	20	chr4	187092001	187113999
+Segment	21	chr4	187114000	187222000
+Segment	22	chr4	187222001	187226999
+Segment	23	chr4	187227000	187232000
+Cycle=1;Copy_count=6.24;Segments=2+,3+,4+,5+,6+,7+,18+,19+,20+,8+,9+,12+,13+,14+,15+,16+,17+,21+,22+,2+,3+,4+,5+,6+,7+,18+,19+,20+,8+,4-,5-,14+,15+,16+,17+,21+,22+;Haplotypes=B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B
+Cycle=2;Copy_count=5.91;Segments=2+,3+,4+,4+,5+,6+,7+,8+,9+,12+,13+,14+,15+,16+,6+,7+,18+,19+,20+,8+,9+,12+,13+,14+,15+,16+,17+,21+,22+;Haplotypes=B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B
+Cycle=3;Copy_count=0.65;Segments=2+,3+,4+,5+,6+,7+,8+,9+,12+,13+,14+,15+,16+,17+,18+,19+,20+,21+,22+,2+,3+,4+,5+,4+,5+,6+,7+,18+,19+,20+,21+,22+;Haplotypes=B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B,B

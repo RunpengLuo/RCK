@@ -1,0 +1,314 @@
+# References
+
+Every reference cited in the pipeline documentation. Each entry was checked on 2026-11-06 (the
+entries under "Clustering comparison and benchmarking statistics": on 2026-11-07)
+against Crossref (`api.crossref.org/works/<DOI>`) or Europe PMC (which also gives the PMID), and
+each software entry against its repository. Entries that could only be checked in part say so.
+References that could not be verified are not listed here. Where the docs need one, they show
+`[citation needed: …]`; the [last section](#not-verified) lists those.
+
+Code is cited as `path/file.py::function`, at these commits:
+
+| Code | Repository | Commit |
+|---|---|---|
+| RCK-ecDNA, scorer, benchmarks | [RunpengLuo/RCK](https://github.com/RunpengLuo/RCK/tree/yubi_dev), branch `yubi_dev` | b4ff12d |
+| Simulator, subgraph construction | [RunpengLuo/amplicon-allele-analysis](https://github.com/RunpengLuo/amplicon-allele-analysis/tree/yubi_dev), branch `yubi_dev` | eea71aa |
+| Original RCK | [aganezov/RCK](https://github.com/aganezov/RCK/tree/4c6c288bfe1e20905069d842bc58609b10568c7e) `master` | 4c6c288 (2020-03-11) |
+| Original RCK, ported to current Python/Gurobi | [RunpengLuo/RCK](https://github.com/RunpengLuo/RCK/tree/rck/version-fix) `rck/version-fix` | 0b41976 |
+| CoRAL | [AmpliconSuite/CoRAL](https://github.com/AmpliconSuite/CoRAL/tree/v3.1.1) tag `v3.1.1`, as installed in `/n/fs/yubi-iw/conda/envs/coral-3.1.1` | 7f3bf31 |
+
+## Methods and tools this pipeline builds on or compares against
+
+<a id="aganezov2020"></a>**[Aganezov & Raphael 2020] RCK.**
+Aganezov S, Raphael BJ. Reconstruction of clone- and haplotype-specific cancer genome karyotypes
+from bulk tumor samples. *Genome Research* 30(9):1274–1290 (2020).
+doi:[10.1101/gr.256701.119](https://doi.org/10.1101/gr.256701.119), PMID 32887685.
+Preprint: bioRxiv (2019), doi:[10.1101/560839](https://doi.org/10.1101/560839).
+
+<a id="rck_upstream"></a>**[RCK code]** https://github.com/aganezov/RCK at 4c6c288. Docs used
+for terminology: `README.md`, `docs/Segments.md`, `docs/Adjacencies.md`, `docs/AdjacencyGroups.md`.
+
+<a id="deshpande2019"></a>**[Deshpande et al. 2019] AmpliconArchitect (AA).**
+Deshpande V, Luebeck J, Nguyen ND, et al. Exploring the landscape of focal amplifications in
+cancer using AmpliconArchitect. *Nature Communications* 10(1):392 (2019).
+doi:[10.1038/s41467-018-08200-y](https://doi.org/10.1038/s41467-018-08200-y), PMID 30674876.
+Code: https://github.com/AmpliconSuite/AmpliconArchitect.
+
+<a id="zhu2024"></a>**[Zhu et al. 2024] CoRAL.**
+Zhu K, Jones MG, Luebeck J, et al. CoRAL accurately resolves extrachromosomal DNA genome
+structures with long-read sequencing. *Genome Research* 34(9):1344–1354 (2024).
+doi:[10.1101/gr.279131.124](https://doi.org/10.1101/gr.279131.124), PMID 38981681.
+
+<a id="coral_code"></a>**[CoRAL 3.1.1 code]** https://github.com/AmpliconSuite/CoRAL, tag
+`v3.1.1` (commit 7f3bf31). The docs cite functions in the installed package
+(`coral/<module>.py::<function>`).
+
+<a id="cycleextractor"></a>**[Faizrahnemoon et al. 2026] CycleExtractor.**
+Faizrahnemoon M, Luebeck J, Hung KL, et al. Fast and accurate resolution of ecDNA sequence using
+Cycle-Extractor. bioRxiv preprint, posted 2026-03-13.
+doi:[10.64898/2026.03.10.710955](https://doi.org/10.64898/2026.03.10.710955).
+Code: https://github.com/AmpliconSuite/CycleExtractor (local copy
+`/n/fs/yubi-iw/tools/CycleExtractor`, commit 1b29b33).
+
+<a id="giurgiu2024"></a>**[Giurgiu et al. 2024] Decoil.**
+Giurgiu M, Wittstruck N, Rodriguez-Fos E, et al. Reconstructing extrachromosomal DNA structural
+heterogeneity from long-read sequencing data using Decoil. *Genome Research* 34(9):1355–1364
+(2024). doi:[10.1101/gr.279123.124](https://doi.org/10.1101/gr.279123.124), PMID 39111816.
+
+<a id="zaccaria2020"></a>**[Zaccaria & Raphael 2020] HATCHet, and the MASCoTE simulation framework.**
+Zaccaria S, Raphael BJ. Accurate quantification of copy-number aberrations and whole-genome
+duplications in multi-sample tumor sequencing data. *Nature Communications* 11(1):4301 (2020).
+doi:[10.1038/s41467-020-17967-y](https://doi.org/10.1038/s41467-020-17967-y), PMID 32879317.
+
+<a id="mascote"></a>**[MASCoTE code]** https://github.com/raphael-group/mascote (default branch
+`master`). Not vendored in this project. The function names the simulator docs attribute to it
+(`RandomTree.buildRandom`, `Mutation.mutate`, `MixBAMs.computeLengths`, …) were not checked
+against the code.
+
+<a id="ecsimulator"></a>**[ecSimulator]** https://github.com/AmpliconSuite/ecSimulator (README: version
+0.7.1). Vendored at amplicon-allele-analysis `third_party/ecSimulator` (pinned commit 07a0e3c). No
+separate paper was found; ecSimulator is the simulator used in the CoRAL benchmarks
+([Zhu et al. 2024](#zhu2024)).
+
+<a id="vanloo2010"></a>**[Van Loo et al. 2010] ASCAT.**
+Van Loo P, Nordgard SH, Lingjærde OC, et al. Allele-specific copy number analysis of tumors.
+*PNAS* 107(39):16910–16915 (2010).
+doi:[10.1073/pnas.1009843107](https://doi.org/10.1073/pnas.1009843107), PMID 20837533.
+
+<a id="gridss2"></a>**[Cameron et al. 2021] GRIDSS2.**
+Cameron DL, Baber J, Shale C, et al. GRIDSS2: comprehensive characterisation of somatic structural
+variation using single breakend variants and structural variant phasing. *Genome Biology* 22(1):202
+(2021). doi:[10.1186/s13059-021-02423-x](https://doi.org/10.1186/s13059-021-02423-x), PMID 34253237.
+
+<a id="lange2022"></a>**[Lange et al. 2022] ecDNA segregation and evolution.**
+Lange JT, Rose JC, Chen CY, et al. The evolutionary dynamics of extrachromosomal DNA in human
+cancers. *Nature Genetics* 54(10):1527–1533 (2022).
+doi:[10.1038/s41588-022-01177-x](https://doi.org/10.1038/s41588-022-01177-x), PMID 36123406.
+
+<a id="yang2017"></a>**[Yang et al. 2017] NanoSim.**
+Yang C, Chu J, Warren RL, Birol I. NanoSim: nanopore sequence read simulator based on statistical
+characterization. *GigaScience* 6(4):1–6 (2017).
+doi:[10.1093/gigascience/gix010](https://doi.org/10.1093/gigascience/gix010), PMID 28327957.
+
+<a id="byrskabishop2022"></a>**[Byrska-Bishop et al. 2022] 1000 Genomes, high coverage.**
+Byrska-Bishop M, Evani US, Zhao X, et al. High-coverage whole-genome sequencing of the expanded
+1000 Genomes Project cohort including 602 trios. *Cell* 185(18):3426–3440.e19 (2022).
+doi:[10.1016/j.cell.2022.08.004](https://doi.org/10.1016/j.cell.2022.08.004), PMID 36055201.
+
+<a id="cnplot"></a>**[cnplot]** https://github.com/raphael-group/cnplot (default branch `main`).
+Vendored at amplicon-allele-analysis `third_party/cnplot` (pinned commit 1e8bfef).
+
+## Solvers and libraries
+
+<a id="gurobi"></a>**[Gurobi]** Gurobi Optimizer Reference Manual, version 13.0.
+https://docs.gurobi.com/projects/optimizer/en/current/. The pipeline used gurobipy 13.0.3 with an
+academic WLS licence. The publisher's legal name was not shown on the page that was checked.
+
+<a id="huangfu2018"></a>**[Huangfu & Hall 2018] HiGHS.**
+Huangfu Q, Hall JAJ. Parallelizing the dual revised simplex method. *Mathematical Programming
+Computation* 10(1):119–142 (2018).
+doi:[10.1007/s12532-017-0130-5](https://doi.org/10.1007/s12532-017-0130-5).
+
+<a id="virtanen2020"></a>**[Virtanen et al. 2020] SciPy.**
+Virtanen P, Gommers R, Oliphant TE, et al. SciPy 1.0: fundamental algorithms for scientific
+computing in Python. *Nature Methods* 17(3):261–272 (2020).
+doi:[10.1038/s41592-019-0686-2](https://doi.org/10.1038/s41592-019-0686-2).
+
+<a id="truong2020"></a>**[Truong et al. 2020] ruptures (change-point detection).**
+Truong C, Oudre L, Vayatis N. Selective review of offline change point detection methods.
+*Signal Processing* 167:107299 (2020).
+doi:[10.1016/j.sigpro.2019.107299](https://doi.org/10.1016/j.sigpro.2019.107299).
+
+## Algorithms and statistics
+
+<a id="hierholzer1873"></a>**[Hierholzer & Wiener 1873] Euler circuits.**
+Hierholzer C, Wiener C. Ueber die Möglichkeit, einen Linienzug ohne Wiederholung und ohne
+Unterbrechung zu umfahren. *Mathematische Annalen* 6(1):30–32 (1873).
+doi:[10.1007/BF01442866](https://doi.org/10.1007/BF01442866).
+
+<a id="vatinlen2008"></a>**[Vatinlen et al. 2008] Minimum flow decomposition.**
+Vatinlen B, Chauvet F, Chrétienne P, Mahey P. Simple bounds and greedy algorithms for decomposing a
+flow into a minimal set of paths. *European Journal of Operational Research* 185(3):1390–1401
+(2008). doi:[10.1016/j.ejor.2006.05.043](https://doi.org/10.1016/j.ejor.2006.05.043).
+
+<a id="glover1975"></a>**[Glover 1975] Linearisation of products with binaries.**
+Glover F. Improved linear integer programming formulations of nonlinear integer problems.
+*Management Science* 22(4):455–460 (1975).
+doi:[10.1287/mnsc.22.4.455](https://doi.org/10.1287/mnsc.22.4.455).
+
+<a id="dantzig1954"></a>**[Dantzig et al. 1954] Subtour elimination cuts.**
+Dantzig G, Fulkerson R, Johnson S. Solution of a large-scale traveling-salesman problem.
+*Journal of the Operations Research Society of America* 2(4):393–410 (1954).
+doi:[10.1287/opre.2.4.393](https://doi.org/10.1287/opre.2.4.393).
+
+<a id="scott1974"></a>**[Scott & Knott 1974] Binary segmentation.**
+Scott AJ, Knott M. A cluster analysis method for grouping means in the analysis of variance.
+*Biometrics* 30(3):507 (1974). doi:[10.2307/2529204](https://doi.org/10.2307/2529204).
+
+<a id="yao1988"></a>**[Yao 1988] BIC penalty for change points.**
+Yao Y-C. Estimating the number of change-points via Schwarz' criterion. *Statistics & Probability
+Letters* 6(3):181–189 (1988).
+doi:[10.1016/0167-7152(88)90118-6](https://doi.org/10.1016/0167-7152(88)90118-6).
+
+<a id="killick2012"></a>**[Killick et al. 2012] PELT.**
+Killick R, Fearnhead P, Eckley IA. Optimal detection of changepoints with a linear computational
+cost. *Journal of the American Statistical Association* 107(500):1590–1598 (2012).
+doi:[10.1080/01621459.2012.737745](https://doi.org/10.1080/01621459.2012.737745).
+
+<a id="rousseeuw1993"></a>**[Rousseeuw & Croux 1993] MAD as a robust scale.**
+Rousseeuw PJ, Croux C. Alternatives to the median absolute deviation. *Journal of the American
+Statistical Association* 88(424):1273–1283 (1993).
+doi:[10.1080/01621459.1993.10476408](https://doi.org/10.1080/01621459.1993.10476408).
+
+<a id="mahalanobis1936"></a>**[Mahalanobis 1936] Mahalanobis distance.**
+Mahalanobis PC. On the generalised distance in statistics. *Proceedings of the National Institute
+of Sciences of India* 2:49 (1936). Only the reprint was verified: *Sankhya A* 80(S1):1–7 (2018),
+doi:[10.1007/s13171-019-00164-5](https://doi.org/10.1007/s13171-019-00164-5). The original's
+volume and page come from secondary records.
+
+<a id="brown2001"></a>**[Brown et al. 2001] Jeffreys interval for a binomial proportion.**
+Brown LD, Cai TT, DasGupta A. Interval estimation for a binomial proportion. *Statistical Science*
+16(2):101–133 (2001). doi:[10.1214/ss/1009213286](https://doi.org/10.1214/ss/1009213286).
+
+<a id="jaccard1912"></a>**[Jaccard 1912] Jaccard index.**
+Jaccard P. The distribution of the flora in the alpine zone. *New Phytologist* 11(2):37–50 (1912).
+doi:[10.1111/j.1469-8137.1912.tb05611.x](https://doi.org/10.1111/j.1469-8137.1912.tb05611.x).
+
+<a id="wagnerfischer1974"></a>**[Wagner & Fischer 1974] Dynamic programming over strings.**
+Wagner RA, Fischer MJ. The string-to-string correction problem. *Journal of the ACM*
+21(1):168–173 (1974). doi:[10.1145/321796.321811](https://doi.org/10.1145/321796.321811).
+
+<a id="mackay2003"></a>**[MacKay 2003]** MacKay DJC. *Information Theory, Inference, and Learning
+Algorithms*. Cambridge University Press (2003). Title, publisher and year were confirmed only
+through published reviews (e.g. doi:[10.1145/1189056.1189063](https://doi.org/10.1145/1189056.1189063)).
+No book DOI or ISBN was found.
+
+## Clustering comparison and benchmarking statistics
+
+Cited by the confusion-matrix metrics M1 and M2 ([evaluation.md §4.7](evaluation.md#47-confusion-matrix-metrics-species-detection-m1-and-adjacency-pairs-m2)).
+Each bibliographic record (authors, title, venue, volume, pages, year) was checked against Crossref
+on 2026-11-07. "Abstract checked" means the claim the docs make was checked against the abstract
+(Europe PMC). The others' claims are well-known definitions that were not re-read in the full text,
+which is paywalled; the [last section](#not-verified) lists the claims that go beyond a definition.
+
+<a id="rand1971"></a>**[Rand 1971] Rand index (pair counting).**
+Rand WM. Objective criteria for the evaluation of clustering methods. *Journal of the American
+Statistical Association* 66(336):846–850 (1971).
+doi:[10.1080/01621459.1971.10482356](https://doi.org/10.1080/01621459.1971.10482356).
+
+<a id="hubert1985"></a>**[Hubert & Arabie 1985] Adjusted Rand index.**
+Hubert L, Arabie P. Comparing partitions. *Journal of Classification* 2(1):193–218 (1985).
+doi:[10.1007/BF01908075](https://doi.org/10.1007/BF01908075).
+
+<a id="fowlkes1983"></a>**[Fowlkes & Mallows 1983] Fowlkes-Mallows index.**
+Fowlkes EB, Mallows CL. A method for comparing two hierarchical clusterings. *Journal of the American
+Statistical Association* 78(383):553–569 (1983).
+doi:[10.1080/01621459.1983.10478008](https://doi.org/10.1080/01621459.1983.10478008).
+
+<a id="collins1988"></a>**[Collins & Dent 1988] Omega index (overlapping clusters).**
+Collins LM, Dent CW. Omega: a general formulation of the Rand index of cluster recovery suitable for
+non-disjoint solutions. *Multivariate Behavioral Research* 23(2):231–242 (1988).
+doi:[10.1207/s15327906mbr2302_6](https://doi.org/10.1207/s15327906mbr2302_6). Abstract checked: a
+generalisation of the Hubert-Arabie adjusted Rand index to non-disjoint (overlapping) solutions.
+
+<a id="amigo2009"></a>**[Amigó et al. 2009] Formal constraints for clustering metrics; extended B-cubed.**
+Amigó E, Gonzalo J, Artiles J, Verdejo F. A comparison of extrinsic clustering evaluation metrics
+based on formal constraints. *Information Retrieval* 12(4):461–486 (2009).
+doi:[10.1007/s10791-008-9066-8](https://doi.org/10.1007/s10791-008-9066-8).
+
+<a id="krusche2019"></a>**[Krusche et al. 2019] GA4GH variant-calling benchmarking.**
+Krusche P, Trigg L, Boutros PC, et al. Best practices for benchmarking germline small-variant calls in
+human genomes. *Nature Biotechnology* 37(5):555–560 (2019).
+doi:[10.1038/s41587-019-0054-x](https://doi.org/10.1038/s41587-019-0054-x). Abstract checked: a
+benchmarking framework that matches calls with different representations to the truth and defines
+standard performance metrics.
+
+<a id="burset1996"></a>**[Burset & Guigó 1996] Gene-structure prediction accuracy at several levels.**
+Burset M, Guigó R. Evaluation of gene structure prediction programs. *Genomics* 34(3):353–367 (1996).
+doi:[10.1006/geno.1996.0298](https://doi.org/10.1006/geno.1996.0298). Abstract checked: accuracy
+measured at the nucleotide, exon and protein levels, including the share of exons exactly
+identified.
+
+<a id="pertea2020"></a>**[Pertea & Pertea 2020] GffCompare.**
+Pertea G, Pertea M. GFF Utilities: GffRead and GffCompare. *F1000Research* 9:304 (2020), version 2.
+doi:[10.12688/f1000research.23297.2](https://doi.org/10.12688/f1000research.23297.2). Abstract
+checked: GffCompare compares annotations (transcripts) against a reference.
+
+<a id="davis2006"></a>**[Davis & Goadrich 2006] Precision-recall curves.**
+Davis J, Goadrich M. The relationship between precision-recall and ROC curves. *Proceedings of the
+23rd International Conference on Machine Learning (ICML '06)*, 233–240 (2006).
+doi:[10.1145/1143844.1143874](https://doi.org/10.1145/1143844.1143874).
+
+<a id="saito2015"></a>**[Saito & Rehmsmeier 2015] Precision-recall under class imbalance.**
+Saito T, Rehmsmeier M. The precision-recall plot is more informative than the ROC plot when
+evaluating binary classifiers on imbalanced datasets. *PLoS ONE* 10(3):e0118432 (2015).
+doi:[10.1371/journal.pone.0118432](https://doi.org/10.1371/journal.pone.0118432). Abstract checked.
+
+<a id="sokolova2009"></a>**[Sokolova & Lapalme 2009] Micro and macro averaging.**
+Sokolova M, Lapalme G. A systematic analysis of performance measures for classification tasks.
+*Information Processing & Management* 45(4):427–437 (2009).
+doi:[10.1016/j.ipm.2009.03.002](https://doi.org/10.1016/j.ipm.2009.03.002).
+
+<a id="dice1945"></a>**[Dice 1945] Dice coefficient (= F1).**
+Dice LR. Measures of the amount of ecologic association between species. *Ecology* 26(3):297–302
+(1945). doi:[10.2307/1932409](https://doi.org/10.2307/1932409).
+
+<a id="avis1983"></a>**[Avis 1983] Greedy heuristic for weighted matching.**
+Avis D. A survey of heuristics for the weighted matching problem. *Networks* 13(4):475–493 (1983).
+doi:[10.1002/net.3230130404](https://doi.org/10.1002/net.3230130404). Cited for the greedy
+matching of [evaluation.md §3.6](evaluation.md#36-one-to-one-matching-of-truth-to-inferred-species).
+
+<a id="kuhn1955"></a>**[Kuhn 1955] Hungarian method (optimal assignment).**
+Kuhn HW. The Hungarian method for the assignment problem. *Naval Research Logistics Quarterly*
+2(1–2):83–97 (1955). doi:[10.1002/nav.3800020109](https://doi.org/10.1002/nav.3800020109). Cited as
+the optimal alternative that §3.6 does not use.
+
+<a id="edge2017"></a>**[Edge et al. 2017] HapCUT2; switch and mismatch errors.**
+Edge P, Bafna V, Bansal V. HapCUT2: robust and accurate haplotype assembly for diverse sequencing
+technologies. *Genome Research* 27(5):801–812 (2017).
+doi:[10.1101/gr.213462.116](https://doi.org/10.1101/gr.213462.116). Full text checked (PMC5411775): a
+switch error is a discordant phase between adjacent variants relative to the truth, and the
+haplotype pair is unordered. Cited for the swap-invariant phasing accuracy of
+[evaluation.md §3.2](evaluation.md#32-phasing-accuracy).
+
+## Not verified
+
+These items appear in the docs as `[citation needed: …]`:
+
+- **Kotzig A., "Moves without forbidden transitions in a graph", Matematický časopis (1968).**
+  Proposed for Euler walks under transition constraints (the alternation in
+  `rck/ecdna/walk.py::alternating_circuit`). Not found in Crossref.
+- **A published method that orients phase blocks using reads across structural-variant junctions**
+  (`simulations/subgraph_construct.md`, phase-block orientation), if one exists.
+- **The source of the 1.15 over-dispersion factor** (`simulations/subgraph_construct.md`).
+- **A published rule for choosing λ from a plateau of benchmark scores**
+  (`results/bench_nested/README.md`, λ selection).
+- **CoRAL supplementary methods.** The sections that define the cycle-interval overlap, the cyclic
+  LCS normalised by the true length, and the log2 length error were not checked against the PDF
+  (`Supplemental_Methods.pdf` is not on disk). The same applies to the section of the AA paper
+  that defines error-free reconstruction and the section of the RCK paper that defines the
+  novel-adjacency FNR and FDR. The papers are verified; the section pointers are not.
+
+- **Content claims of the §4.7 references that go beyond a standard definition** (the full texts
+  are paywalled and were not read; the bibliographic records are verified):
+  - Amigó et al. 2009: that pair-counting metrics fail a constraint that B-cubed satisfies (in the
+    paper, "cluster size vs. quantity"), and that the paper extends B-cubed to overlapping
+    clusterings;
+  - Krusche et al. 2019: that the framework reports recall, precision and F-measure with no true
+    negatives or specificity, and matches calls to the truth one to one;
+  - Burset & Guigó 1996: that the exon-level "specificity" is the share of predicted exons that
+    are real, which is a precision;
+  - Pertea & Pertea 2020: that GffCompare's transcript level requires an exact intron-chain match;
+  - Sokolova & Lapalme 2009: their wording on micro averaging favouring large classes.
+- **Avis 1983: that the survey covers the greedy heuristic and its factor-½ guarantee for maximum
+  weight matching.** The bibliographic record is verified; the full text was not read.
+- **Bagga A, Baldwin B. "Algorithms for scoring coreference chains" (1998)**, the original B-cubed,
+  usually cited from an LREC 1998 workshop. No DOI or Crossref record was found. It is not cited
+  in the docs.
+- **A published threshold for a partly correct ecDNA reconstruction**
+  ([evaluation.md §4.7](evaluation.md#47-confusion-matrix-metrics-species-detection-m1-and-adjacency-pairs-m2), M1's
+  0.95 operating point). None was found.
+
+Also checked: the DOI the previous `simulations/README.md` gave for NanoSim
+(10.1093/bioinformatics/btw753) is a different paper (Šošić & Šikić, Edlib, *Bioinformatics*
+2017). The correct DOI is above.

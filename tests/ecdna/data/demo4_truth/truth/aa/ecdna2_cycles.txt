@@ -1,0 +1,11 @@
+# ecSimulator 0.7.1 2026-10-20 15:57:27
+Interval	1	chr4	144711001	145249000
+Interval	2	chr5	9354001	10578000
+Interval	3	chr6	50744001	50797000
+Interval	4	chr16	25455001	25638000
+List of cycle segments
+Segment	1	chr4	144711001	145249000
+Segment	2	chr5	9354001	10578000
+Segment	3	chr6	50744001	50797000
+Segment	4	chr16	25455001	25638000
+Cycle=1;Copy_count=1.0;Length=1998000;Segments=4+,1+,2+,3+

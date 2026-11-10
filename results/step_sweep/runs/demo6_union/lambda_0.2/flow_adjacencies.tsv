@@ -1,0 +1,47 @@
+aid	kind	u	v	phasing	reads	obs_cn	junction_hap	ecdna	bg
+imputed_adj_anchor_chr15_5	imputed	imputed_ext_chr15_2_-	chr15:52659000-_+	AA			imputed	0	0
+imputed_adj_anchor_chr15_5	imputed	imputed_ext_chr15_2_-	chr15:52659000-_+	BB			imputed	0	0
+imputed_adj_anchor_chr17_8	imputed	imputed_ext_chr17_5_-	chr17:3906000-_+	AA			imputed	0	0
+imputed_adj_anchor_chr17_8	imputed	imputed_ext_chr17_5_-	chr17:3906000-_+	BB			imputed	0	0
+imputed_adj_inter_chr15_2	imputed	imputed_ext_chr15_1_+	imputed_ext_chr15_2_-	AA			imputed	0	0
+imputed_adj_inter_chr15_2	imputed	imputed_ext_chr15_1_+	imputed_ext_chr15_2_-	BB			imputed	0	0
+imputed_adj_intra_chr15_1	imputed	imputed_ext_chr15_1_+	chr15:50227000-_-	AA			imputed	0	0
+imputed_adj_intra_chr15_1	imputed	imputed_ext_chr15_1_+	chr15:50227000-_-	BB			imputed	0	0
+imputed_adj_intra_chr15_4	imputed	chr15:52785999+_+	imputed_ext_chr15_2_-	AA			imputed	0	0
+imputed_adj_intra_chr15_4	imputed	chr15:52785999+_+	imputed_ext_chr15_2_-	BB			imputed	0	0
+imputed_adj_intra_chr17_7	imputed	imputed_ext_chr17_6_+	imputed_ext_chr17_5_-	AA			imputed	0	0
+imputed_adj_intra_chr17_7	imputed	imputed_ext_chr17_6_+	imputed_ext_chr17_5_-	BB			imputed	0	0
+ref0001	reference	chr15:50227000-_+	chr15:50227000-_-	AA	13.0	2.0		0	1
+ref0001	reference	chr15:50227000-_+	chr15:50227000-_-	BB	13.0	2.0		0	1
+ref0002	reference	chr15:52098999+_+	chr15:52098999+_-	AA	8.0	1.2307692307692308		0	1
+ref0002	reference	chr15:52098999+_+	chr15:52098999+_-	BB	8.0	1.2307692307692308		0	1
+ref0003	reference	chr15:52659000-_+	chr15:52659000-_-	AA	15.0	2.3076923076923075		0	1
+ref0003	reference	chr15:52659000-_+	chr15:52659000-_-	BB	15.0	2.3076923076923075		0	1
+ref0006	reference	chr15:52785999+_+	chr15:52785999+_-	AA	8.0	1.2307692307692308		0	1
+ref0006	reference	chr15:52785999+_+	chr15:52785999+_-	BB	8.0	1.2307692307692308		0	1
+ref0007	reference	imputed_ext_chr15_1_+	imputed_ext_chr15_1_-	AA				0	1
+ref0007	reference	imputed_ext_chr15_1_+	imputed_ext_chr15_1_-	BB				8	1
+ref0008	reference	imputed_ext_chr15_2_+	imputed_ext_chr15_2_-	AA				0	1
+ref0008	reference	imputed_ext_chr15_2_+	imputed_ext_chr15_2_-	BB				0	1
+ref0009	reference	chr17:3906000-_+	chr17:3906000-_-	AA	19.0	2.923076923076923		0	1
+ref0009	reference	chr17:3906000-_+	chr17:3906000-_-	BB	19.0	2.923076923076923		0	1
+ref0012	reference	chr17:5785999+_+	chr17:5785999+_-	AA	16.0	2.4615384615384617		0	1
+ref0012	reference	chr17:5785999+_+	chr17:5785999+_-	BB	16.0	2.4615384615384617		0	1
+ref0013	reference	chr17:61941000-_+	chr17:61941000-_-	AA	12.0	1.8461538461538463		0	1
+ref0013	reference	chr17:61941000-_+	chr17:61941000-_-	BB	12.0	1.8461538461538463		0	1
+ref0014	reference	chr17:62059999+_+	chr17:62059999+_-	AA	13.0	2.0		0	1
+ref0014	reference	chr17:62059999+_+	chr17:62059999+_-	BB	13.0	2.0		0	1
+ref0015	reference	imputed_ext_chr17_5_+	imputed_ext_chr17_5_-	AA				0	1
+ref0015	reference	imputed_ext_chr17_5_+	imputed_ext_chr17_5_-	BB				0	1
+ref0016	reference	imputed_ext_chr17_6_+	imputed_ext_chr17_6_-	AA				0	1
+ref0016	reference	imputed_ext_chr17_6_+	imputed_ext_chr17_6_-	BB				0	1
+ref_c001	reference	chr15:52724999+_+	chr15:52725000-_-	AA	11.0	1.6923076923076923		0	1
+ref_c001	reference	chr15:52724999+_+	chr15:52725000-_-	BB	11.0	1.6923076923076923		0	1
+ref_c002	reference	chr17:5782999+_+	chr17:5783000-_-	AA	14.5	2.230769230769231		0	1
+ref_c002	reference	chr17:5782999+_+	chr17:5783000-_-	BB	14.5	2.230769230769231		0	1
+sim00005	novel	chr15:50227000-_-	chr15:52785999+_+	BB	53.0	8.153846153846153	B	8	0
+sim00006	novel	chr15:52098999+_+	chr15:52724999+_+	BB	62.0	9.538461538461538	B	8	0
+sim00007	novel	chr15:52659000-_-	chr15:52725000-_-	BB	60.0	9.23076923076923	B	8	0
+sim00010	novel	chr17:3906000-_-	chr17:62059999+_+	AA	56.0	8.615384615384615	A	8	0
+sim00011	novel	chr17:5782999+_+	chr17:5785999+_+	AA	56.0	8.615384615384615	A	8	0
+sim00012	novel	chr17:5783000-_-	chr17:61941000-_-	AA	52.0	8.0	A	8	0

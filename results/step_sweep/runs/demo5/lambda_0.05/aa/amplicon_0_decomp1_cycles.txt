@@ -1,0 +1,10 @@
+Interval	1	chr17	3906001	5790000
+Interval	2	chr17	61941001	62059999
+List of cycle segments
+Segment	1	chr17	3906001	3910000
+Segment	2	chr17	3910001	4230000
+Segment	3	chr17	4230001	5782999
+Segment	4	chr17	5783000	5785999
+Segment	5	chr17	5786000	5790000
+Segment	6	chr17	61941001	62059999
+Cycle=1;Copy_count=16.82;Segments=1+,2+,3+,4-,6+;Haplotypes=A,A,A,A,A

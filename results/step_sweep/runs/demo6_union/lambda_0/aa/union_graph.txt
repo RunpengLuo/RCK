@@ -1,0 +1,33 @@
+SequenceEdge: StartPosition, EndPosition, PredictedCopyCount, AverageCoverage, Size, NumberReadsMapped
+sequence	chr15:50227001-	chr15:52096000+	10.000000	125.069619	1869000	0
+sequence	chr15:52096001-	chr15:52098999+	10.000000	119.993145	2999	0
+sequence	chr15:52099000-	chr15:52656000+	2.000000	28.304517	557001	0
+sequence	chr15:52656001-	chr15:52659000+	2.000000	63.745927	3000	0
+sequence	chr15:52659001-	chr15:52724999+	10.000000	139.310260	65999	0
+sequence	chr15:52725000-	chr15:52785999+	10.000000	147.532601	61000	0
+sequence	chr17:3900001-	chr17:3906000+	2.000000	57.853295	6000	0
+sequence	chr17:3906001-	chr17:5782999+	10.000000	140.409518	1876999	0
+sequence	chr17:5783000-	chr17:5785999+	10.000000	199.987655	3000	0
+sequence	chr17:5786000-	chr17:5790000+	2.000000	26.998112	4001	0
+sequence	chr17:61941001-	chr17:62059999+	10.000000	147.721795	118999	0
+BreakpointEdge: StartPosition->EndPosition, PredictedCopyCount, NumberOfReadPairs, HomologySizeIfAvailable(<0ForInsertions), Homology/InsertionSequence
+concordant	chr15:50227000+->chr15:50227001-	2.000000	13	None	None
+concordant	chr15:52098999+->chr15:52099000-	2.000000	8	None	None
+concordant	chr15:52659000+->chr15:52659001-	2.000000	15	None	None
+concordant	chr15:52785999+->chr15:52786000-	2.000000	8	None	None
+concordant	chr15:52096000+->chr15:52096001-	10.000000	0	None	None
+concordant	chr15:52656000+->chr15:52656001-	2.000000	0	None	None
+concordant	chr17:3906000+->chr17:3906001-	2.000000	19	None	None
+concordant	chr17:5785999+->chr17:5786000-	2.000000	16	None	None
+concordant	chr17:61941000+->chr17:61941001-	2.000000	12	None	None
+concordant	chr17:62059999+->chr17:62060000-	2.000000	13	None	None
+concordant	chr17:3900000+->chr17:3900001-	2.000000	0	None	None
+concordant	chr17:5790000+->chr17:5790001-	2.000000	0	None	None
+concordant	chr15:52724999+->chr15:52725000-	2.000000	11	None	None
+concordant	chr17:5782999+->chr17:5783000-	2.000000	14	None	None
+discordant	chr15:50227001-->chr15:52785999+	8.000000	53	None	None
+discordant	chr15:52098999+->chr15:52724999+	8.000000	62	None	None
+discordant	chr15:52659001-->chr15:52725000-	8.000000	60	None	None
+discordant	chr17:3906001-->chr17:62059999+	8.000000	56	None	None
+discordant	chr17:5782999+->chr17:5785999+	8.000000	56	None	None
+discordant	chr17:5783000-->chr17:61941001-	8.000000	52	None	None

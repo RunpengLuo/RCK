@@ -1,0 +1,51 @@
+{
+  "n_decompositions": 1,
+  "n_truth_species": 1,
+  "n_truth_species_total": 2,
+  "truth_species": [
+    {
+      "species": "ecdna1",
+      "weight": 7.437605251340802,
+      "length_bp": 1774000,
+      "n_steps": 8,
+      "fraction_in_subgraph": 0.0,
+      "in_scope": false
+    },
+    {
+      "species": "ecdna2",
+      "weight": 7.437605251340802,
+      "length_bp": 1998000,
+      "n_steps": 4,
+      "fraction_in_subgraph": 1.0,
+      "in_scope": true
+    }
+  ],
+  "first_rank_with_all_orders_matched": 1,
+  "best_mean_jaccard_hap": 0.999997997997998,
+  "best_mean_jaccard_rank": 1,
+  "top_decomposition": [
+    {
+      "truth": "ecdna2",
+      "inferred": "ec1",
+      "jaccard_hap": 0.999997997997998,
+      "jaccard_total": 0.999997997997998,
+      "junction_recall": 1.0,
+      "junction_precision": 1.0,
+      "phased_junction_recall": 1.0,
+      "phased_junction_precision": 1.0,
+      "order_match": true,
+      "order_match_ordering": 1,
+      "truth_weight": 7.437605251340802,
+      "inferred_weight": 7.0,
+      "cn_rel_err": 0.05883684822637144,
+      "inferred_topology": "circular",
+      "topology_match": true,
+      "decomposition_rank": 1,
+      "n_species_inferred": 1,
+      "n_low_weight": 0,
+      "n_species_truth": 1
+    }
+  ],
+  "tol_bp": 10000,
+  "min_truth_fraction": 0.5
+}

@@ -1,0 +1,238 @@
+{
+  "scale": {
+    "depth_per_copy": 13.5,
+    "junction_reads_per_copy": 5.5,
+    "baseline_cn": 2.0,
+    "depth_method": "override",
+    "junction_method": "subgraph_reference_median",
+    "depth_mode": "tumor",
+    "ratio_baseline": null,
+    "details": {
+      "reference_adjacencies_used": 8,
+      "background_flank_cn": {
+        "chr16:25450001-25640000": 2.0,
+        "chr4:144711001-145252000": 2.0,
+        "chr5:9350001-10580000": 2.0,
+        "chr6:50744001-50796999": 2.0
+      }
+    }
+  },
+  "segments": {
+    "s0001": {
+      "sid": "s0001",
+      "depth": 72.74562721252441,
+      "total": 5.388564978705512,
+      "a": null,
+      "b": null,
+      "n_bins": 5.0,
+      "source": "subgraph_weight"
+    },
+    "s0002": {
+      "sid": "s0002",
+      "depth": 72.74562721252441,
+      "total": 5.388564978705512,
+      "a": null,
+      "b": null,
+      "n_bins": 5.0,
+      "source": "subgraph_weight"
+    },
+    "s0003": {
+      "sid": "s0003",
+      "depth": 128.47304738484897,
+      "total": 9.516522028507332,
+      "a": 8.485586926419915,
+      "b": 1.0309351020874182,
+      "n_bins": 130.0,
+      "source": "subgraph_weight"
+    },
+    "s0004": {
+      "sid": "s0004",
+      "depth": 112.04326587677004,
+      "total": 8.29950117605704,
+      "a": 7.390737965888004,
+      "b": 0.9087632101690359,
+      "n_bins": 47.999,
+      "source": "subgraph_weight"
+    },
+    "s0005": {
+      "sid": "s0005",
+      "depth": 103.49378032684326,
+      "total": 7.666205950136538,
+      "a": null,
+      "b": null,
+      "n_bins": 2.001,
+      "source": "subgraph_weight"
+    },
+    "s0006": {
+      "sid": "s0006",
+      "depth": 95.85787470990962,
+      "total": 7.100583311845157,
+      "a": 6.240721290442175,
+      "b": 0.8598620214029816,
+      "n_bins": 101.0,
+      "source": "subgraph_weight"
+    },
+    "s0007": {
+      "sid": "s0007",
+      "depth": 112.85528576291838,
+      "total": 8.359650797253213,
+      "a": 7.398288835229522,
+      "b": 0.9613619620236914,
+      "n_bins": 290.0,
+      "source": "subgraph_weight"
+    },
+    "s0008": {
+      "sid": "s0008",
+      "depth": 132.28051037054794,
+      "total": 9.798556323744291,
+      "a": 8.730360441164992,
+      "b": 1.0681958825792992,
+      "n_bins": 130.0,
+      "source": "subgraph_weight"
+    },
+    "s0009": {
+      "sid": "s0009",
+      "depth": 107.99350843429563,
+      "total": 7.999519143281158,
+      "a": 7.193028112487144,
+      "b": 0.8064910307940132,
+      "n_bins": 16.999,
+      "source": "subgraph_weight"
+    },
+    "s0010": {
+      "sid": "s0010",
+      "depth": 102.74382438659669,
+      "total": 7.610653658266421,
+      "a": null,
+      "b": null,
+      "n_bins": 3.001,
+      "source": "subgraph_weight"
+    },
+    "s0011": {
+      "sid": "s0011",
+      "depth": 98.24409461021423,
+      "total": 7.277340341497351,
+      "a": null,
+      "b": null,
+      "n_bins": 4.0,
+      "source": "subgraph_weight"
+    },
+    "s0012": {
+      "sid": "s0012",
+      "depth": 110.05588506460192,
+      "total": 8.152287782563105,
+      "a": 7.254387461205193,
+      "b": 0.8979003213579125,
+      "n_bins": 36.0,
+      "source": "subgraph_weight"
+    },
+    "s0013": {
+      "sid": "s0013",
+      "depth": 132.9920064284007,
+      "total": 9.85125973543709,
+      "a": 8.73200628037886,
+      "b": 1.1192534550582305,
+      "n_bins": 750.0,
+      "source": "subgraph_weight"
+    },
+    "s0014": {
+      "sid": "s0014",
+      "depth": 112.01599441658368,
+      "total": 8.297481067895088,
+      "a": 7.365624441511883,
+      "b": 0.9318566263832055,
+      "n_bins": 220.0,
+      "source": "subgraph_weight"
+    },
+    "s0015": {
+      "sid": "s0015",
+      "depth": 95.38063062754544,
+      "total": 7.065231898336699,
+      "a": 6.274147362961722,
+      "b": 0.7910845353749769,
+      "n_bins": 217.999,
+      "source": "subgraph_weight"
+    },
+    "s0016": {
+      "sid": "s0016",
+      "depth": 71.2457169532776,
+      "total": 5.2774605150576,
+      "a": null,
+      "b": null,
+      "n_bins": 2.001,
+      "source": "subgraph_weight"
+    },
+    "s0017": {
+      "sid": "s0017",
+      "depth": 114.74310340881348,
+      "total": 8.49948914139359,
+      "a": 7.575890245000903,
+      "b": 0.9235988963926868,
+      "n_bins": 52.999,
+      "source": "subgraph_weight"
+    }
+  },
+  "adjacencies": {
+    "ref0001": 1.8181818181818181,
+    "ref0002": 2.3636363636363638,
+    "ref0003": null,
+    "ref0004": null,
+    "ref0005": null,
+    "ref0006": null,
+    "ref0007": 2.0,
+    "ref0008": 3.4545454545454546,
+    "ref0009": null,
+    "ref0010": null,
+    "ref0011": null,
+    "ref0012": null,
+    "ref0013": 2.0,
+    "ref0014": 3.4545454545454546,
+    "ref0015": null,
+    "ref0016": null,
+    "ref0017": null,
+    "ref0018": null,
+    "ref0019": null,
+    "ref0020": 1.4545454545454546,
+    "ref0021": 2.0,
+    "sim00012": 5.090909090909091,
+    "sim00013": 6.909090909090909,
+    "sim00014": 10.909090909090908,
+    "sim00017": 5.818181818181818,
+    "imputed_adj_intra_chr16_1": null,
+    "imputed_adj_anchor_chr16_3": null,
+    "imputed_adj_intra_chr16_4": null,
+    "imputed_adj_anchor_chr16_6": null,
+    "imputed_adj_intra_chr16_7": null,
+    "imputed_adj_anchor_chr16_9": null,
+    "imputed_adj_intra_chr4_18": null,
+    "imputed_adj_intra_chr4_21": null,
+    "imputed_adj_intra_chr4_23": null,
+    "imputed_adj_intra_chr4_25": null,
+    "imputed_adj_anchor_chr4_26": null,
+    "imputed_adj_intra_chr5_27": null,
+    "imputed_adj_anchor_chr5_29": null,
+    "imputed_adj_intra_chr5_30": null,
+    "imputed_adj_anchor_chr5_32": null,
+    "imputed_adj_intra_chr5_33": null,
+    "imputed_adj_intra_chr5_35": null
+  },
+  "background_total_cn": {
+    "s0001": 2.0,
+    "s0002": 2.0,
+    "s0003": 2.0,
+    "s0004": 2.0,
+    "s0005": 2.0,
+    "s0006": 2.0,
+    "s0007": 2.0,
+    "s0008": 2.0,
+    "s0009": 2.0,
+    "s0010": 2.0,
+    "s0011": 2.0,
+    "s0012": 2.0,
+    "s0013": 2.0,
+    "s0014": 2.0,
+    "s0015": 2.0,
+    "s0016": 2.0,
+    "s0017": 2.0
+  }
+}

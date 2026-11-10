@@ -1,0 +1,24 @@
+Interval	1	chr4	6019001	6690000
+Interval	2	chr6	69527001	70856999
+List of cycle segments
+Segment	1	chr4	6019001	6220999
+Segment	2	chr4	6221000	6343999
+Segment	3	chr4	6344000	6344999
+Segment	4	chr4	6345000	6350000
+Segment	5	chr4	6350001	6370000
+Segment	6	chr4	6370001	6680000
+Segment	7	chr4	6680001	6687999
+Segment	8	chr4	6688000	6690000
+Segment	9	chr6	69527001	69532999
+Segment	10	chr6	69533000	69661999
+Segment	11	chr6	69662000	69897000
+Segment	12	chr6	69897001	69925999
+Segment	13	chr6	69926000	70089999
+Segment	14	chr6	70090000	70211999
+Segment	15	chr6	70212000	70322999
+Segment	16	chr6	70323000	70767000
+Segment	17	chr6	70767001	70843999
+Segment	18	chr6	70844000	70856999
+Cycle=1;Copy_count=14.0;Segments=1+,3+,14-,13-,11+,12+,15+,9-,7-,6-,5-,4-,3-,2-,7-,6-,5-,4-,17-,16-,10+,18+;Haplotypes=A,A,B,A,A,A,A,A,A,A,A,A,B,A,A,A,A,A,A,A,A,A
+Cycle=2;Copy_count=1.0;Segments=1+,2+,3+,14-,13-,12-,11-,10-,16+,17+,18+,1+,3+,14-,13-,11+,12+,15+,9-,7-,6-,5-,4-,17-,16-,10+,11+,12+,15+,9-,7-,6-,5-,4-,17-,16-,10+,18+;Haplotypes=A,A,A,B,A,A,A,A,A,A,A,A,A,B,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A
+Cycle=3;Copy_count=1.0;Segments=1+,3+,4+,5+,6+,7+,9+,10+,18+,1+,3+,4+,5+,6+,7+,9+,15-,14-,13-,11+,12+,15+,9-,7-,6-,5-,4-,17-,16-,10+,18+;Haplotypes=A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A

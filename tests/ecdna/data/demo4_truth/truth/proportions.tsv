@@ -1,0 +1,22 @@
+SAMPLE	KIND	ID	U	V	GENOME_LENGTH	CLONE	PSI	PHI
+normal	clone	normal	1.0	1.0	5487268000.0			
+tumor1	clone	normal	0.2	0.20053918276226634	5487268000.0			
+tumor1	clone	clone1	0.20277234481946144	0.1997512552989132	5390980000.0			
+tumor1	clone	clone2	0.2315066372857987	0.23213075922667248	5487268000.0			
+tumor1	clone	clone3	0.36572101789474	0.3632487856570697	5435521000.0			
+tumor2	clone	normal	0.2	0.1996890709508775	5487268000.0			
+tumor2	clone	clone1	0.1553044737563372	0.15234205721255542	5390980000.0			
+tumor2	clone	clone2	0.5566391793392141	0.5557738028855328	5487268000.0			
+tumor2	clone	clone3	0.08805634690444868	0.08709033705449318	5435521000.0			
+.	ecdna_psi	ecdna1	0.5			clone1	23.076923076923077	
+.	ecdna_psi	ecdna1	0.5			clone2	6.9230769230769225	
+.	ecdna_psi	ecdna1	0.5			clone3	0.0	
+.	ecdna_psi	ecdna2	0.5			clone1	23.076923076923077	
+.	ecdna_psi	ecdna2	0.5			clone2	6.9230769230769225	
+.	ecdna_psi	ecdna2	0.5			clone3	0.0	
+normal	ecdna_burden	ecdna1						0.0
+normal	ecdna_burden	ecdna2						0.0
+tumor1	ecdna_burden	ecdna1						6.282100061658486
+tumor1	ecdna_burden	ecdna2						6.282100061658486
+tumor2	ecdna_burden	ecdna1						7.437605251340802
+tumor2	ecdna_burden	ecdna2						7.437605251340802

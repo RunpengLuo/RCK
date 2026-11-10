@@ -1,0 +1,113 @@
+NODE_1	NODE_2	EDGE_TYPE	WEIGHT	CHROM_1	POS_1	CHROM_2	POS_2	AID	ORIENT_1	ORIENT_2	n_snps	A_count	B_count	BAF	BAF_lo	BAF_hi	depth_A	depth_B	BAF_observed	n_blocks	NOV_A	NOV_B	NOV_U	phased_frac	frac_B	BAF_end1	n_snps_end1	BAF_end2	n_snps_end2	hap_end1	hap_end2	expected_hap	seg_hap	phase_status	junction_hap	allele_consistent	used_for_phase_orient
+chr11:81496000-_+	chr11:81496000-_-	extremity	13.0	chr11	81496000	chr11	81496001																														
+chr11:81515999+_+	chr11:81515999+_-	extremity	16.0	chr11	81515999	chr11	81516000																														
+chr11:81516000-_+	chr11:81516000-_-	extremity	14.0	chr11	81516000	chr11	81516001																														
+chr11:81924999+_+	chr11:81924999+_-	extremity	13.0	chr11	81924999	chr11	81925000																														
+chr11:81925000-_+	chr11:81925000-_-	extremity	15.0	chr11	81925000	chr11	81925001																														
+chr11:82305999+_+	chr11:82305999+_-	extremity	11.0	chr11	82305999	chr11	82306000																														
+imputed_ext_chr11_1_+	imputed_ext_chr11_1_-	extremity	0.0	chr11	81498000	chr11	81498001																														
+imputed_ext_chr11_2_+	imputed_ext_chr11_2_-	extremity	0.0	chr11	81858000	chr11	81858001																														
+imputed_ext_chr11_3_+	imputed_ext_chr11_3_-	extremity	0.0	chr11	82178000	chr11	82178001																														
+imputed_ext_chr11_4_+	imputed_ext_chr11_4_-	extremity	0.0	chr11	82308000	chr11	82308001																														
+imputed_ext_chr11_5_+	imputed_ext_chr11_5_-	extremity	0.0	chr11	82318000	chr11	82318001																														
+chr11:81496000-_-	imputed_ext_chr11_1_+	reference	43.497385787963864	chr11	81496001	chr11	81498000				2.0	64.0	419.0	0.8674948240165632	0.8350929368255572	0.8955091074211519	5.763628758653595	37.73375702931027	0.8674948240165632	1.0													unknown	oriented			
+imputed_ext_chr11_1_-	chr11:81515999+_+	reference	113.99314863681793	chr11	81498001	chr11	81515999				13.0	333.0	2519.0	0.8832398316970547	0.8710665189123248	0.8946358087026176	13.309859220217525	100.6832894166004	0.8832398316970547	1.0													B	oriented			
+chr11:81515999+_-	chr11:81516000-_+	reference	122.99260821342469	chr11	81516000	chr11	81516000																										no_span				
+chr11:81516000-_-	imputed_ext_chr11_2_+	reference	120.1213513633183	chr11	81516001	chr11	81858000				223.0	6245.0	46479.0	0.8815529929443896	0.8787738360931556	0.8842902602680474	14.228014552460419	105.89333681085787	0.8815529929443896	1.0													B	oriented			
+imputed_ext_chr11_2_-	chr11:81924999+_+	reference	135.74184141159057	chr11	81858001	chr11	81924999				40.0	1086.0	9340.0	0.8958373297525417	0.8898639919911553	0.9015909356853742	14.139232665738287	121.60260874585228	0.8958373297525417	1.0													B	oriented			
+chr11:81924999+_-	chr11:81925000-_+	reference	119.99278821945191	chr11	81925000	chr11	81925000																										no_span				
+chr11:81925000-_-	imputed_ext_chr11_3_+	reference	133.14584330412058	chr11	81925001	chr11	82178000				161.0	4698.0	37423.0	0.8884641865102918	0.8854312551053796	0.8914437344061654	14.850529945698305	118.29531335842226	0.3422283421571188	2.0													B	oriented			
+imputed_ext_chr11_3_-	chr11:82305999+_+	reference	145.89507727989783	chr11	82178001	chr11	82305999				82.0	2872.0	20926.0	0.8793175897134213	0.8751327345989612	0.8834101870912507	17.606969575084733	128.28810770481311	0.12068241028657871	1.0													B	oriented			
+chr11:82305999+_-	imputed_ext_chr11_4_+	reference	122.24265222549438	chr11	82306000	chr11	82308000				0.0	0.0	0.0							1.0													unknown	oriented			
+imputed_ext_chr11_4_-	imputed_ext_chr11_5_+	reference	37.49774641990662	chr11	82308001	chr11	82318000				9.0	358.0	346.0	0.4914772727272727	0.4546465102449874	0.5283779523525609	19.06845627603206	18.42929014387456	0.5085227272727273	1.0													AB	oriented			
+chr16:25455000-_+	chr16:25455000-_-	extremity	10.0	chr16	25455000	chr16	25455001																														
+chr16:46681000-_+	chr16:46681000-_-	extremity	16.0	chr16	46681000	chr16	46681001																														
+chr16:46896999+_+	chr16:46896999+_-	extremity	15.0	chr16	46896999	chr16	46897000																														
+imputed_ext_chr16_6_+	imputed_ext_chr16_6_-	extremity	0.0	chr16	25450000	chr16	25450001																														
+imputed_ext_chr16_7_+	imputed_ext_chr16_7_-	extremity	0.0	chr16	25460000	chr16	25460001																														
+imputed_ext_chr16_8_+	imputed_ext_chr16_8_-	extremity	0.0	chr16	25590000	chr16	25590001																														
+imputed_ext_chr16_10_+	imputed_ext_chr16_10_-	extremity	0.0	chr16	46675000	chr16	46675001																														
+imputed_ext_chr16_11_+	imputed_ext_chr16_11_-	extremity	0.0	chr16	46685000	chr16	46685001																														
+imputed_ext_chr16_12_+	imputed_ext_chr16_12_-	extremity	0.0	chr16	46895000	chr16	46895001																														
+imputed_ext_chr16_13_+	imputed_ext_chr16_13_-	extremity	0.0	chr16	46905000	chr16	46905001																														
+imputed_ext_chr16_6_-	chr16:25455000-_+	reference	72.74562721252441	chr16	25450001	chr16	25455000				2.0	25.0	27.0	0.5192307692307693	0.3854818591519838	0.6509041788861096	34.97385923679058	37.77176797573383	0.5192307692307693	1.0													unknown	oriented			
+chr16:25455000-_-	imputed_ext_chr16_7_+	reference	72.74562721252441	chr16	25455001	chr16	25460000				4.0	842.0	84.0	0.09071274298056156	0.07348897892463534	0.11048953037256948	66.14667182823494	6.5989553842894715	0.09071274298056156	1.0													A	oriented			
+imputed_ext_chr16_7_-	imputed_ext_chr16_8_+	reference	128.47304738484897	chr16	25460001	chr16	25590000				85.0	19779.0	2403.0	0.10833107925344874	0.1042921866834268	0.11247217286940156	114.55542350666882	13.91762387818015	0.10833107925344874	1.0													A	oriented			
+imputed_ext_chr16_10_-	chr16:46681000-_+	reference	60.74634866714477	chr16	46675001	chr16	46681000				6.0	202.0	178.0	0.46842105263157896	0.41864787001220166	0.5186732420279365	32.29148008095591	28.45486858618887	0.46842105263157896	1.0													AB	oriented			
+chr16:46681000-_-	imputed_ext_chr16_11_+	reference	60.74634866714477	chr16	46681001	chr16	46685000				1.0	36.0	214.0	0.856	0.8084813637058597	0.8953350480368695	8.747474208068848	51.99887445907592	0.856	1.0													unknown	oriented			
+imputed_ext_chr16_11_-	imputed_ext_chr16_12_+	reference	136.20609891755242	chr16	46685001	chr16	46895000				154.0	4828.0	36939.0	0.884406349510379	0.8813133640479294	0.8874460613710272	15.744560192830301	120.46153872472212	0.884406349510379	1.0													B	oriented			
+imputed_ext_chr16_12_-	chr16:46896999+_+	reference	57.74652943611145	chr16	46895001	chr16	46896999				2.0	94.0	664.0	0.8759894459102903	0.8511051236424698	0.8980094915134995	7.161179112129915	50.58535032398154	0.8759894459102903	1.0													unknown	oriented			
+chr16:46896999+_-	imputed_ext_chr16_13_+	reference	57.74652943611145	chr16	46897000	chr16	46905000				6.0	169.0	182.0	0.5185185185185185	0.46627434588265493	0.5704586902707618	27.803884543312922	29.94264489279853	0.5185185185185185	1.0													AB	oriented			
+chr20:48341000-_+	chr20:48341000-_-	extremity	13.0	chr20	48341000	chr20	48341001																														
+chr20:48388999+_+	chr20:48388999+_-	extremity	17.0	chr20	48388999	chr20	48389000																														
+chr20:48389000-_+	chr20:48389000-_-	extremity	11.0	chr20	48389000	chr20	48389001																														
+chr20:48419999+_+	chr20:48419999+_-	extremity	19.0	chr20	48419999	chr20	48420000																														
+imputed_ext_chr20_14_+	imputed_ext_chr20_14_-	extremity	0.0	chr20	48343000	chr20	48343001																														
+imputed_ext_chr20_15_+	imputed_ext_chr20_15_-	extremity	0.0	chr20	48373000	chr20	48373001																														
+imputed_ext_chr20_16_+	imputed_ext_chr20_16_-	extremity	0.0	chr20	48413000	chr20	48413001																														
+imputed_ext_chr20_17_+	imputed_ext_chr20_17_-	extremity	0.0	chr20	48423000	chr20	48423001																														
+chr20:48341000-_-	imputed_ext_chr20_14_+	reference	41.247521209716794	chr20	48341001	chr20	48343000				1.0	31.0	277.0	0.8993506493506493	0.86202831379047	0.9292147763005615	4.151536225653314	37.09598498406348	0.8993506493506493	1.0													unknown	oriented			
+imputed_ext_chr20_14_-	imputed_ext_chr20_15_+	reference	106.74358445803324	chr20	48343001	chr20	48373000				20.0	452.0	3482.0	0.8851042196237926	0.8748566307517888	0.8947854262262583	12.264387436459334	94.47919702157391	0.8851042196237926	1.0													B	oriented			
+imputed_ext_chr20_15_-	chr20:48388999+_+	reference	122.61762976646423	chr20	48373001	chr20	48388999				12.0	319.0	2647.0	0.8924477410654079	0.8809159482533949	0.9032141059898185	13.187803066588707	109.42982669987552	0.8924477410654079	1.0													B	oriented			
+chr20:48388999+_-	chr20:48389000-_+	reference	123.74256248474121	chr20	48389000	chr20	48389000																										no_span				
+chr20:48389000-_-	imputed_ext_chr20_16_+	reference	121.74268248875937	chr20	48389001	chr20	48413000				14.0	421.0	2977.0	0.8761035903472632	0.864707056295054	0.8868597696320347	15.083481261850403	106.65920122690896	0.8761035903472632	1.0													B	oriented			
+imputed_ext_chr20_16_-	chr20:48419999+_+	reference	89.24463601112366	chr20	48413001	chr20	48419999				5.0	149.0	1122.0	0.8827694728560189	0.8642175906700008	0.8995806585960823	10.462195724356743	78.78244028676691	0.8827694728560189	1.0													B	oriented			
+chr20:48419999+_-	imputed_ext_chr20_17_+	reference	89.24463601112366	chr20	48420000	chr20	48423000				3.0	72.0	66.0	0.4782608695652174	0.3960927672490507	0.5613302487162369	46.562418788412344	42.682217222711316	0.4782608695652174	1.0													AB	oriented			
+chr6:50796999+_+	chr6:50796999+_-	extremity	11.0	chr6	50796999	chr6	50797000																														
+chr6:88298000-_+	chr6:88298000-_-	extremity	16.0	chr6	88298000	chr6	88298001																														
+chr6:88966999+_+	chr6:88966999+_-	extremity	13.0	chr6	88966999	chr6	88967000																														
+imputed_ext_chr6_18_+	imputed_ext_chr6_18_-	extremity	0.0	chr6	88447000	chr6	88447001																														
+imputed_ext_chr6_19_+	imputed_ext_chr6_19_-	extremity	0.0	chr6	88507000	chr6	88507001																														
+imputed_ext_chr6_20_+	imputed_ext_chr6_20_-	extremity	0.0	chr6	88587000	chr6	88587001																														
+chr6:88298000-_-	imputed_ext_chr6_18_+	reference	118.59287184079487	chr6	88298001	chr6	88447000				89.0	2380.0	18146.0	0.8840494981974082	0.8796154446127742	0.8883752545449295	13.750903000150625	104.84196884064424	0.8840494981974082	1.0													B	oriented			
+imputed_ext_chr6_18_-	imputed_ext_chr6_19_+	reference	135.24187149206796	chr6	88447001	chr6	88507000				39.0	1262.0	9770.0	0.885605511240029	0.8795650866017684	0.8914436391268505	15.470924748276817	119.77094674379114	0.885605511240029	1.0													B	oriented			
+imputed_ext_chr6_19_-	imputed_ext_chr6_20_+	reference	111.55579466223716	chr6	88507001	chr6	88587000				57.0	1569.0	11503.0	0.8799724602203183	0.8743172367507205	0.8854594463990588	13.389767581475677	98.16602708076148	0.8799724602203183	1.0													B	oriented			
+imputed_ext_chr6_20_-	chr6:88966999+_+	reference	127.66995785236357	chr6	88587001	chr6	88966999				250.0	7560.0	56524.0	0.8820298358404594	0.8795151197198949	0.8845100447903732	15.061245886084965	112.6087119662786	0.8820298358404594	1.0													B	oriented			
+chr6:50796999+_+	chr16:25455000-_-	variant	32.0	chr6	50796999	chr16	25455001	sim00017	+	-											32.0	0.0	0.0	1.0	0.0	0.11093117408906883	30.0	0.11196337993319312	32.0	A	A	A			A	True	True
+chr6:88298000-_-	chr11:81925000-_-	variant	40.0	chr6	88298001	chr11	81925001	sim00020	-	-											0.0	40.0	0.0	1.0	1.0	0.8825894094815636	29.0	0.8855978859282096	35.0	B	B	B			B	True	True
+chr6:88966999+_+	chr20:48419999+_+	variant	49.0	chr6	88966999	chr20	48419999	sim00021	+	+											0.0	49.0	0.0	1.0	1.0	0.8559477124183007	29.0	0.8779181837652602	19.0	B	B	B			B	True	True
+chr11:81496000-_-	chr11:81924999+_+	variant	36.0	chr11	81496001	chr11	81924999	sim00030	-	+											0.0	36.0	0.0	1.0	1.0	0.8809595202398801	15.0	0.8945476333133613	32.0	B	B	B			B	True	True
+chr11:81515999+_+	chr20:48388999+_+	variant	38.0	chr11	81515999	chr20	48388999	sim00031	+	+											0.0	38.0	0.0	1.0	1.0	0.8809595202398801	15.0	0.8887347391786904	33.0	B	B	B			B	True	True
+chr11:81516000-_-	chr20:48389000-_-	variant	38.0	chr11	81516001	chr20	48389001	sim00032	-	-											0.0	38.0	0.0	1.0	1.0	0.8890322580645161	29.0	0.8779181837652602	19.0	B	B	B			B	True	True
+chr11:82305999+_+	chr16:46681000-_-	variant	56.0	chr11	82305999	chr16	46681001	sim00033	+	-											0.0	56.0	0.0	1.0	1.0	0.8758049678012879	39.0	0.8881074168797954	33.0	B	B	B			B	True	True
+chr16:46896999+_+	chr20:48341000-_-	variant	47.0	chr16	46896999	chr20	48341001	sim00037	+	-											0.0	47.0	0.0	1.0	1.0	0.8904943583083043	43.0	0.8887347391786904	33.0	B	B	B			B	True	True
+imputed_ext_chr11_2_+	imputed_ext_chr11_1_-	imputed_variant	119.7011385215653	chr11	81858000	chr11	81498001	imputed_adj_intra_chr11_1	+	-																0.8866191093817553	39.0	0.8832398316970547	13.0	B	B	B			imputed		False
+imputed_ext_chr11_2_+	imputed_ext_chr11_2_-	imputed_variant	126.9129446915454	chr11	81858000	chr11	81858001	imputed_adj_inter_chr11_2	+	-																0.8866191093817553	39.0	0.8968928344958782	30.0	B	B	B			imputed		False
+imputed_ext_chr11_1_-	chr11:81496000-_+	imputed_variant	59.85056926078265	chr11	81498001	chr11	81496000	imputed_adj_anchor_chr11_3	-	+																0.8832398316970547	13.0	0.49138755980861243	30.0	B	AB	ambiguous			imputed		False
+imputed_ext_chr11_3_+	imputed_ext_chr11_2_-	imputed_variant	134.1247508615255	chr11	82178000	chr11	81858001	imputed_adj_intra_chr11_4	+	-																0.880218754168334	30.0	0.8968928344958782	30.0	B	B	B			imputed		False
+imputed_ext_chr11_3_+	imputed_ext_chr11_3_-	imputed_variant	140.00991407071166	chr11	82178000	chr11	82178001	imputed_adj_inter_chr11_5	+	-																0.880218754168334	30.0	0.8860666568785788	24.0	B	B	B			imputed		False
+imputed_ext_chr11_2_-	chr11:81924999+_+	imputed_variant	67.06237543076276	chr11	81858001	chr11	81924999	imputed_adj_anchor_chr11_6	-	+																0.8968928344958782	30.0	0.8945476333133613	32.0	B	B	B			imputed		False
+imputed_ext_chr11_4_+	imputed_ext_chr11_3_-	imputed_variant	145.89507727989783	chr11	82308000	chr11	82178001	imputed_adj_intra_chr11_7	+	-																	0.0	0.8860666568785788	24.0	unknown	B	unknown			imputed		False
+imputed_ext_chr11_4_+	imputed_ext_chr11_4_-	imputed_variant	91.69641184990223	chr11	82308000	chr11	82308001	imputed_adj_inter_chr11_8	+	-																	0.0	0.48028477546549836	30.0	unknown	AB	unknown			imputed		False
+imputed_ext_chr11_5_+	imputed_ext_chr11_4_-	imputed_variant	37.49774641990662	chr11	82318000	chr11	82308001	imputed_adj_intra_chr11_9	+	-																0.4914772727272727	9.0	0.48028477546549836	30.0	AB	AB	ambiguous			imputed		False
+imputed_ext_chr11_4_-	chr11:82305999+_+	imputed_variant	18.74887320995331	chr11	82308001	chr11	82305999	imputed_adj_anchor_chr11_10	-	+																0.48028477546549836	30.0	0.8758049678012879	39.0	AB	B	ambiguous			imputed		False
+imputed_ext_chr16_7_+	imputed_ext_chr16_6_-	imputed_variant	72.74562721252441	chr16	25460000	chr16	25450001	imputed_adj_intra_chr16_11	+	-																0.09071274298056156	4.0	0.5192307692307693	2.0	A	unknown	unknown			imputed		False
+imputed_ext_chr16_7_+	imputed_ext_chr16_7_-	imputed_variant	100.60933729868668	chr16	25460000	chr16	25460001	imputed_adj_inter_chr16_12	+	-																0.09071274298056156	4.0	0.11329106352434502	33.0	A	A	A			imputed		False
+imputed_ext_chr16_6_-	chr16:25455000-_+	imputed_variant	36.372813606262206	chr16	25450001	chr16	25455000	imputed_adj_anchor_chr16_13	-	+																0.5192307692307693	2.0	0.511049723756906	27.0	unknown	AB	unknown			imputed		False
+imputed_ext_chr16_8_+	imputed_ext_chr16_7_-	imputed_variant	128.47304738484897	chr16	25590000	chr16	25460001	imputed_adj_intra_chr16_14	+	-																0.10376818233879281	32.0	0.11329106352434502	33.0	A	A	A			imputed		False
+imputed_ext_chr16_8_+	imputed_ext_chr16_8_-	imputed_variant	120.25815663080951	chr16	25590000	chr16	25590001	imputed_adj_inter_chr16_15	+	-																0.10376818233879281	32.0	0.10949612403100775	26.0	A	A	A			imputed		False
+imputed_ext_chr16_7_-	chr16:25455000-_+	imputed_variant	64.23652369242448	chr16	25460001	chr16	25455000	imputed_adj_anchor_chr16_16	-	+																0.11329106352434502	33.0	0.511049723756906	27.0	A	AB	ambiguous			imputed		False
+imputed_ext_chr16_11_+	imputed_ext_chr16_10_-	imputed_variant	60.74634866714477	chr16	46685000	chr16	46675001	imputed_adj_intra_chr16_20	+	-																0.856	1.0	0.46842105263157896	6.0	unknown	AB	unknown			imputed		False
+imputed_ext_chr16_11_+	imputed_ext_chr16_11_-	imputed_variant	98.4762237923486	chr16	46685000	chr16	46685001	imputed_adj_inter_chr16_21	+	-																0.856	1.0	0.8854629904140725	36.0	unknown	B	unknown			imputed		False
+imputed_ext_chr16_10_-	chr16:46681000-_+	imputed_variant	30.373174333572386	chr16	46675001	chr16	46681000	imputed_adj_anchor_chr16_22	-	+																0.46842105263157896	6.0	0.4951974386339381	30.0	AB	AB	ambiguous			imputed		False
+imputed_ext_chr16_12_+	imputed_ext_chr16_11_-	imputed_variant	136.20609891755242	chr16	46895000	chr16	46685001	imputed_adj_intra_chr16_23	+	-																0.8917261654766905	42.0	0.8854629904140725	36.0	B	B	B			imputed		False
+imputed_ext_chr16_12_+	imputed_ext_chr16_12_-	imputed_variant	96.97631417683193	chr16	46895000	chr16	46895001	imputed_adj_inter_chr16_24	+	-																0.8917261654766905	42.0	0.8759894459102903	2.0	B	unknown	unknown			imputed		False
+imputed_ext_chr16_11_-	chr16:46681000-_+	imputed_variant	68.10304945877621	chr16	46685001	chr16	46681000	imputed_adj_anchor_chr16_25	-	+																0.8854629904140725	36.0	0.4951974386339381	30.0	B	AB	ambiguous			imputed		False
+imputed_ext_chr16_13_+	imputed_ext_chr16_12_-	imputed_variant	57.74652943611145	chr16	46905000	chr16	46895001	imputed_adj_intra_chr16_26	+	-																0.5185185185185185	6.0	0.8759894459102903	2.0	AB	unknown	unknown			imputed		False
+imputed_ext_chr16_12_-	chr16:46896999+_+	imputed_variant	28.873264718055726	chr16	46895001	chr16	46896999	imputed_adj_anchor_chr16_27	-	+																0.8759894459102903	2.0	0.8904943583083043	43.0	unknown	B	unknown			imputed		False
+imputed_ext_chr20_15_+	imputed_ext_chr20_14_-	imputed_variant	106.74358445803324	chr20	48373000	chr20	48343001	imputed_adj_intra_chr20_28	+	-																0.8861386138613861	21.0	0.8882608695652174	32.0	B	B	B			imputed		False
+imputed_ext_chr20_15_+	imputed_ext_chr20_15_-	imputed_variant	114.21188529332478	chr20	48373000	chr20	48373001	imputed_adj_inter_chr20_29	+	-																0.8861386138613861	21.0	0.8924477410654079	12.0	B	B	B			imputed		False
+imputed_ext_chr20_14_-	chr20:48341000-_+	imputed_variant	53.37179222901662	chr20	48343001	chr20	48341000	imputed_adj_anchor_chr20_30	-	+																0.8882608695652174	32.0	0.5109034267912772	31.0	B	AB	ambiguous			imputed		False
+imputed_ext_chr20_16_+	imputed_ext_chr20_15_-	imputed_variant	121.68018612861633	chr20	48413000	chr20	48373001	imputed_adj_intra_chr20_31	+	-																0.8761035903472632	14.0	0.8924477410654079	12.0	B	B	B			imputed		False
+imputed_ext_chr20_16_+	imputed_ext_chr20_16_-	imputed_variant	105.46241106987	chr20	48413000	chr20	48413001	imputed_adj_inter_chr20_32	+	-																0.8761035903472632	14.0	0.8827694728560189	5.0	B	B	B			imputed		False
+imputed_ext_chr20_15_-	chr20:48388999+_+	imputed_variant	60.840093064308164	chr20	48373001	chr20	48388999	imputed_adj_anchor_chr20_33	-	+																0.8924477410654079	12.0	0.8887347391786904	33.0	B	B	B			imputed		False
+imputed_ext_chr20_17_+	imputed_ext_chr20_16_-	imputed_variant	89.24463601112366	chr20	48423000	chr20	48413001	imputed_adj_intra_chr20_34	+	-																0.4782608695652174	3.0	0.8827694728560189	5.0	AB	B	ambiguous			imputed		False
+imputed_ext_chr20_16_-	chr20:48419999+_+	imputed_variant	44.62231800556183	chr20	48413001	chr20	48419999	imputed_adj_anchor_chr20_35	-	+																0.8827694728560189	5.0	0.8779181837652602	19.0	B	B	B			imputed		False
+imputed_ext_chr6_18_+	chr6:88298000-_-	imputed_variant	118.59287184079487	chr6	88447000	chr6	88297001	imputed_adj_intra_chr6_36	+	-																0.8816615681854774	29.0	0.65	1.0	B	unknown	unknown			imputed		False
+imputed_ext_chr6_18_+	imputed_ext_chr6_18_-	imputed_variant	126.91737166643142	chr6	88447000	chr6	88447001	imputed_adj_inter_chr6_37	+	-																0.8816615681854774	29.0	0.8869413694136942	34.0	B	B	B			imputed		False
+chr6:88298000-_-	chr6:88298000-_+	imputed_variant	59.296435920397435	chr6	88297001	chr6	88298000	imputed_adj_anchor_chr6_38	-	+																0.65	1.0	0.43567052416609936	34.0	unknown	AB	unknown			imputed		False
+imputed_ext_chr6_19_+	imputed_ext_chr6_18_-	imputed_variant	135.24187149206796	chr6	88507000	chr6	88447001	imputed_adj_intra_chr6_39	+	-																0.8843159065628476	32.0	0.8869413694136942	34.0	B	B	B			imputed		False
+imputed_ext_chr6_19_+	imputed_ext_chr6_19_-	imputed_variant	123.39883307715256	chr6	88507000	chr6	88507001	imputed_adj_inter_chr6_40	+	-																0.8843159065628476	32.0	0.88010495094684	38.0	B	B	B			imputed		False
+imputed_ext_chr6_20_+	imputed_ext_chr6_19_-	imputed_variant	111.55579466223716	chr6	88587000	chr6	88507001	imputed_adj_intra_chr6_41	+	-																0.8789092788834324	34.0	0.88010495094684	38.0	B	B	B			imputed		False
+imputed_ext_chr6_20_+	imputed_ext_chr6_20_-	imputed_variant	119.61287625730037	chr6	88587000	chr6	88587001	imputed_adj_inter_chr6_42	+	-																0.8789092788834324	34.0	0.8861722040243332	33.0	B	B	B			imputed		False
+chr6:88966999+_+	imputed_ext_chr6_20_-	imputed_variant	127.66995785236357	chr6	88967000	chr6	88587001	imputed_adj_intra_chr6_43	+	-																0.8559477124183007	29.0	0.8861722040243332	33.0	B	B	B			imputed		False

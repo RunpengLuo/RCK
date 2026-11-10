@@ -1,0 +1,127 @@
+scenario	graph	method	mode	n_cases	n_truth	mean_composite_h0	n_exact	n_missed	n_merged	n_missed_or_merged	n_false_circular	n_false_linear
+ctrl_dup	inferred	ce	best_of	6	6	0.9617	6	0				
+ctrl_dup	inferred	ce	strict	6	6	0.9617	6	0	0.0000	0.0000	1.0000	24.0000
+ctrl_dup	inferred	coral	best_of	6	6	0.9617	6	0				
+ctrl_dup	inferred	coral	strict	6	6	0.9617	6	0	0.0000	0.0000	1.0000	0.0000
+ctrl_dup	inferred	rck_ecdna	best_of	6	6	0.8157	3	0				
+ctrl_dup	inferred	rck_ecdna	strict	6	6	0.8157	3	0	0.0000	0.0000	4.0000	0.0000
+ctrl_dup	native	native	best_of	6	6	0.8744	4	0				
+ctrl_dup	native	native	strict	6	6	0.8203	3	0	0.0000	0.0000	4.0000	0.0000
+ctrl_dup	truth_rp	ce	best_of	6	6	1.0000	6	0				
+ctrl_dup	truth_rp	ce	strict	6	6	1.0000	6	0	0.0000	0.0000	0.0000	0.0000
+ctrl_dup	truth_rp	coral	best_of	6	6	1.0000	6	0				
+ctrl_dup	truth_rp	coral	strict	6	6	1.0000	6	0	0.0000	0.0000	0.0000	0.0000
+ctrl_dup	truth_rp	rck_ecdna	best_of	6	6	0.8380	3	0				
+ctrl_dup	truth_rp	rck_ecdna	strict	6	6	0.8380	3	0	0.0000	0.0000	3.0000	0.0000
+ctrl_separate	inferred	ce	best_of	2	4	0.9467	4	0				
+ctrl_separate	inferred	ce	strict	2	4	0.8204	3	0	0.0000	0.0000	2.0000	5.0000
+ctrl_separate	inferred	coral	best_of	2	4	0.9517	4	0				
+ctrl_separate	inferred	coral	strict	2	4	0.9517	4	0	0.0000	0.0000	0.0000	2.0000
+ctrl_separate	inferred	rck_ecdna	best_of	2	4	0.9743	4	0				
+ctrl_separate	inferred	rck_ecdna	strict	2	4	0.9743	4	0	0.0000	0.0000	0.0000	0.0000
+ctrl_separate	native	native	best_of	2	4	0.9740	4	0				
+ctrl_separate	native	native	strict	2	4	0.9740	4	0	0.0000	0.0000	0.0000	0.0000
+ctrl_separate	truth_rp	ce	best_of	2	4	1.0000	4	0				
+ctrl_separate	truth_rp	ce	strict	2	4	1.0000	4	0	0.0000	0.0000	0.0000	3.0000
+ctrl_separate	truth_rp	coral	best_of	2	4	1.0000	4	0				
+ctrl_separate	truth_rp	coral	strict	2	4	1.0000	4	0	0.0000	0.0000	0.0000	3.0000
+ctrl_separate	truth_rp	rck_ecdna	best_of	2	4	0.9968	4	0				
+ctrl_separate	truth_rp	rck_ecdna	strict	2	4	0.9968	4	0	0.0000	0.0000	0.0000	0.0000
+demo	inferred	ce	best_of	4	7	0.6910	3	0				
+demo	inferred	ce	strict	4	7	0.5945	3	1	4.0000	4.0000	0.0000	2.0000
+demo	inferred	coral	best_of	4	7	0.9775	7	0				
+demo	inferred	coral	strict	4	7	0.9775	7	0	0.0000	0.0000	0.0000	2.0000
+demo	inferred	rck_ecdna	best_of	4	7	0.9835	7	0				
+demo	inferred	rck_ecdna	strict	4	7	0.9835	7	0	0.0000	0.0000	0.0000	0.0000
+demo	native	native	best_of	4	7	0.9885	7	0				
+demo	native	native	strict	4	7	0.9885	7	0	0.0000	0.0000	0.0000	0.0000
+demo	truth_rp	ce	best_of	4	7	0.8468	5	0				
+demo	truth_rp	ce	strict	4	7	0.7901	5	1	2.0000	2.0000	0.0000	3.0000
+demo	truth_rp	coral	best_of	4	7	0.9902	7	0				
+demo	truth_rp	coral	strict	4	7	0.9902	7	0	0.0000	0.0000	0.0000	3.0000
+demo	truth_rp	rck_ecdna	best_of	4	7	0.9271	6	0				
+demo	truth_rp	rck_ecdna	strict	4	7	0.9271	6	0	2.0000	2.0000	0.0000	0.0000
+nest_cross_1to1	inferred	ce	best_of	6	12	0.4810	0	0				
+nest_cross_1to1	inferred	ce	strict	6	12	0.3903	0	0	12.0000	12.0000	5.0000	9.0000
+nest_cross_1to1	inferred	coral	best_of	6	12	0.4884	0	0				
+nest_cross_1to1	inferred	coral	strict	6	12	0.3628	0	1	12.0000	12.0000	2.0000	1.0000
+nest_cross_1to1	inferred	rck_ecdna	best_of	6	12	0.5587	2	0				
+nest_cross_1to1	inferred	rck_ecdna	strict	6	12	0.4767	2	0	10.0000	10.0000	5.0000	2.0000
+nest_cross_1to1	native	native	best_of	6	12	0.8622	9	0				
+nest_cross_1to1	native	native	strict	6	12	0.8615	9	0	6.0000	6.0000	3.0000	2.0000
+nest_cross_1to1	truth_rp	ce	best_of	6	12	0.6034	4	0				
+nest_cross_1to1	truth_rp	ce	strict	6	12	0.5688	4	0	12.0000	12.0000	0.0000	1.0000
+nest_cross_1to1	truth_rp	coral	best_of	6	12	0.5185	0	0				
+nest_cross_1to1	truth_rp	coral	strict	6	12	0.3535	0	0	12.0000	12.0000	0.0000	0.0000
+nest_cross_1to1	truth_rp	rck_ecdna	best_of	6	12	0.6896	4	0				
+nest_cross_1to1	truth_rp	rck_ecdna	strict	6	12	0.6336	4	0	8.0000	8.0000	3.0000	0.0000
+nest_cross_2to1	inferred	ce	best_of	2	4	0.6666	2	0				
+nest_cross_2to1	inferred	ce	strict	2	4	0.6601	2	0	2.0000	2.0000	1.0000	2.0000
+nest_cross_2to1	inferred	coral	best_of	2	4	0.6666	2	0				
+nest_cross_2to1	inferred	coral	strict	2	4	0.6601	2	0	2.0000	2.0000	1.0000	0.0000
+nest_cross_2to1	inferred	rck_ecdna	best_of	2	4	0.8261	3	0				
+nest_cross_2to1	inferred	rck_ecdna	strict	2	4	0.8261	3	0	2.0000	2.0000	2.0000	0.0000
+nest_cross_2to1	native	native	best_of	2	4	0.9585	4	0				
+nest_cross_2to1	native	native	strict	2	4	0.9585	4	0	0.0000	0.0000	0.0000	0.0000
+nest_cross_2to1	truth_rp	ce	best_of	2	4	0.7146	2	0				
+nest_cross_2to1	truth_rp	ce	strict	2	4	0.6705	2	0	2.0000	2.0000	0.0000	0.0000
+nest_cross_2to1	truth_rp	coral	best_of	2	4	0.7137	2	0				
+nest_cross_2to1	truth_rp	coral	strict	2	4	0.6515	2	0	2.0000	2.0000	1.0000	1.0000
+nest_cross_2to1	truth_rp	rck_ecdna	best_of	2	4	0.7244	2	0				
+nest_cross_2to1	truth_rp	rck_ecdna	strict	2	4	0.7148	2	0	2.0000	2.0000	0.0000	0.0000
+nest_cross_3sp	inferred	ce	best_of	2	6	0.3666	0	0				
+nest_cross_3sp	inferred	ce	strict	2	6	0.2877	0	1	5.0000	6.0000	0.0000	8.0000
+nest_cross_3sp	inferred	coral	best_of	2	6	0.3589	0	0				
+nest_cross_3sp	inferred	coral	strict	2	6	0.3104	0	0	6.0000	6.0000	1.0000	1.0000
+nest_cross_3sp	inferred	rck_ecdna	best_of	2	6	0.4961	0	0				
+nest_cross_3sp	inferred	rck_ecdna	strict	2	6	0.3644	0	0	5.0000	5.0000	2.0000	0.0000
+nest_cross_3sp	native	native	best_of	2	6	0.7394	3	0				
+nest_cross_3sp	native	native	strict	2	6	0.7015	3	0	3.0000	3.0000	0.0000	0.0000
+nest_cross_3sp	truth_rp	ce	best_of	2	6	0.4303	0	0				
+nest_cross_3sp	truth_rp	ce	strict	2	6	0.2958	0	2	6.0000	6.0000	0.0000	0.0000
+nest_cross_3sp	truth_rp	coral	best_of	2	6	0.3698	0	0				
+nest_cross_3sp	truth_rp	coral	strict	2	6	0.2592	0	1	6.0000	6.0000	0.0000	0.0000
+nest_cross_3sp	truth_rp	rck_ecdna	best_of	2	6	0.6153	2	0				
+nest_cross_3sp	truth_rp	rck_ecdna	strict	2	6	0.3717	0	1	6.0000	6.0000	0.0000	0.0000
+nest_samehap_2to1	inferred	ce	best_of	2	4	0.3865	0	0				
+nest_samehap_2to1	inferred	ce	strict	2	4	0.2912	0	0	4.0000	4.0000	0.0000	0.0000
+nest_samehap_2to1	inferred	coral	best_of	2	4	0.6647	2	0				
+nest_samehap_2to1	inferred	coral	strict	2	4	0.6622	2	0	2.0000	2.0000	1.0000	0.0000
+nest_samehap_2to1	inferred	rck_ecdna	best_of	2	4	0.8351	3	0				
+nest_samehap_2to1	inferred	rck_ecdna	strict	2	4	0.6854	2	0	2.0000	2.0000	0.0000	0.0000
+nest_samehap_2to1	native	native	best_of	2	4	0.9893	4	0				
+nest_samehap_2to1	native	native	strict	2	4	0.9893	4	0	0.0000	0.0000	0.0000	0.0000
+nest_samehap_2to1	truth_rp	ce	best_of	2	4	0.7139	2	0				
+nest_samehap_2to1	truth_rp	ce	strict	2	4	0.5986	2	1	2.0000	2.0000	0.0000	1.0000
+nest_samehap_2to1	truth_rp	coral	best_of	2	4	1.0000	4	0				
+nest_samehap_2to1	truth_rp	coral	strict	2	4	1.0000	4	0	0.0000	0.0000	0.0000	1.0000
+nest_samehap_2to1	truth_rp	rck_ecdna	best_of	2	4	0.9999	4	0				
+nest_samehap_2to1	truth_rp	rck_ecdna	strict	2	4	0.9999	4	0	0.0000	0.0000	0.0000	0.0000
+nest_samehap_3to1	inferred	ce	best_of	6	12	0.6019	5	0				
+nest_samehap_3to1	inferred	ce	strict	6	12	0.5482	5	1	6.0000	7.0000	7.0000	14.0000
+nest_samehap_3to1	inferred	coral	best_of	6	12	0.6354	6	0				
+nest_samehap_3to1	inferred	coral	strict	6	12	0.6173	6	1	6.0000	7.0000	1.0000	2.0000
+nest_samehap_3to1	inferred	rck_ecdna	best_of	6	12	0.7541	7	0				
+nest_samehap_3to1	inferred	rck_ecdna	strict	6	12	0.6500	6	1	6.0000	7.0000	1.0000	1.0000
+nest_samehap_3to1	native	native	best_of	6	12	0.9633	12	0				
+nest_samehap_3to1	native	native	strict	6	12	0.8244	10	1	2.0000	3.0000	1.0000	0.0000
+nest_samehap_3to1	truth_rp	ce	best_of	6	12	0.8960	10	0				
+nest_samehap_3to1	truth_rp	ce	strict	6	12	0.8958	10	1	0.0000	1.0000	0.0000	2.0000
+nest_samehap_3to1	truth_rp	coral	best_of	6	12	0.8173	9	0				
+nest_samehap_3to1	truth_rp	coral	strict	6	12	0.8171	9	1	0.0000	1.0000	0.0000	1.0000
+nest_samehap_3to1	truth_rp	rck_ecdna	best_of	6	12	0.8661	9	0				
+nest_samehap_3to1	truth_rp	rck_ecdna	strict	6	12	0.7942	8	0	6.0000	6.0000	0.0000	0.0000
+nest_samehap_6to1	inferred	ce	best_of	6	12	0.7111	5	0				
+nest_samehap_6to1	inferred	ce	strict	6	12	0.6273	5	1	0.0000	1.0000	1.0000	8.0000
+nest_samehap_6to1	inferred	coral	best_of	6	12	0.6720	5	0				
+nest_samehap_6to1	inferred	coral	strict	6	12	0.5547	5	3	0.0000	3.0000	3.0000	0.0000
+nest_samehap_6to1	inferred	rck_ecdna	best_of	6	12	0.7538	7	0				
+nest_samehap_6to1	inferred	rck_ecdna	strict	6	12	0.5978	6	3	6.0000	9.0000	2.0000	0.0000
+nest_samehap_6to1	native	native	best_of	6	12	0.8618	9	0				
+nest_samehap_6to1	native	native	strict	6	12	0.5452	6	5	0.0000	5.0000	0.0000	0.0000
+nest_samehap_6to1	truth_rp	ce	best_of	6	12	0.9241	10	0				
+nest_samehap_6to1	truth_rp	ce	strict	6	12	0.9241	10	0	0.0000	0.0000	1.0000	1.0000
+nest_samehap_6to1	truth_rp	coral	best_of	6	12	0.7562	7	0				
+nest_samehap_6to1	truth_rp	coral	strict	6	12	0.6489	7	3	0.0000	3.0000	1.0000	1.0000
+nest_samehap_6to1	truth_rp	rck_ecdna	best_of	6	12	0.8015	7	0				
+nest_samehap_6to1	truth_rp	rck_ecdna	strict	6	12	0.6653	6	2	6.0000	8.0000	1.0000	0.0000

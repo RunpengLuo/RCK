@@ -1,0 +1,401 @@
+case	bench	rule	pool_index	composite	merged	n_reported	n_truth	unexplained	fail
+ctrl_dup_s702	True	default	0	0.9974	False	1	1	0	False
+ctrl_dup_s702	True	unexpl 0.25	0	0.9974	False	1	1	0	False
+ctrl_dup_s702	True	unexpl 0.25 np	0	0.9974	False	1	1	0	False
+ctrl_dup_s702	True	unexpl 0.5	0	0.9974	False	1	1	0	False
+ctrl_dup_s702	True	unexpl 0.5 np	0	0.9974	False	1	1	0	False
+ctrl_dup_s702	True	unexpl 1	0	0.9974	False	1	1	0	False
+ctrl_dup_s702	True	unexpl 1 np	0	0.9974	False	1	1	0	False
+ctrl_dup_s702	True	unexpl 2	0	0.9974	False	1	1	0	False
+ctrl_dup_s702	True	unexpl 2 np	0	0.9974	False	1	1	0	False
+ctrl_dup_s702	True	mass	0	0.9974	False	1	1	0	False
+ctrl_dup_s703	True	default	0	0.7116	False	2	1	0	True
+ctrl_dup_s703	True	unexpl 0.25	0	0.7116	False	2	1	0	True
+ctrl_dup_s703	True	unexpl 0.25 np	0	0.7116	False	2	1	0	True
+ctrl_dup_s703	True	unexpl 0.5	0	0.7116	False	2	1	0	True
+ctrl_dup_s703	True	unexpl 0.5 np	0	0.7116	False	2	1	0	True
+ctrl_dup_s703	True	unexpl 1	0	0.7116	False	2	1	0	True
+ctrl_dup_s703	True	unexpl 1 np	0	0.7116	False	2	1	0	True
+ctrl_dup_s703	True	unexpl 2	0	0.7116	False	2	1	0	True
+ctrl_dup_s703	True	unexpl 2 np	0	0.7116	False	2	1	0	True
+ctrl_dup_s703	True	mass	0	0.7116	False	2	1	0	True
+ctrl_dup_s706	True	default	1	0.9831	False	1	1	0	False
+ctrl_dup_s706	True	unexpl 0.25	1	0.9831	False	1	1	0	False
+ctrl_dup_s706	True	unexpl 0.25 np	1	0.9831	False	1	1	0	False
+ctrl_dup_s706	True	unexpl 0.5	1	0.9831	False	1	1	0	False
+ctrl_dup_s706	True	unexpl 0.5 np	1	0.9831	False	1	1	0	False
+ctrl_dup_s706	True	unexpl 1	1	0.9831	False	1	1	0	False
+ctrl_dup_s706	True	unexpl 1 np	1	0.9831	False	1	1	0	False
+ctrl_dup_s706	True	unexpl 2	1	0.9831	False	1	1	0	False
+ctrl_dup_s706	True	unexpl 2 np	1	0.9831	False	1	1	0	False
+ctrl_dup_s706	True	mass	1	0.9831	False	1	1	0	False
+ctrl_dup_s708	True	default	0	0.7319	False	2	1	0	True
+ctrl_dup_s708	True	unexpl 0.25	0	0.7319	False	2	1	0	True
+ctrl_dup_s708	True	unexpl 0.25 np	0	0.7319	False	2	1	0	True
+ctrl_dup_s708	True	unexpl 0.5	0	0.7319	False	2	1	0	True
+ctrl_dup_s708	True	unexpl 0.5 np	0	0.7319	False	2	1	0	True
+ctrl_dup_s708	True	unexpl 1	0	0.7319	False	2	1	0	True
+ctrl_dup_s708	True	unexpl 1 np	0	0.7319	False	2	1	0	True
+ctrl_dup_s708	True	unexpl 2	0	0.7319	False	2	1	0	True
+ctrl_dup_s708	True	unexpl 2 np	0	0.7319	False	2	1	0	True
+ctrl_dup_s708	True	mass	0	0.7319	False	2	1	0	True
+ctrl_dup_s709	True	default	1	0.9908	False	1	1	0	False
+ctrl_dup_s709	True	unexpl 0.25	1	0.9908	False	1	1	0	False
+ctrl_dup_s709	True	unexpl 0.25 np	1	0.9908	False	1	1	0	False
+ctrl_dup_s709	True	unexpl 0.5	1	0.9908	False	1	1	0	False
+ctrl_dup_s709	True	unexpl 0.5 np	1	0.9908	False	1	1	0	False
+ctrl_dup_s709	True	unexpl 1	1	0.9908	False	1	1	0	False
+ctrl_dup_s709	True	unexpl 1 np	1	0.9908	False	1	1	0	False
+ctrl_dup_s709	True	unexpl 2	1	0.9908	False	1	1	0	False
+ctrl_dup_s709	True	unexpl 2 np	1	0.9908	False	1	1	0	False
+ctrl_dup_s709	True	mass	1	0.9908	False	1	1	0	False
+ctrl_dup_s710	True	default	0	0.7228	False	3	1	0	True
+ctrl_dup_s710	True	unexpl 0.25	0	0.7228	False	3	1	0	True
+ctrl_dup_s710	True	unexpl 0.25 np	0	0.7228	False	3	1	0	True
+ctrl_dup_s710	True	unexpl 0.5	0	0.7228	False	3	1	0	True
+ctrl_dup_s710	True	unexpl 0.5 np	0	0.7228	False	3	1	0	True
+ctrl_dup_s710	True	unexpl 1	0	0.7228	False	3	1	0	True
+ctrl_dup_s710	True	unexpl 1 np	0	0.7228	False	3	1	0	True
+ctrl_dup_s710	True	unexpl 2	0	0.7228	False	3	1	0	True
+ctrl_dup_s710	True	unexpl 2 np	0	0.7228	False	3	1	0	True
+ctrl_dup_s710	True	mass	0	0.7228	False	3	1	0	True
+ctrl_separate_s601	True	default	0	0.9822	False	2	2	0	False
+ctrl_separate_s601	True	unexpl 0.25	0	0.9822	False	2	2	0	False
+ctrl_separate_s601	True	unexpl 0.25 np	0	0.9822	False	2	2	0	False
+ctrl_separate_s601	True	unexpl 0.5	0	0.9822	False	2	2	0	False
+ctrl_separate_s601	True	unexpl 0.5 np	0	0.9822	False	2	2	0	False
+ctrl_separate_s601	True	unexpl 1	0	0.9822	False	2	2	0	False
+ctrl_separate_s601	True	unexpl 1 np	0	0.9822	False	2	2	0	False
+ctrl_separate_s601	True	unexpl 2	0	0.9822	False	2	2	0	False
+ctrl_separate_s601	True	unexpl 2 np	0	0.9822	False	2	2	0	False
+ctrl_separate_s601	True	mass	0	0.9822	False	2	2	0	False
+ctrl_separate_s603	True	default	0	0.9762	False	2	2	0	False
+ctrl_separate_s603	True	unexpl 0.25	0	0.9762	False	2	2	0	False
+ctrl_separate_s603	True	unexpl 0.25 np	0	0.9762	False	2	2	0	False
+ctrl_separate_s603	True	unexpl 0.5	0	0.9762	False	2	2	0	False
+ctrl_separate_s603	True	unexpl 0.5 np	0	0.9762	False	2	2	0	False
+ctrl_separate_s603	True	unexpl 1	0	0.9762	False	2	2	0	False
+ctrl_separate_s603	True	unexpl 1 np	0	0.9762	False	2	2	0	False
+ctrl_separate_s603	True	unexpl 2	0	0.9762	False	2	2	0	False
+ctrl_separate_s603	True	unexpl 2 np	0	0.9762	False	2	2	0	False
+ctrl_separate_s603	True	mass	0	0.9762	False	2	2	0	False
+demo3	False	default	6	0.9587	False	1	1	0	False
+demo3	False	unexpl 0.25	6	0.9587	False	1	1	0	False
+demo3	False	unexpl 0.25 np	6	0.9587	False	1	1	0	False
+demo3	False	unexpl 0.5	6	0.9587	False	1	1	0	False
+demo3	False	unexpl 0.5 np	6	0.9587	False	1	1	0	False
+demo3	False	unexpl 1	6	0.9587	False	1	1	0	False
+demo3	False	unexpl 1 np	6	0.9587	False	1	1	0	False
+demo3	False	unexpl 2	6	0.9587	False	1	1	0	False
+demo3	False	unexpl 2 np	6	0.9587	False	1	1	0	False
+demo3	False	mass	0	0.7195	False	2	1	0	False
+demo4_amp0	False	default	0	0.9834	False	1	1	0	False
+demo4_amp0	False	unexpl 0.25	0	0.9834	False	1	1	0	False
+demo4_amp0	False	unexpl 0.25 np	0	0.9834	False	1	1	0	False
+demo4_amp0	False	unexpl 0.5	0	0.9834	False	1	1	0	False
+demo4_amp0	False	unexpl 0.5 np	0	0.9834	False	1	1	0	False
+demo4_amp0	False	unexpl 1	0	0.9834	False	1	1	0	False
+demo4_amp0	False	unexpl 1 np	0	0.9834	False	1	1	0	False
+demo4_amp0	False	unexpl 2	0	0.9834	False	1	1	0	False
+demo4_amp0	False	unexpl 2 np	0	0.9834	False	1	1	0	False
+demo4_amp0	False	mass	0	0.9834	False	1	1	0	False
+demo4_amp1	False	default	0	0.9966	False	1	1	0	False
+demo4_amp1	False	unexpl 0.25	0	0.9966	False	1	1	0	False
+demo4_amp1	False	unexpl 0.25 np	0	0.9966	False	1	1	0	False
+demo4_amp1	False	unexpl 0.5	0	0.9966	False	1	1	0	False
+demo4_amp1	False	unexpl 0.5 np	0	0.9966	False	1	1	0	False
+demo4_amp1	False	unexpl 1	0	0.9966	False	1	1	0	False
+demo4_amp1	False	unexpl 1 np	0	0.9966	False	1	1	0	False
+demo4_amp1	False	unexpl 2	0	0.9966	False	1	1	0	False
+demo4_amp1	False	unexpl 2 np	0	0.9966	False	1	1	0	False
+demo4_amp1	False	mass	0	0.9966	False	1	1	0	False
+demo5	False	default	0	0.9897	False	1	1	0	False
+demo5	False	unexpl 0.25	0	0.9897	False	1	1	0	False
+demo5	False	unexpl 0.25 np	0	0.9897	False	1	1	0	False
+demo5	False	unexpl 0.5	0	0.9897	False	1	1	0	False
+demo5	False	unexpl 0.5 np	0	0.9897	False	1	1	0	False
+demo5	False	unexpl 1	0	0.9897	False	1	1	0	False
+demo5	False	unexpl 1 np	0	0.9897	False	1	1	0	False
+demo5	False	unexpl 2	0	0.9897	False	1	1	0	False
+demo5	False	unexpl 2 np	0	0.9897	False	1	1	0	False
+demo5	False	mass	0	0.9897	False	1	1	0	False
+demo6_union	False	default	0	0.9895	False	2	2	0	False
+demo6_union	False	unexpl 0.25	0	0.9895	False	2	2	0	False
+demo6_union	False	unexpl 0.25 np	0	0.9895	False	2	2	0	False
+demo6_union	False	unexpl 0.5	0	0.9895	False	2	2	0	False
+demo6_union	False	unexpl 0.5 np	0	0.9895	False	2	2	0	False
+demo6_union	False	unexpl 1	0	0.9895	False	2	2	0	False
+demo6_union	False	unexpl 1 np	0	0.9895	False	2	2	0	False
+demo6_union	False	unexpl 2	0	0.9895	False	2	2	0	False
+demo6_union	False	unexpl 2 np	0	0.9895	False	2	2	0	False
+demo6_union	False	mass	0	0.9895	False	2	2	0	False
+demo7_blockflip	False	default	1	0.997	False	2	2	0	False
+demo7_blockflip	False	unexpl 0.25	1	0.997	False	2	2	0	False
+demo7_blockflip	False	unexpl 0.25 np	1	0.997	False	2	2	0	False
+demo7_blockflip	False	unexpl 0.5	1	0.997	False	2	2	0	False
+demo7_blockflip	False	unexpl 0.5 np	1	0.997	False	2	2	0	False
+demo7_blockflip	False	unexpl 1	1	0.997	False	2	2	0	False
+demo7_blockflip	False	unexpl 1 np	1	0.997	False	2	2	0	False
+demo7_blockflip	False	unexpl 2	1	0.997	False	2	2	0	False
+demo7_blockflip	False	unexpl 2 np	1	0.997	False	2	2	0	False
+demo7_blockflip	False	mass	1	0.997	False	2	2	0	False
+demo7_totalonly	False	default	32	0.9764	False	2	2	0	False
+demo7_totalonly	False	unexpl 0.25	32	0.9764	False	2	2	0	False
+demo7_totalonly	False	unexpl 0.25 np	32	0.9764	False	2	2	0	False
+demo7_totalonly	False	unexpl 0.5	32	0.9764	False	2	2	0	False
+demo7_totalonly	False	unexpl 0.5 np	32	0.9764	False	2	2	0	False
+demo7_totalonly	False	unexpl 1	32	0.9764	False	2	2	0	False
+demo7_totalonly	False	unexpl 1 np	32	0.9764	False	2	2	0	False
+demo7_totalonly	False	unexpl 2	32	0.9764	False	2	2	0	False
+demo7_totalonly	False	unexpl 2 np	32	0.9764	False	2	2	0	False
+demo7_totalonly	False	mass	30	0.8642	False	3	2	0	False
+demo8	False	default	0	0.9869	False	2	2	0	False
+demo8	False	unexpl 0.25	0	0.9869	False	2	2	0	False
+demo8	False	unexpl 0.25 np	0	0.9869	False	2	2	0	False
+demo8	False	unexpl 0.5	0	0.9869	False	2	2	0	False
+demo8	False	unexpl 0.5 np	0	0.9869	False	2	2	0	False
+demo8	False	unexpl 1	0	0.9869	False	2	2	0	False
+demo8	False	unexpl 1 np	0	0.9869	False	2	2	0	False
+demo8	False	unexpl 2	0	0.9869	False	2	2	0	False
+demo8	False	unexpl 2 np	0	0.9869	False	2	2	0	False
+demo8	False	mass	0	0.9869	False	2	2	0	False
+nest_cross_1to1_s502	True	default	0	0.9553	True	3	2	0	True
+nest_cross_1to1_s502	True	unexpl 0.25	0	0.9553	True	3	2	0	True
+nest_cross_1to1_s502	True	unexpl 0.25 np	0	0.9553	True	3	2	0	True
+nest_cross_1to1_s502	True	unexpl 0.5	0	0.9553	True	3	2	0	True
+nest_cross_1to1_s502	True	unexpl 0.5 np	0	0.9553	True	3	2	0	True
+nest_cross_1to1_s502	True	unexpl 1	0	0.9553	True	3	2	0	True
+nest_cross_1to1_s502	True	unexpl 1 np	0	0.9553	True	3	2	0	True
+nest_cross_1to1_s502	True	unexpl 2	0	0.9553	True	3	2	0	True
+nest_cross_1to1_s502	True	unexpl 2 np	0	0.9553	True	3	2	0	True
+nest_cross_1to1_s502	True	mass	0	0.9553	True	3	2	0	True
+nest_cross_1to1_s505	True	default	0	0.7648	True	3	2	0	True
+nest_cross_1to1_s505	True	unexpl 0.25	0	0.7648	True	3	2	0	True
+nest_cross_1to1_s505	True	unexpl 0.25 np	0	0.7648	True	3	2	0	True
+nest_cross_1to1_s505	True	unexpl 0.5	0	0.7648	True	3	2	0	True
+nest_cross_1to1_s505	True	unexpl 0.5 np	0	0.7648	True	3	2	0	True
+nest_cross_1to1_s505	True	unexpl 1	0	0.7648	True	3	2	0	True
+nest_cross_1to1_s505	True	unexpl 1 np	0	0.7648	True	3	2	0	True
+nest_cross_1to1_s505	True	unexpl 2	0	0.7648	True	3	2	0	True
+nest_cross_1to1_s505	True	unexpl 2 np	0	0.7648	True	3	2	0	True
+nest_cross_1to1_s505	True	mass	0	0.7648	True	3	2	0	True
+nest_cross_1to1_s506	True	default	0	0.9896	False	2	2	0	False
+nest_cross_1to1_s506	True	unexpl 0.25	0	0.9896	False	2	2	0	False
+nest_cross_1to1_s506	True	unexpl 0.25 np	0	0.9896	False	2	2	0	False
+nest_cross_1to1_s506	True	unexpl 0.5	0	0.9896	False	2	2	0	False
+nest_cross_1to1_s506	True	unexpl 0.5 np	0	0.9896	False	2	2	0	False
+nest_cross_1to1_s506	True	unexpl 1	0	0.9896	False	2	2	0	False
+nest_cross_1to1_s506	True	unexpl 1 np	0	0.9896	False	2	2	0	False
+nest_cross_1to1_s506	True	unexpl 2	0	0.9896	False	2	2	0	False
+nest_cross_1to1_s506	True	unexpl 2 np	0	0.9896	False	2	2	0	False
+nest_cross_1to1_s506	True	mass	0	0.9896	False	2	2	0	False
+nest_cross_1to1_s507	True	default	75	0.9605	True	4	2	0	True
+nest_cross_1to1_s507	True	unexpl 0.25	75	0.9605	True	4	2	0	True
+nest_cross_1to1_s507	True	unexpl 0.25 np	75	0.9605	True	4	2	0	True
+nest_cross_1to1_s507	True	unexpl 0.5	75	0.9605	True	4	2	0	True
+nest_cross_1to1_s507	True	unexpl 0.5 np	75	0.9605	True	4	2	0	True
+nest_cross_1to1_s507	True	unexpl 1	75	0.9605	True	4	2	0	True
+nest_cross_1to1_s507	True	unexpl 1 np	75	0.9605	True	4	2	0	True
+nest_cross_1to1_s507	True	unexpl 2	75	0.9605	True	4	2	0	True
+nest_cross_1to1_s507	True	unexpl 2 np	75	0.9605	True	4	2	0	True
+nest_cross_1to1_s507	True	mass	75	0.9605	True	4	2	0	True
+nest_cross_1to1_s508	True	default	0	0.6723	False	3	2	0	True
+nest_cross_1to1_s508	True	unexpl 0.25	0	0.6723	False	3	2	0	True
+nest_cross_1to1_s508	True	unexpl 0.25 np	0	0.6723	False	3	2	0	True
+nest_cross_1to1_s508	True	unexpl 0.5	0	0.6723	False	3	2	0	True
+nest_cross_1to1_s508	True	unexpl 0.5 np	0	0.6723	False	3	2	0	True
+nest_cross_1to1_s508	True	unexpl 1	0	0.6723	False	3	2	0	True
+nest_cross_1to1_s508	True	unexpl 1 np	0	0.6723	False	3	2	0	True
+nest_cross_1to1_s508	True	unexpl 2	0	0.6723	False	3	2	0	True
+nest_cross_1to1_s508	True	unexpl 2 np	0	0.6723	False	3	2	0	True
+nest_cross_1to1_s508	True	mass	0	0.6723	False	3	2	0	True
+nest_cross_1to1_s509	True	default	0	0.9926	False	2	2	0	False
+nest_cross_1to1_s509	True	unexpl 0.25	0	0.9926	False	2	2	0	False
+nest_cross_1to1_s509	True	unexpl 0.25 np	0	0.9926	False	2	2	0	False
+nest_cross_1to1_s509	True	unexpl 0.5	0	0.9926	False	2	2	0	False
+nest_cross_1to1_s509	True	unexpl 0.5 np	0	0.9926	False	2	2	0	False
+nest_cross_1to1_s509	True	unexpl 1	0	0.9926	False	2	2	0	False
+nest_cross_1to1_s509	True	unexpl 1 np	0	0.9926	False	2	2	0	False
+nest_cross_1to1_s509	True	unexpl 2	0	0.9926	False	2	2	0	False
+nest_cross_1to1_s509	True	unexpl 2 np	0	0.9926	False	2	2	0	False
+nest_cross_1to1_s509	True	mass	0	0.9926	False	2	2	0	False
+nest_cross_2to1_s103	True	default	0	0.9718	False	2	2	0	False
+nest_cross_2to1_s103	True	unexpl 0.25	0	0.9718	False	2	2	0	False
+nest_cross_2to1_s103	True	unexpl 0.25 np	0	0.9718	False	2	2	0	False
+nest_cross_2to1_s103	True	unexpl 0.5	0	0.9718	False	2	2	0	False
+nest_cross_2to1_s103	True	unexpl 0.5 np	0	0.9718	False	2	2	0	False
+nest_cross_2to1_s103	True	unexpl 1	0	0.9718	False	2	2	0	False
+nest_cross_2to1_s103	True	unexpl 1 np	0	0.9718	False	2	2	0	False
+nest_cross_2to1_s103	True	unexpl 2	0	0.9718	False	2	2	0	False
+nest_cross_2to1_s103	True	unexpl 2 np	0	0.9718	False	2	2	0	False
+nest_cross_2to1_s103	True	mass	0	0.9718	False	2	2	0	False
+nest_cross_2to1_s104	True	default	1	0.9618	False	2	2	0	False
+nest_cross_2to1_s104	True	unexpl 0.25	1	0.9618	False	2	2	0	False
+nest_cross_2to1_s104	True	unexpl 0.25 np	1	0.9618	False	2	2	0	False
+nest_cross_2to1_s104	True	unexpl 0.5	1	0.9618	False	2	2	0	False
+nest_cross_2to1_s104	True	unexpl 0.5 np	1	0.9618	False	2	2	0	False
+nest_cross_2to1_s104	True	unexpl 1	1	0.9618	False	2	2	0	False
+nest_cross_2to1_s104	True	unexpl 1 np	1	0.9618	False	2	2	0	False
+nest_cross_2to1_s104	True	unexpl 2	1	0.9618	False	2	2	0	False
+nest_cross_2to1_s104	True	unexpl 2 np	1	0.9618	False	2	2	0	False
+nest_cross_2to1_s104	True	mass	1	0.9618	False	2	2	0	False
+nest_cross_3sp_s402	True	default	0	0.9775	False	3	3	0	False
+nest_cross_3sp_s402	True	unexpl 0.25	0	0.9775	False	3	3	0	False
+nest_cross_3sp_s402	True	unexpl 0.25 np	0	0.9775	False	3	3	0	False
+nest_cross_3sp_s402	True	unexpl 0.5	0	0.9775	False	3	3	0	False
+nest_cross_3sp_s402	True	unexpl 0.5 np	0	0.9775	False	3	3	0	False
+nest_cross_3sp_s402	True	unexpl 1	0	0.9775	False	3	3	0	False
+nest_cross_3sp_s402	True	unexpl 1 np	0	0.9775	False	3	3	0	False
+nest_cross_3sp_s402	True	unexpl 2	0	0.9775	False	3	3	0	False
+nest_cross_3sp_s402	True	unexpl 2 np	0	0.9775	False	3	3	0	False
+nest_cross_3sp_s402	True	mass	0	0.9775	False	3	3	0	False
+nest_cross_3sp_s403	True	default	0	0.5449	True	3	3	0	True
+nest_cross_3sp_s403	True	unexpl 0.25	0	0.5449	True	3	3	0	True
+nest_cross_3sp_s403	True	unexpl 0.25 np	0	0.5449	True	3	3	0	True
+nest_cross_3sp_s403	True	unexpl 0.5	0	0.5449	True	3	3	0	True
+nest_cross_3sp_s403	True	unexpl 0.5 np	0	0.5449	True	3	3	0	True
+nest_cross_3sp_s403	True	unexpl 1	0	0.5449	True	3	3	0	True
+nest_cross_3sp_s403	True	unexpl 1 np	0	0.5449	True	3	3	0	True
+nest_cross_3sp_s403	True	unexpl 2	0	0.5449	True	3	3	0	True
+nest_cross_3sp_s403	True	unexpl 2 np	0	0.5449	True	3	3	0	True
+nest_cross_3sp_s403	True	mass	0	0.5449	True	3	3	0	True
+nest_samehap_2to1_s201	True	default	0	0.9942	False	2	2	0	False
+nest_samehap_2to1_s201	True	unexpl 0.25	0	0.9942	False	2	2	0	False
+nest_samehap_2to1_s201	True	unexpl 0.25 np	0	0.9942	False	2	2	0	False
+nest_samehap_2to1_s201	True	unexpl 0.5	0	0.9942	False	2	2	0	False
+nest_samehap_2to1_s201	True	unexpl 0.5 np	0	0.9942	False	2	2	0	False
+nest_samehap_2to1_s201	True	unexpl 1	0	0.9942	False	2	2	0	False
+nest_samehap_2to1_s201	True	unexpl 1 np	0	0.9942	False	2	2	0	False
+nest_samehap_2to1_s201	True	unexpl 2	0	0.9942	False	2	2	0	False
+nest_samehap_2to1_s201	True	unexpl 2 np	0	0.9942	False	2	2	0	False
+nest_samehap_2to1_s201	True	mass	0	0.9942	False	2	2	0	False
+nest_samehap_2to1_s202	True	default	1	0.9887	False	2	2	0	False
+nest_samehap_2to1_s202	True	unexpl 0.25	1	0.9887	False	2	2	0	False
+nest_samehap_2to1_s202	True	unexpl 0.25 np	1	0.9887	False	2	2	0	False
+nest_samehap_2to1_s202	True	unexpl 0.5	1	0.9887	False	2	2	0	False
+nest_samehap_2to1_s202	True	unexpl 0.5 np	1	0.9887	False	2	2	0	False
+nest_samehap_2to1_s202	True	unexpl 1	1	0.9887	False	2	2	0	False
+nest_samehap_2to1_s202	True	unexpl 1 np	1	0.9887	False	2	2	0	False
+nest_samehap_2to1_s202	True	unexpl 2	1	0.9887	False	2	2	0	False
+nest_samehap_2to1_s202	True	unexpl 2 np	1	0.9887	False	2	2	0	False
+nest_samehap_2to1_s202	True	mass	1	0.9887	False	2	2	0	False
+nest_samehap_3to1_s301	True	default	0	0.6932	True	3	2	0	True
+nest_samehap_3to1_s301	True	unexpl 0.25	0	0.6932	True	3	2	0	True
+nest_samehap_3to1_s301	True	unexpl 0.25 np	19	0.7396	True	4	2	1	True
+nest_samehap_3to1_s301	True	unexpl 0.5	0	0.6932	True	3	2	0	True
+nest_samehap_3to1_s301	True	unexpl 0.5 np	19	0.7396	True	4	2	1	True
+nest_samehap_3to1_s301	True	unexpl 1	0	0.6932	True	3	2	0	True
+nest_samehap_3to1_s301	True	unexpl 1 np	0	0.6932	True	3	2	0	True
+nest_samehap_3to1_s301	True	unexpl 2	0	0.6932	True	3	2	0	True
+nest_samehap_3to1_s301	True	unexpl 2 np	0	0.6932	True	3	2	0	True
+nest_samehap_3to1_s301	True	mass	0	0.6932	True	3	2	0	True
+nest_samehap_3to1_s304	True	default	0	0.9778	False	2	2	0	False
+nest_samehap_3to1_s304	True	unexpl 0.25	0	0.9778	False	2	2	0	False
+nest_samehap_3to1_s304	True	unexpl 0.25 np	0	0.9778	False	2	2	0	False
+nest_samehap_3to1_s304	True	unexpl 0.5	0	0.9778	False	2	2	0	False
+nest_samehap_3to1_s304	True	unexpl 0.5 np	0	0.9778	False	2	2	0	False
+nest_samehap_3to1_s304	True	unexpl 1	0	0.9778	False	2	2	0	False
+nest_samehap_3to1_s304	True	unexpl 1 np	0	0.9778	False	2	2	0	False
+nest_samehap_3to1_s304	True	unexpl 2	0	0.9778	False	2	2	0	False
+nest_samehap_3to1_s304	True	unexpl 2 np	0	0.9778	False	2	2	0	False
+nest_samehap_3to1_s304	True	mass	0	0.9778	False	2	2	0	False
+nest_samehap_3to1_s305	True	default	40	0.9601	False	2	2	0	False
+nest_samehap_3to1_s305	True	unexpl 0.25	40	0.9601	False	2	2	0	False
+nest_samehap_3to1_s305	True	unexpl 0.25 np	40	0.9601	False	2	2	0	False
+nest_samehap_3to1_s305	True	unexpl 0.5	40	0.9601	False	2	2	0	False
+nest_samehap_3to1_s305	True	unexpl 0.5 np	40	0.9601	False	2	2	0	False
+nest_samehap_3to1_s305	True	unexpl 1	40	0.9601	False	2	2	0	False
+nest_samehap_3to1_s305	True	unexpl 1 np	40	0.9601	False	2	2	0	False
+nest_samehap_3to1_s305	True	unexpl 2	40	0.9601	False	2	2	0	False
+nest_samehap_3to1_s305	True	unexpl 2 np	40	0.9601	False	2	2	0	False
+nest_samehap_3to1_s305	True	mass	40	0.9601	False	2	2	0	False
+nest_samehap_3to1_s306	True	default	0	0.9848	False	2	2	0	False
+nest_samehap_3to1_s306	True	unexpl 0.25	0	0.9848	False	2	2	0	False
+nest_samehap_3to1_s306	True	unexpl 0.25 np	0	0.9848	False	2	2	0	False
+nest_samehap_3to1_s306	True	unexpl 0.5	0	0.9848	False	2	2	0	False
+nest_samehap_3to1_s306	True	unexpl 0.5 np	0	0.9848	False	2	2	0	False
+nest_samehap_3to1_s306	True	unexpl 1	0	0.9848	False	2	2	0	False
+nest_samehap_3to1_s306	True	unexpl 1 np	0	0.9848	False	2	2	0	False
+nest_samehap_3to1_s306	True	unexpl 2	0	0.9848	False	2	2	0	False
+nest_samehap_3to1_s306	True	unexpl 2 np	0	0.9848	False	2	2	0	False
+nest_samehap_3to1_s306	True	mass	0	0.9848	False	2	2	0	False
+nest_samehap_3to1_s307	True	default	10	0.4927	False	1	2	2	True
+nest_samehap_3to1_s307	True	unexpl 0.25	10	0.4927	False	1	2	2	True
+nest_samehap_3to1_s307	True	unexpl 0.25 np	10	0.4927	False	1	2	2	True
+nest_samehap_3to1_s307	True	unexpl 0.5	10	0.4927	False	1	2	2	True
+nest_samehap_3to1_s307	True	unexpl 0.5 np	10	0.4927	False	1	2	2	True
+nest_samehap_3to1_s307	True	unexpl 1	0	0.9767	False	2	2	0	False
+nest_samehap_3to1_s307	True	unexpl 1 np	0	0.9767	False	2	2	0	False
+nest_samehap_3to1_s307	True	unexpl 2	0	0.9767	False	2	2	0	False
+nest_samehap_3to1_s307	True	unexpl 2 np	0	0.9767	False	2	2	0	False
+nest_samehap_3to1_s307	True	mass	10	0.4927	False	1	2	2	True
+nest_samehap_3to1_s308	True	default	28	0.9487	False	2	2	0	True
+nest_samehap_3to1_s308	True	unexpl 0.25	28	0.9487	False	2	2	0	True
+nest_samehap_3to1_s308	True	unexpl 0.25 np	28	0.9487	False	2	2	0	True
+nest_samehap_3to1_s308	True	unexpl 0.5	28	0.9487	False	2	2	0	True
+nest_samehap_3to1_s308	True	unexpl 0.5 np	28	0.9487	False	2	2	0	True
+nest_samehap_3to1_s308	True	unexpl 1	28	0.9487	False	2	2	0	True
+nest_samehap_3to1_s308	True	unexpl 1 np	28	0.9487	False	2	2	0	True
+nest_samehap_3to1_s308	True	unexpl 2	28	0.9487	False	2	2	0	True
+nest_samehap_3to1_s308	True	unexpl 2 np	28	0.9487	False	2	2	0	True
+nest_samehap_3to1_s308	True	mass	28	0.9487	False	2	2	0	True
+nest_samehap_6to1_s801	True	default	15	0.4918	False	1	2	5	True
+nest_samehap_6to1_s801	True	unexpl 0.25	15	0.4918	False	1	2	5	True
+nest_samehap_6to1_s801	True	unexpl 0.25 np	15	0.4918	False	1	2	5	True
+nest_samehap_6to1_s801	True	unexpl 0.5	15	0.4918	False	1	2	5	True
+nest_samehap_6to1_s801	True	unexpl 0.5 np	15	0.4918	False	1	2	5	True
+nest_samehap_6to1_s801	True	unexpl 1	14	0.9536	False	2	2	0	False
+nest_samehap_6to1_s801	True	unexpl 1 np	14	0.9536	False	2	2	0	False
+nest_samehap_6to1_s801	True	unexpl 2	14	0.9536	False	2	2	0	False
+nest_samehap_6to1_s801	True	unexpl 2 np	14	0.9536	False	2	2	0	False
+nest_samehap_6to1_s801	True	mass	22	0.4917	False	1	2	5	True
+nest_samehap_6to1_s802	True	default	1	0.4979	False	1	2	5	True
+nest_samehap_6to1_s802	True	unexpl 0.25	1	0.4979	False	1	2	5	True
+nest_samehap_6to1_s802	True	unexpl 0.25 np	1	0.4979	False	1	2	5	True
+nest_samehap_6to1_s802	True	unexpl 0.5	1	0.4979	False	1	2	5	True
+nest_samehap_6to1_s802	True	unexpl 0.5 np	1	0.4979	False	1	2	5	True
+nest_samehap_6to1_s802	True	unexpl 1	0	0.9657	False	2	2	0	False
+nest_samehap_6to1_s802	True	unexpl 1 np	0	0.9657	False	2	2	0	False
+nest_samehap_6to1_s802	True	unexpl 2	0	0.9657	False	2	2	0	False
+nest_samehap_6to1_s802	True	unexpl 2 np	0	0.9657	False	2	2	0	False
+nest_samehap_6to1_s802	True	mass	1	0.4979	False	1	2	5	True
+nest_samehap_6to1_s803	True	default	1	0.4932	False	1	2	5	True
+nest_samehap_6to1_s803	True	unexpl 0.25	1	0.4932	False	1	2	5	True
+nest_samehap_6to1_s803	True	unexpl 0.25 np	1	0.4932	False	1	2	5	True
+nest_samehap_6to1_s803	True	unexpl 0.5	1	0.4932	False	1	2	5	True
+nest_samehap_6to1_s803	True	unexpl 0.5 np	1	0.4932	False	1	2	5	True
+nest_samehap_6to1_s803	True	unexpl 1	1	0.4932	False	1	2	5	True
+nest_samehap_6to1_s803	True	unexpl 1 np	1	0.4932	False	1	2	5	True
+nest_samehap_6to1_s803	True	unexpl 2	8	0.7545	True	2	2	0	True
+nest_samehap_6to1_s803	True	unexpl 2 np	8	0.7545	True	2	2	0	True
+nest_samehap_6to1_s803	True	mass	5	0.4913	False	1	2	5	True
+nest_samehap_6to1_s804	True	default	0	0.841	False	2	2	0	True
+nest_samehap_6to1_s804	True	unexpl 0.25	0	0.841	False	2	2	0	True
+nest_samehap_6to1_s804	True	unexpl 0.25 np	0	0.841	False	2	2	0	True
+nest_samehap_6to1_s804	True	unexpl 0.5	0	0.841	False	2	2	0	True
+nest_samehap_6to1_s804	True	unexpl 0.5 np	0	0.841	False	2	2	0	True
+nest_samehap_6to1_s804	True	unexpl 1	0	0.841	False	2	2	0	True
+nest_samehap_6to1_s804	True	unexpl 1 np	0	0.841	False	2	2	0	True
+nest_samehap_6to1_s804	True	unexpl 2	0	0.841	False	2	2	0	True
+nest_samehap_6to1_s804	True	unexpl 2 np	0	0.841	False	2	2	0	True
+nest_samehap_6to1_s804	True	mass	0	0.841	False	2	2	0	True
+nest_samehap_6to1_s805	True	default	10	0.4953	False	1	2	4	True
+nest_samehap_6to1_s805	True	unexpl 0.25	10	0.4953	False	1	2	4	True
+nest_samehap_6to1_s805	True	unexpl 0.25 np	10	0.4953	False	1	2	4	True
+nest_samehap_6to1_s805	True	unexpl 0.5	10	0.4953	False	1	2	4	True
+nest_samehap_6to1_s805	True	unexpl 0.5 np	10	0.4953	False	1	2	4	True
+nest_samehap_6to1_s805	True	unexpl 1	1	0.9553	False	2	2	0	False
+nest_samehap_6to1_s805	True	unexpl 1 np	1	0.9553	False	2	2	0	False
+nest_samehap_6to1_s805	True	unexpl 2	1	0.9553	False	2	2	0	False
+nest_samehap_6to1_s805	True	unexpl 2 np	1	0.9553	False	2	2	0	False
+nest_samehap_6to1_s805	True	mass	10	0.4953	False	1	2	4	True
+nest_samehap_6to1_s806	True	default	3	0.4976	False	1	2	6	True
+nest_samehap_6to1_s806	True	unexpl 0.25	3	0.4976	False	1	2	6	True
+nest_samehap_6to1_s806	True	unexpl 0.25 np	3	0.4976	False	1	2	6	True
+nest_samehap_6to1_s806	True	unexpl 0.5	3	0.4976	False	1	2	6	True
+nest_samehap_6to1_s806	True	unexpl 0.5 np	3	0.4976	False	1	2	6	True
+nest_samehap_6to1_s806	True	unexpl 1	0	0.9555	False	2	2	0	False
+nest_samehap_6to1_s806	True	unexpl 1 np	0	0.9555	False	2	2	0	False
+nest_samehap_6to1_s806	True	unexpl 2	0	0.9555	False	2	2	0	False
+nest_samehap_6to1_s806	True	unexpl 2 np	0	0.9555	False	2	2	0	False
+nest_samehap_6to1_s806	True	mass	3	0.4976	False	1	2	6	True

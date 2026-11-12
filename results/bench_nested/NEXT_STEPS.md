@@ -1416,3 +1416,61 @@ Decision after the check:
   the bench. That means rerunning `collect.py` into the repo tables and README, which needs your
   decision; RCK's defaults stay off.
 - **If cases break,** diagnose them as in point 1 before any default or bench change.
+
+## Step 4, offline: an "unexplained junction" prior for the nested species (2026-11-12)
+
+`diag/nested_prior.py` (no Gurobi) re-ranks saved pools. Outputs are in `diag/nested_prior_2026-11-12/`.
+
+**Signature of the prior class.** The wrong rank 1 ("outer + 1–3 copy leftovers") leaves the nested
+species' own novel junctions, which carry 6–8 copies of flow, to low_weight walks. The ranking counts
+significant species only, so it does not see this.
+
+**Rule `unexpl μ`.** Count the *unexplained junctions* of a decomposition: novel junctions whose
+ecDNA flow is at least its low_weight threshold max(1, 0.1 × heaviest), but which no significant
+species uses. Add μ per unexplained junction to the structure cost. `np` = without the λ pool pruning.
+
+| pools, λ | rule | mean | failures | fixed | broken / down > 0.005 |
+|---|---|---|---|---|---|
+| bench (40), 0.2 | default | 0.8531 | 17 | – | – |
+| | **unexpl 1** | **0.9113** | **12** | s307, s801, s802, s805, s806 | **none** |
+| | unexpl 2 | 0.9179 | 12 | the same | none |
+| | unexpl 0.25, 0.5 | 0.8531 | 17 | none | none |
+| | mass | 0.8442 | 17 | none | demo3, demo7_totalonly |
+| bench (40), 0 | default | 0.7714 | 21 | – | – |
+| | unexpl 1 | 0.8325 | 17 | s307, s802, s805, s806 | none |
+| | unexpl 1 np | 0.8687 | 16 | + s305 | none |
+| depth bias b1 (16), 0.2 | default | 0.8621 | 5 | – | – |
+| | **unexpl 1** | **0.9517** | **2** | s301, s801, s803 | **none** (guards s709, s506, s201, s306, demo3, demo8 unchanged) |
+| | unexpl 1 np | 0.9815 | 1 | + s804 | none |
+
+Reading:
+
+- **This is the first ranking rule here that fixes cases without breaking any**, on both the noisy
+  bench pools and the bias pools, at λ = 0.2 and λ = 0. Every earlier rule traded cases (§3 of the
+  failure analysis, the junction-incidence test).
+- **μ = 1 is the natural setting.** It makes an unexplained junction cost one species. μ ≤ 0.5 is too
+  weak: the right answer pays a species plus about 10 steps at λ 0.2.
+- **Fixed cases** are those whose unexplained count at rank 1 is 2–6 (6to1, s307, s301 on the bias
+  pools). Cases with 0 (the noise class, s403, s308, s505) are untouched, as intended.
+- **s804 needs `np`:** its right answer is pruned at λ = 0.2. An implementation in RCK should prune
+  with the new cost (`pool_keeps` reads the structure cost), not after it.
+- **Caveats.**
+  - These are pools generated under the old ranking, so a solve can only do as well as what the pool
+    holds.
+  - The bias pools are 16 cases, not 40. s802, s805, s806 and s307 are fixed on the bench pools but
+    not yet tested on bias pools.
+  - The threshold reuses `--min-species-weight-frac` (0.1).
+
+**Next (offline):** when the full rerun (Slurm 32228969) is checked, run the same script on its 40
+pools. That is the real test of depth bias + cap 4 + this rule together:
+
+```bash
+cd ~/RCK/results/bench_nested
+for L in 0.2 0; do /n/fs/yubi-iw/conda/envs/gurobi-env/bin/python diag/nested_prior.py \
+  /n/fs/yubi-iw/runs/bench_nested_v2/depthbias/rck_runs --lambda $L -o /n/fs/yubi-iw/runs/bench_nested_v2/depthbias/nested_prior_lambda$L.tsv; done
+```
+
+What to look for: no case broken or down > 0.005 (controls and demos especially), and the count of
+remaining failures. Projected: s505, s403, s308, s507 and perhaps s804. If it holds, implement it in
+`rck/ecdna/decompose.py` (`ranking_key` / `pool_keeps`) as an opt-in option, e.g.
+`--unexplained-junction-penalty 1`, and validate it with a solve.

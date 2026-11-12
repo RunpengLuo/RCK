@@ -1171,3 +1171,71 @@ wrong reported species count.
 Reading: this is the same conclusion as section 3 above. The right answers need noise leftovers
 too, so no prior on leftovers separates them. Next are the two Gurobi diagnostics (plan steps 2
 and 3: `--max-multiplicity 4`, and σ = 0), which address the cause rather than the ranking.
+
+## Plan steps 2 and 3 run: multiplicity 4 and σ = 0 (2026-11-12)
+
+Both ran with `diag/rck_diag.sbatch` (pool run at λ = 0.2, never more than 2 licence sessions).
+The LIST files and summaries (`diag/noise_summary.py`) are in `diag/rck_mult/` and `diag/rck_sigma0/`.
+The run outputs are in `/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_{mult,sigma0}/`.
+
+### Step 2, `--max-multiplicity 4` (Slurm 32226591, 4 tasks, 4–17 s each)
+
+| case | bench (cap 3) | cap 4, λ = 0.2 | best in the cap-4 pool |
+|---|---|---|---|
+| ctrl_dup_s708 (4 traversals) | 0.732, 2 species | 0.732, 2 species | 0.994 (`21, 4, 1`), rank 4 at λ 0.2, a same-fit alternative |
+| ctrl_dup_s710 (4 traversals) | 0.723, 3 species | 0.723, 2 species | 0.976 (`49, 26, 5`), rank 7 |
+| ctrl_dup_s703 (3 traversals, fails) | 0.712, 2 species | **0.971, 1 species** | the same |
+| ctrl_dup_s709 (3 traversals, passes) | 0.991 | 0.991 | the same |
+
+λ = 0 gives the same rank 1 in all four.
+
+- **The cap was real but not sufficient.** With cap 4 the true walk enters s708's and s710's pools
+  (with cap 3, none had it), but it loses the ranking.
+- **Why it loses (s708).** The good answer also carries a 4-copy noise leftover, which is
+  significant (cutoff 2.1). So it counts 2 species, like the split rank 1 (`25, 21`). Its 4-traversal
+  walk has 57 steps against 41, so λ prefers the split.
+- **s703.** It has only 3 traversals, so the cap cannot explain its change. Read it as the larger
+  MILP returning a different same-fit answer (tie-breaking), not as a fix.
+- **Do not adopt cap 4 bench-wide** (the 40-case rerun) on this evidence.
+
+### Step 3, σ = 0 control (simulation Slurm 32226593, RCK Slurm 32226645)
+
+- Simulations and subgraphs are in `/n/fs/yubi-iw/runs/bench_nested_sigma0/`, in project space,
+  not scratch. They are built at `BENCH_NESTED_RCK_PLOIDY=2`, and each config differs from the
+  tracked one only in `sigma: 0.0`.
+- **Truth check.** The species truth is identical to the bench (`ecdna.tsv`, `events.tsv`, the AA
+  truth cycles up to the timestamp line).
+  - The long-read observations differ: path supports change, a few low-support paths appear or
+    disappear (`walks.walk`), and so do `rck/rck.adjgroups.tsv` groups.
+  - So "Run A"'s statement that reads are unchanged at σ = 0 holds for the walks, not for the
+    sampled reads.
+
+Scored as `collect.py` scores a bench case (rank 1 at λ = 0.2):
+
+| case | bench (σ = 0.1) | σ = 0 | fails at σ = 0 |
+|---|---|---|---|
+| ctrl_dup_s703 | 0.712, 2 species | 0.988, 1 species | no |
+| nest_cross_1to1_s502 | 0.955, 3 species | 0.972, 2 species | no |
+| nest_cross_1to1_s505 | 0.765, 3 species | 0.984, 2 species | no |
+| nest_cross_1to1_s508 | 0.672, 3 species | 0.991, 2 species | no |
+| nest_samehap_6to1_s801 | 0.492, 1 species | 0.995, 2 species (after the refit; integer rank 1 is `34, 3L, 3L, 1L`) | no |
+| nest_samehap_3to1_s301 | 0.693 | 0.492: `12, 1L, 1L`, the 0.992 answer `12, 5, 1` ranks below | **yes** |
+| nest_samehap_6to1_s803 | 0.493 | 0.496: `36, 2L, 1L`; best 0.959 is pruned at λ 0.2 | **yes** |
+| nest_samehap_6to1_s804 | 0.841 | 0.493: `38, 3L, 2L`; best 0.989 (`40, 6, 1`) ranks below | **yes** |
+
+None of these rank-1 answers is merged.
+
+Reading:
+
+- **Noise: 5 of 8** (s703, s502, s505, s508, s801). Without the correlated depth bias, the current
+  ranking picks the right answer. The step-2 noise-tolerant residual on the decomposition did not
+  help these, so the fix belongs in the flow stage (A2, depth-bias-aware flow). It is no longer
+  deferred.
+  - ctrl_dup s708 and s710 probably belong here too: their remaining obstacle at cap 4 is a noise
+    leftover.
+- **Prior (identifiability): 3 of 8** (s301, s803, s804). Even on noise-free depth, "outer species
+  + 1–3 copy leftovers" ties the true nested answer on the fit and wins on species count.
+  - Total copy number cannot decide, and these are same-haplotype cases, so alleles cannot either.
+    Only long reads spanning the nested species' own junctions could.
+  - This feeds step 4 (the 6to1 decision). Expect most of nest_samehap_6to1 to be in this class.
+- **Caveat.** These are single runs. s703's change at cap 4 shows that answers move with model size.

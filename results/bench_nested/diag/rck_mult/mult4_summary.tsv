@@ -1,0 +1,5 @@
+name	options	status	n_significant	n_truth	weights	steps	residual	composites	mean_composite	best_pool_composite	best_pool_rank	best_pool_significant	picked	pool_size	inexact	decided_by	paths_loaded	reads_explained	runtime_s
+ctrl_dup_s708_m4	--max-multiplicity 4	done	2	1	25.09,21.23	41	0.0	ecdna1=0.732	0.7319	0.9938	2	2	False	73	0	step_penalty	7		4.35
+ctrl_dup_s710_m4	--max-multiplicity 4	done	2	1	31.16,23.2	35	0.0	ecdna1=0.723	0.7228	0.9763	7	3	False	53	0	species_penalty	6		3.91
+ctrl_dup_s703_m4	--max-multiplicity 4	done	1	1	16.22	17	0.0	ecdna1=0.971	0.9711	0.9711	4	2	True	35	0	species_penalty	10	1.0	4.36
+ctrl_dup_s709_m4	--max-multiplicity 4	done	1	1	24.85	18	0.0	ecdna1=0.991	0.9908	0.9908	2	1	True	34	0	species_penalty	7		1.3

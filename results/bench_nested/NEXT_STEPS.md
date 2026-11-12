@@ -1147,3 +1147,27 @@ LIST=$PWD/sigma0.list DIAG_POOL_LAMBDA=0.2 DIAG_LAMBDA0=0 sbatch --array=0-7%2 -
     feeds step 4;
   - s803 and s804 gaining a good pool answer means their failure is the simulated depth bias;
   - s301, s703, s505 and s502 are read as in "Run A".
+
+## Offline test: junction-incidence and long-read-path priors (2026-11-12): negative
+
+Two more ranking priors were tested offline on the 40 saved pools with
+`diag/junction_rules.py` (no Gurobi; gurobipy blocked at import). Outputs are in
+`diag/junction_rules_2026-11-12/`. The `default` rule reproduces `bench_sweep.tsv` (0.8531 at
+λ = 0.2) and the 17 failures. Failures are scored as in `collect.py`: composite < 0.95, merged, or a
+wrong reported species count.
+
+- **Junction incidence** (`jinc μ`): μ × Σ over novel junctions of (species using it − 1), all
+  species counted, low_weight included, added to the structure cost. At λ = 0.2 the best is
+  16 failures (μ ≥ 0.5: s307 fixed). It costs demo3 (a control, down > 0.005) and s308. μ = 0.1 is
+  harmless but fixes nothing. Without the λ pruning (`np`) the results are the same.
+  - **Why it fails.** The good answers also carry 1–2 copy leftovers, and those leftovers repeat
+    junctions too. For example, s801's 0.972 answer `[32, 5, 2, 1]` scores 13 against rank 1's 12.
+    Every pool also has bad answers with fewer repeats (minimum 2–8).
+- **Long-read paths** (`paths first`, `paths sum ν`): no change in any case. `reads_explained`
+  is 1.0 for almost every pool solution, and 15 of the 40 pools have no multi-junction reads at all
+  (among them 6to1 s802 and s803). This bench has no path signal to rank on, so the test says
+  nothing about paths on data that has them.
+
+Reading: this is the same conclusion as section 3 above. The right answers need noise leftovers
+too, so no prior on leftovers separates them. Next are the two Gurobi diagnostics (plan steps 2
+and 3: `--max-multiplicity 4`, and σ = 0), which address the cause rather than the ranking.

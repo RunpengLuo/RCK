@@ -1269,3 +1269,46 @@ Reading:
 **Decision:** implement option 1 behind opt-in flags (`--depth-bias-window`, `--depth-bias-cost`),
 default off. Then validate on the 8 diagnostic cases, s708 and s710 at cap 4, and passing guards
 (Gurobi, about 1 licence-hour; ask first).
+
+## Depth-bias validation (2026-11-12, Slurm 32227536)
+
+`rck-ecdna --depth-bias-window 200000` (commit 13a308a) was run on 16 cases at bias cost and
+smoothness 1 (`b1`) and 2 (`b2`): 32 `--keep-pool` runs at λ = 0.2.
+- Each case uses its exact bench configuration (`diag/rck_valid.sbatch`, which takes the case from
+  `run_case.py`, so demo3 and demo8 keep their options).
+- s708 and s710 also use `--max-multiplicity 4`.
+- The list and per-run scores are in `diag/rck_depthbias/` (`valid.list`, `valid_scores.tsv`).
+- Runs are in `/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_depthbias/`.
+- Scoring is `collect.py`'s rule (composite, merged, reported species count), against the bench
+  rank 1 at λ = 0.2.
+
+| case | bench | b1 | b2 |
+|---|---|---|---|
+| ctrl_dup_s703 | 0.712 ✗ | **0.990 ✓** | **0.979 ✓** |
+| ctrl_dup_s708 (cap 4) | 0.732 ✗ | **0.999 ✓** | 0.732 ✗ |
+| ctrl_dup_s710 (cap 4) | 0.723 ✗ | **0.992 ✓** | 0.731 ✗ |
+| nest_cross_1to1_s502 | 0.955 ✗ | **0.974 ✓** | 0.319 ✗ |
+| nest_cross_1to1_s508 | 0.672 ✗ | **0.995 ✓** | **0.995 ✓** |
+| nest_cross_1to1_s505 | 0.765 ✗ | 0.962 ✗ (3 species for 2: `15, 10, 2`) | **0.968 ✓** |
+| nest_samehap_3to1_s301 | 0.693 ✗ | 0.483 ✗ | 0.741 ✗ |
+| nest_samehap_6to1_s801 | 0.492 ✗ | 0.493 ✗ | 0.491 ✗ |
+| nest_samehap_6to1_s803 | 0.493 ✗ | 0.491 ✗ | 0.494 ✗ |
+| nest_samehap_6to1_s804 | 0.841 ✗ | 0.493 ✗ | 0.495 ✗ |
+| guards: s709, s506, s201, s306, demo3, demo8 | all pass | all pass (demo3 0.959 → 0.975) | all pass |
+
+Reading:
+
+- **b1 fixes 5 of the 10 targeted failures and breaks no guard.** The fitted biases are about
+  −0.23 to +0.28 (s710 reaches the 0.3 bound in one window).
+- **s708 and s710 need both changes.** They pass only with the bias and cap 4 together.
+- **b2 is unstable.** It fixes s505, but loses s708, s710 and s502.
+- **The prior class does not move** (s301, s801, s803), as the σ = 0 control predicted. s801 passed
+  at σ = 0 but not with the bias.
+- **s804 got worse** (0.841 → about 0.49, nested species lost) in both settings. It is the first sign
+  of the expected risk, that the bias absorbs a real copy-number difference. Being looked at offline
+  next.
+- **Projection.** At b1 with cap 4, the bench would go from 17 to 12 failures, if the 22 untested
+  cases hold. That needs the full 40-case rerun.
+- **Licence.** Every run succeeded, but Gurobi reported "5 active sessions for a baseline of 2" and
+  "over the baseline for 30 minutes". Short tasks (2–20 s) leave sessions counted after they exit.
+  Run arrays of short tasks at `%1`, or pause between tasks.

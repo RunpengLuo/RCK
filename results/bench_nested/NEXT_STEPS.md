@@ -1239,3 +1239,33 @@ Reading:
     Only long reads spanning the nested species' own junctions could.
   - This feeds step 4 (the 6to1 decision). Expect most of nest_samehap_6to1 to be in this class.
 - **Caveat.** These are single runs. s703's change at cap 4 shows that answers move with model size.
+
+## Flow-stage noise, step 0 (2026-11-12, offline): option 1 chosen
+
+`diag/flow_noise.py` (no Gurobi) reads the 32 bench runs and the 8 σ = 0 runs. Its outputs are in
+`diag/flow_noise_2026-11-12/`.
+
+- **The noise is in segment depth and is shared by neighbours.**
+  - Depth error is 8.7% at σ = 0.1 against 1.9% at σ = 0.
+  - The lag-1 correlation between neighbouring segments is 0.60 against 0.26.
+  - Junction copy-number error is about 9% at both σ, so it is not the depth wave. It is most
+    likely θ = 6.5 fixed (root cause 3) and read sampling.
+- **The flow follows the depth.** Where it misses the truth, it is on the observed side in 85% of
+  the length. In s703 it lowers the two crossing junctions from 18 to 16 (reads 18.6 and 18.2) to
+  match a segment 17% low.
+- **The noise also adds subgraph breakpoints** (s703: 8 ecDNA segments against 5). Balance keeps
+  copy numbers equal across them.
+- **Pricing.** The σ = 0 flow, priced on the σ = 0.1 observations against RCK's σ = 0.1 flow
+  (`flow_noise_sigma0flow.tsv`):
+  - option 2 (relative-error weights) cuts the noisy flow's advantage by about 10–20% and flips
+    no case;
+  - option 1 (one bias per 200 kb window at cost κ|β|) cuts it to 0.07–2.3 at κ = 1 (s703 −0.15,
+    s803 0.07, s804 0.58, s505 2.25 from 6.93). At κ ≥ 5 it does almost nothing;
+  - weighting junction reads ×2 or ×4 makes it worse in 7 of 8.
+- **The remaining gap is in the junction term**, so per-case θ is option 1's companion.
+- **Caveats.** Totals only; reference-adjacency and background terms left out; windows independent
+  (no smoothness). So the gains are an upper bound, and passing cases are not tested.
+
+**Decision:** implement option 1 behind opt-in flags (`--depth-bias-window`, `--depth-bias-cost`),
+default off. Then validate on the 8 diagnostic cases, s708 and s710 at cap 4, and passing guards
+(Gurobi, about 1 licence-hour; ask first).

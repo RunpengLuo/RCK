@@ -1,0 +1,84 @@
+                  case sigma  fails  n_ec_segments  seg_err_absmean  window_share  junc_err_absmean  flow_miss_copies  flow_miss_mb  follows_obs  junc_miss  d_seg  d_junc  d_current  d_opt2  d_opt1 1  d_opt1 2  d_opt1 3  d_opt1 5  d_opt1 10  d_junc x2  d_junc x4
+         ctrl_dup_s702   0.1  False              7           0.0374         1.000            0.0453             1.792         2.999        0.794          4  0.558  -0.071      0.487   0.371     0.047     0.108     0.169     0.291      0.487      0.416      0.273
+         ctrl_dup_s703   0.1   True              8           0.1163         1.000            0.0332             0.966         1.355        0.818          4  1.261  -0.376      0.885   0.729    -0.121     0.133     0.386     0.737      0.885      0.510     -0.241
+         ctrl_dup_s706   0.1  False              8           0.1022         1.000            0.0644             3.197         2.999        0.857          5  1.942  -0.203      1.739   1.487     0.281     0.604     0.926     1.571      1.739      1.536      1.130
+         ctrl_dup_s708   0.1   True             16           0.0697         0.949            0.0430             1.075         1.163        1.000          3  1.715  -0.119      1.596   1.104    -0.130    -0.040     0.051     0.231      0.723      1.478      1.240
+         ctrl_dup_s709   0.1  False              8           0.0806         1.000            0.0733             2.343         2.999        0.741          6  0.771  -0.290      0.481   0.325    -0.176    -0.072     0.031     0.239      0.481      0.191     -0.388
+         ctrl_dup_s710   0.1   True             13           0.1761         1.000            0.0431             6.624         2.999        0.571          5  4.617  -0.175      4.441   2.760     0.216     0.590     0.973     1.744      3.623      4.266      3.916
+    ctrl_separate_s601   0.1  False             20           0.0934         1.000            0.1047             1.000         5.998        0.755         11  1.643   0.863      2.506   2.399     1.445     1.812     2.172     2.506      2.506      3.370      5.096
+    ctrl_separate_s603   0.1  False             22           0.0912         0.970            0.0980             0.413         2.271        0.651          7  0.403   0.688      1.091   1.077     1.049     1.086     1.123     1.091      1.091      1.779      3.155
+  nest_cross_1to1_s502   0.1   True             19           0.1180         0.999            0.0797             0.975         2.575        0.814          6  1.525   0.003      1.528   1.397     0.334     0.534     0.734     1.081      1.505      1.531      1.537
+  nest_cross_1to1_s505   0.1   True             21           0.0719         0.981            0.0792             1.970         2.229        0.833         10  8.412   0.622      9.034   7.872     2.274     3.163     4.048     5.776      7.785      9.656     10.901
+  nest_cross_1to1_s506   0.1  False             22           0.0925         0.997            0.1127             0.364         1.092        0.803          3  1.111  -0.145      0.965   0.878     0.122     0.333     0.544     0.842      0.965      0.820      0.529
+  nest_cross_1to1_s507   0.1   True             21           0.0892         0.992            0.0747             0.713         2.099        0.914          6  1.481   0.424      1.905   1.773     0.725     0.957     1.189     1.564      1.906      2.330      3.179
+  nest_cross_1to1_s508   0.1   True             20           0.0760         0.991            0.0637             0.974         2.484        0.998          5  2.448  -0.017      2.431   2.171     0.694     1.128     1.563     2.217      2.382      2.414      2.380
+  nest_cross_1to1_s509   0.1  False             22           0.0348         0.982            0.1076             0.779         2.053        0.551          7 -0.078   1.210      1.132   1.144     1.212     1.283     1.281     1.357      1.245      2.342      4.762
+  nest_cross_2to1_s103   0.1  False             15           0.0943         1.000            0.0752             1.209         2.475        0.999          5  2.156   0.196      2.352   2.093     0.507     0.877     1.248     1.969      2.305      2.548      2.940
+  nest_cross_2to1_s104   0.1  False             22           0.0692         0.986            0.0711             0.478         1.288        0.688          8  0.850   0.074      0.925   0.880     0.047     0.322     0.570     0.736      0.925      0.999      1.148
+   nest_cross_3sp_s402   0.1  False             34           0.0697         0.933            0.1052             1.349         2.662        0.976          8  3.638   0.393      4.031   3.745     1.247     1.906     2.558     3.531      4.102      4.424      5.210
+   nest_cross_3sp_s403   0.1   True             33           0.0935         0.975            0.1105             1.021        53.554        1.000          6  4.917   0.236      5.153   4.828     1.865     2.682     3.343     4.311      5.140      5.388      5.860
+nest_samehap_2to1_s201   0.1  False             18           0.0757         0.980            0.0789             0.568         1.704        1.000          1  0.943  -0.015      0.927   0.845     0.117     0.306     0.486     0.694      0.927      0.912      0.882
+nest_samehap_2to1_s202   0.1  False             17           0.1076         0.996            0.0949             0.801         1.387        0.844          5  0.525   0.587      1.112   1.034     0.807     0.908     1.008     1.179      1.112      1.699      2.873
+nest_samehap_3to1_s301   0.1   True             12           0.1017         0.993            0.0936             1.495         2.679        0.998          5  2.567   0.121      2.689   2.437     0.659     1.079     1.507     2.233      2.689      2.810      3.053
+nest_samehap_3to1_s304   0.1  False             18           0.0606         1.000            0.0881             1.330         2.762        0.865          7  1.018   0.617      1.635   1.530     0.980     1.173     1.340     1.636      1.635      2.252      3.485
+nest_samehap_3to1_s305   0.1  False             20           0.0783         0.991            0.0862             2.275         2.818        0.989         10  4.389  -0.149      4.240   3.733     0.548     1.200     1.841     3.032      3.900      4.091      3.793
+nest_samehap_3to1_s306   0.1  False              9           0.0588         1.000            0.0738             0.000         0.000          NaN          0  0.000   0.000      0.000   0.000     0.000     0.000     0.000     0.000      0.000      0.000      0.000
+nest_samehap_3to1_s307   0.1   True             16           0.0688         0.992            0.0872             0.926         2.776        0.866          3  0.734  -0.263      0.471   0.399    -0.233    -0.155    -0.078     0.136      0.471      0.208     -0.318
+nest_samehap_3to1_s308   0.1   True             18           0.0859         1.000            0.0930             1.327         2.007        0.736          6  2.079   0.277      2.356   2.138     0.686     1.119     1.552     2.115      2.310      2.633      3.188
+nest_samehap_6to1_s801   0.1   True             18           0.0730         1.000            0.1393             1.048         2.156        0.872         10  1.477   0.606      2.082   1.864     1.039     1.304     1.525     1.929      2.097      2.688      3.899
+nest_samehap_6to1_s802   0.1   True             16           0.0770         1.000            0.0650             0.667         1.314        0.997          4  1.102  -0.198      0.903   0.720    -0.053     0.116     0.285     0.623      0.903      0.705      0.308
+nest_samehap_6to1_s803   0.1   True             20           0.0874         0.935            0.1373             1.286         2.781        0.675          7  1.239  -0.098      1.141   0.887     0.045     0.235     0.424     0.763      1.141      1.042      0.845
+nest_samehap_6to1_s804   0.1   True             20           0.1632         0.990            0.1374             3.375         2.023        0.832          8  5.049   0.342      5.390   4.358     0.887     1.441     1.987     3.079      4.936      5.732      6.415
+nest_samehap_6to1_s805   0.1   True             14           0.0724         1.000            0.0934             1.573         2.148        0.691          5  0.852   0.012      0.864   0.646     0.054     0.155     0.256     0.459      0.864      0.876      0.900
+nest_samehap_6to1_s806   0.1   True             21           0.0947         0.967            0.1055             2.018         2.409        0.761         10  3.116   0.926      4.042   3.385     1.092     1.411     1.729     2.404      3.490      4.967      6.818
+         ctrl_dup_s703     0   True              5           0.0179         1.000            0.0564             0.247         0.740        1.000          2  0.234   0.125      0.358   0.323     0.173     0.214     0.254     0.324      0.358      0.483      0.733
+  nest_cross_1to1_s502     0   True             19           0.0124         0.821            0.1127             0.000         0.000          NaN          2  0.000   0.052      0.052   0.052     0.052     0.052     0.052     0.052      0.052      0.103      0.206
+  nest_cross_1to1_s505     0   True             20           0.0193         0.808            0.0781             0.522         0.728        0.977          4  1.149   0.602      1.751   1.562     0.973     1.047     1.153     1.361      1.590      2.353      3.558
+  nest_cross_1to1_s508     0   True             20           0.0181         1.000            0.0924             0.426         1.222        0.998          3  0.557   0.203      0.761   0.699     0.324     0.435     0.545     0.723      0.761      0.964      1.371
+nest_samehap_3to1_s301     0   True             10           0.0099         0.984            0.1052             0.330         0.989        0.646          6  0.276   0.042      0.318   0.289    -0.036     0.041     0.087     0.179      0.318      0.359      0.443
+nest_samehap_6to1_s801     0   True             16           0.0218         1.000            0.0718             0.668         1.993        0.897          7  0.130   0.190      0.320   0.300     0.201     0.219     0.245     0.298      0.320      0.509      0.888
+nest_samehap_6to1_s803     0   True             15           0.0325         1.000            0.2059             1.140         2.099        0.997          8  0.972   1.195      2.168   1.990     1.320     1.464     1.608     1.895      2.168      3.363      5.754
+nest_samehap_6to1_s804     0   True             13           0.0163         0.758            0.0603             0.971         2.537        0.922          5  0.451   0.344      0.794   0.718     0.479     0.559     0.621     0.745      0.827      1.138      1.825
+
+sigma 0.1: lag-1 correlation of segment depth error between neighbours (<= 200 kb apart): 0.601 over 284 pairs
+sigma 0: lag-1 correlation of segment depth error between neighbours (<= 200 kb apart): 0.259 over 53 pairs
+sigma 0, 8 runs: mean |depth error| 0.0185, window share 0.992 (median), mean |junction error| 0.0978
+sigma 0.1, 32 runs: mean |depth error| 0.0869, window share 0.994 (median), mean |junction error| 0.0862
+
+sigma 0.1, failing bench cases (17): flow misses truth by 1.649 copies (length-weighted mean), follows obs 0.85
+   d_seg      truth cheaper or equal in  0 of 17; median d 1.715
+   d_junc     truth cheaper or equal in  7 of 17; median d 0.012
+   d_current  truth cheaper or equal in  0 of 17; median d 2.082
+   d_opt2     truth cheaper or equal in  0 of 17; median d 1.864
+   d_opt1 1   truth cheaper or equal in  4 of 17; median d 0.659
+   d_opt1 2   truth cheaper or equal in  2 of 17; median d 0.957
+   d_opt1 3   truth cheaper or equal in  1 of 17; median d 1.189
+   d_opt1 5   truth cheaper or equal in  0 of 17; median d 1.744
+   d_opt1 10  truth cheaper or equal in  0 of 17; median d 2.097
+   d_junc x2  truth cheaper or equal in  0 of 17; median d 2.414
+   d_junc x4  truth cheaper or equal in  2 of 17; median d 3.053
+
+sigma 0.1, passing bench cases (15): flow misses truth by 1.193 copies (length-weighted mean), follows obs 0.82
+   d_seg      truth cheaper or equal in  2 of 15; median d 0.943
+   d_junc     truth cheaper or equal in  7 of 15; median d 0.074
+   d_current  truth cheaper or equal in  1 of 15; median d 1.112
+   d_opt2     truth cheaper or equal in  1 of 15; median d 1.077
+   d_opt1 1   truth cheaper or equal in  2 of 15; median d 0.507
+   d_opt1 2   truth cheaper or equal in  2 of 15; median d 0.877
+   d_opt1 3   truth cheaper or equal in  1 of 15; median d 1.008
+   d_opt1 5   truth cheaper or equal in  1 of 15; median d 1.179
+   d_opt1 10  truth cheaper or equal in  1 of 15; median d 1.112
+   d_junc x2  truth cheaper or equal in  1 of 15; median d 1.699
+   d_junc x4  truth cheaper or equal in  2 of 15; median d 2.873
+
+sigma 0 flow priced on the sigma 0.1 observations (d = cost(sigma 0 flow) - cost(sigma 0.1 flow)):
+                  case junctions_matched  flow_diff_copies  d_seg  d_junc  d_current  d_opt2  d_opt1 1  d_opt1 2  d_opt1 3  d_opt1 5  d_opt1 10  d_junc x2  d_junc x4
+         ctrl_dup_s703               5/5             0.012  1.118  -0.385      0.733   0.601    -0.152     0.079     0.311     0.618      0.733      0.347     -0.423
+  nest_cross_1to1_s502             12/12             0.972  1.936   0.256      2.192   2.022     0.717     1.007     1.297     1.729      2.169      2.447      2.959
+  nest_cross_1to1_s505             13/13             1.446  6.448   0.486      6.933   6.078     2.254     2.992     3.674     4.976      6.216      7.419      8.390
+  nest_cross_1to1_s508               9/9             1.117  2.282   0.340      2.622   2.400     1.046     1.475     1.904     2.508      2.574      2.962      3.643
+nest_samehap_3to1_s301               8/8             1.667  2.256   0.343      2.599   2.369     1.031     1.403     1.781     2.409      2.599      2.943      3.630
+nest_samehap_6to1_s801             10/10             0.058  2.477   0.835      3.311   2.945     1.601     2.037     2.430     3.138      3.401      4.146      5.816
+nest_samehap_6to1_s803               9/9             0.047  1.967  -0.258      1.709   1.328     0.070     0.439     0.754     1.146      1.709      1.450      0.934
+nest_samehap_6to1_s804             10/10             0.175  4.784   0.022      4.806   3.813     0.577     1.108     1.632     2.679      4.481      4.829      4.874
+gurobipy loaded: False

@@ -45,6 +45,9 @@ POOL_LAMBDA = "0.1"
 LAMBDAS = [0.0, 0.02, 0.05, 0.1, 0.2, 0.5]
 RETRIES = 5  # licence sessions of finished tasks can take a few minutes to free up
 COMMON = ["--no-plots", "--threads", os.environ.get("SLURM_CPUS_PER_TASK", "4"), "--time-limit", "1800"]
+# BENCH_NESTED_EXTRA adds rck-ecdna options to every run of every case (default none), e.g. a whole-bench
+# rerun with "--depth-bias-window 200000 --depth-bias-cost 1 --max-multiplicity 4" into its own BENCH_NESTED_OUT
+EXTRA = os.environ.get("BENCH_NESTED_EXTRA", "").split()
 
 # the step sweep's cases (results/step_sweep/sweep.py), unchanged
 REGRESSION = [
@@ -98,7 +101,7 @@ def rck_run(case, outdir, extra, pool=False):
     if done(outdir, pool):
         print("done already: " + outdir, flush=True)
         return True
-    argv = ["--subgraph-dir", case["subgraph"], "--truth-dir", case["truth"], "--outdir", outdir] + COMMON + case["options"] + extra
+    argv = ["--subgraph-dir", case["subgraph"], "--truth-dir", case["truth"], "--outdir", outdir] + COMMON + case["options"] + EXTRA + extra
     for attempt in range(1, RETRIES + 1):
         started = time.time()
         try:
@@ -138,7 +141,7 @@ def run_case(key):
                                                      "--pool-lambdas"] + [str(x) for x in LAMBDAS], pool=True)
     release_licence()
     with open(os.path.join(base, "case.json"), "w") as handle:
-        json.dump(case, handle, indent=2)
+        json.dump(dict(case, extra=EXTRA), handle, indent=2)
     return 0 if ok else 1
 
 

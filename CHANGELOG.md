@@ -457,6 +457,14 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
     which `aa_format.read_cycles` skips, are read as AA-style linear walks, as rck-ecdna's are.
     Results in `results/graph_route/README.md`.
 
+- **`rck-ecdna --depth-bias-window W`** (opt-in, default off; also `--depth-bias-cost`,
+  `--depth-bias-smooth`, `--depth-bias-max`). The flow MILP fits one multiplicative depth bias per
+  window of nearby segments, so the integer flow need not follow a smooth coverage bias with
+  few-copy dips no junction supports (docs/ecDNA.md §4.8).
+  - The refit and the phase-block report use the bias-corrected targets.
+  - `flow_segments.tsv` and `summary.json` report the bias only when the option is on.
+  - Tests: `tests/ecdna/test_depth_bias.py`.
+
 ### Changed
 
 - **Environments, tools and run outputs now live in project space, `/n/fs/yubi-iw`** (2026-11-04;

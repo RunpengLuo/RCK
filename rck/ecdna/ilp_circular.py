@@ -21,6 +21,15 @@ haplotype-aware balance constraint (``define_constraints_on_nodes`` /
   imputed edges, novel-adjacency use and (optionally) disfavoured junction labelings.
   RCK's novel-adjacency utilization constraint is dropped: chromosomal SVs that touch the
   amplicon should be free to stay unused.
+* **Depth bias (optional, off by default).** With ``depth_bias_window`` > 0, segments are grouped
+  into windows of about that many bp of nearby sequence (:func:`depth_bias_windows`), and each
+  window k gets a continuous bias beta_k in [-``depth_bias_max``, ``depth_bias_max``]. The
+  segment (and phase-block piece) targets become obs x (1 - beta_k), which stays linear because obs
+  is data; a flippable piece's target uses one exact product variable (flip x beta). The objective
+  adds ``depth_bias_cost`` x |beta_k| and ``depth_bias_smooth`` x |beta_k - beta_j| over neighbouring
+  windows. This absorbs a smooth multiplicative coverage bias (GC, mappability) shared by nearby
+  segments, so the integer flow need not follow a few-copy dip that no junction supports; junction
+  reads, which the depth bias does not reach, are left as they are.
 * Optional per-haplotype extremity exclusivity (``enforce_is``), RCK's infinite-sites
   constraint, off by default because chromothripsis-derived ecDNA violates it.
 * **Linear ends (optional).** With ``linear_ends`` set to ``boundaries`` (default) or ``all``,
@@ -66,6 +75,10 @@ class CircularParams:
     bg_prior_weight: float = 0.1  # pull of the background layer towards the flank copy number
     seg_length_cap: int = 50_000  # segment weight = min(length / cap, 1)
     min_seg_weight: float = 0.02
+    depth_bias_window: int = 0  # bp; > 0 fits one multiplicative depth bias per window of nearby segments; 0 = off
+    depth_bias_cost: float = 1.0  # per unit |bias| (a 10 % shift of one window costs 0.1 x this)
+    depth_bias_smooth: float = 1.0  # per unit |bias_k - bias_j| between neighbouring windows
+    depth_bias_max: float = 0.3  # bound on |bias|
     enforce_is: bool = False
     allow_background_novel: bool = True  # chromosomal SVs may carry background flow
     linear_ends: str = "boundaries"  # boundaries | all | none: where ecDNA-layer copies may start / stop
@@ -97,6 +110,8 @@ class FlowSolution:
     linear_ends: Dict[Tuple[str, Haplotype], int] = field(default_factory=dict)
     block_flips: Dict[str, int] = field(default_factory=dict)  # phase block -> 1 if its A / B were swapped (--block-flip)
     blocks: List[Dict[str, object]] = field(default_factory=list)  # one block_flips.tsv row per phase block
+    depth_bias: Dict[str, float] = field(default_factory=dict)  # window -> fitted bias (depth_bias_window > 0 only)
+    seg_bias: Dict[str, float] = field(default_factory=dict)  # segment -> its window's bias (empty when off)
 
     def ecdna_edges(self) -> Dict[Tuple[str, str, str], int]:
         """Positive ecDNA-layer flow on phased edge keys (see :mod:`rck.ecdna.phased`)."""
@@ -126,6 +141,9 @@ class FlowSolution:
         frame = pd.DataFrame(rows)
         if len(frame):
             frame["inferred_total"] = frame[["ecdna_A", "ecdna_B", "bg_A", "bg_B"]].sum(axis=1)
+            if self.seg_bias:  # only with --depth-bias-window, so default outputs keep their columns
+                frame["depth_bias"] = [round(self.seg_bias.get(sid, 0.0), 6) for sid in frame["sid"]]
+                frame["obs_corrected"] = frame["obs_total"] * (1.0 - frame["depth_bias"])
         return frame
 
     def adjacency_table(self, graph: ECGraph, obs: Observations) -> pd.DataFrame:
@@ -143,6 +161,36 @@ class FlowSolution:
         return pd.DataFrame(rows)
 
 
+def depth_bias_windows(graph: ECGraph, window: int) -> Tuple[Dict[str, str], List[str], List[Tuple[str, str]]]:
+    """Group segments into depth-bias windows: (segment -> window, windows in order, neighbouring
+    window pairs).
+
+    Per chromosome, segments in coordinate order are added to the current window until the next one
+    starts ``window`` bp or more after the window's first segment, or a gap of more than ``window``
+    bp separates them; a segment longer than ``window`` is a window of its own. Consecutive windows
+    are neighbours (smoothness term) unless such a gap separates them: distant parts of an amplicon do
+    not share a coverage bias. Windows are named ``<chrom>:<n>``."""
+    if window <= 0:
+        return {}, [], []
+    by_chrom: Dict[str, List] = {}
+    for sid, s in graph.segments.items():
+        by_chrom.setdefault(s.chrom, []).append((s.start, s.end, sid))
+    seg_window, windows, pairs = {}, [], []
+    for chrom in sorted(by_chrom):
+        current, first_start, prev_end = None, None, None
+        for start, end, sid in sorted(by_chrom[chrom]):
+            gap = None if prev_end is None else start - prev_end - 1
+            if current is None or gap > window or start - first_start >= window or end - first_start + 1 > window:
+                name = "{c}:{n}".format(c=chrom, n=sum(1 for w in windows if w.startswith(chrom + ":")))
+                if current is not None and gap <= window:
+                    pairs.append((current, name))
+                current, first_start = name, start
+                windows.append(name)
+            seg_window[sid] = current
+            prev_end = end if prev_end is None else max(prev_end, end)
+    return seg_window, windows, pairs
+
+
 class OptModelCircular:
     """Build and solve the two-layer flow MILP for one amplicon graph."""
 
@@ -153,6 +201,10 @@ class OptModelCircular:
         self.model = None
         self.xe, self.xb, self.ye, self.yb, self.pv, self.t, self.te = {}, {}, {}, {}, {}, {}, {}
         self.flip = {}  # phase block -> binary A / B swap (--block-flip)
+        self.beta = {}  # depth-bias window -> continuous bias (--depth-bias-window)
+        self.flip_beta = {}  # (phase block, window) -> flip x bias (exact linearisation)
+        self.seg_window: Dict[str, str] = {}
+        self.bias_pairs: List[Tuple[str, str]] = []
         self.end_nodes: List[str] = []
         self.ub_seg: Dict[str, int] = {}
 
@@ -216,18 +268,57 @@ class OptModelCircular:
         """Segment data term split over its phase-block pieces by length. Allele targets are
         linear in the block's flip f: t_A = a + f (b - a), t_B = b + f (a - b)."""
         terms = []
+        beta = self._beta(sid)
         for i, pc in enumerate(self.obs.pieces[sid]):
             weight = w * pc.share * norm
             if pc.has_alleles:
                 f = self.flip.get(pc.block)
                 for h, (own, other) in ((Haplotype.A, (pc.a, pc.b)), (Haplotype.B, (pc.b, pc.a))):
-                    target = own if f is None else own + (other - own) * f
+                    if f is None:
+                        target = self._biased(own, beta)
+                    elif beta is None:
+                        target = own + (other - own) * f
+                    else:  # (own + (other - own) f)(1 - beta) = own (1 - beta) + (other - own)(f - f beta)
+                        target = own - own * beta + (other - own) * (f - self._flip_beta(gp, pc.block, self.seg_window[sid]))
                     d = self._abs_dev(gp, self.xe[sid, h] + self.xb[sid, h], target, "dpc[{s},{i},{h}]".format(s=sid, i=i, h=h))
                     terms.append(weight * d)
             else:
                 total = gp.quicksum(self.xe[sid, h] + self.xb[sid, h] for h in HAPLOTYPES)
-                d = self._abs_dev(gp, total, pc.total, "dpc[{s},{i},T]".format(s=sid, i=i))
+                d = self._abs_dev(gp, total, self._biased(pc.total, beta), "dpc[{s},{i},T]".format(s=sid, i=i))
                 terms.append(weight * d)
+        return terms
+
+    # ---- depth bias (--depth-bias-window) ---- #
+    def _beta(self, sid: str):
+        """The bias variable of the segment's window, or None when the option is off."""
+        wid = self.seg_window.get(sid)
+        return self.beta.get(wid) if wid is not None else None
+
+    @staticmethod
+    def _biased(value: float, beta):
+        """value x (1 - beta): the observation with the window's bias taken out (value when off)."""
+        return value if beta is None else value - value * beta
+
+    def _flip_beta(self, gp, block: str, wid: str):
+        """z = flip x beta, exact for a binary flip and |beta| <= depth_bias_max (McCormick)."""
+        key = (block, wid)
+        if key not in self.flip_beta:
+            m, f, b, bound = self.model, self.flip[block], self.beta[wid], self.params.depth_bias_max
+            z = m.addVar(lb=-bound, ub=bound, name="fbeta[{b},{w}]".format(b=block, w=wid))
+            m.addConstr(z <= bound * f)
+            m.addConstr(z >= -bound * f)
+            m.addConstr(z <= b + bound * (1 - f))
+            m.addConstr(z >= b - bound * (1 - f))
+            self.flip_beta[key] = z
+        return self.flip_beta[key]
+
+    def _bias_terms(self, gp) -> List:
+        p = self.params
+        terms = []
+        for wid, b in sorted(self.beta.items()):
+            terms.append(p.depth_bias_cost * self._abs_dev(gp, b, 0.0, "dbeta[{w}]".format(w=wid)))
+        for u, v in self.bias_pairs:
+            terms.append(p.depth_bias_smooth * self._abs_dev(gp, self.beta[u] - self.beta[v], 0.0, "dsmooth[{u},{v}]".format(u=u, v=v)))
         return terms
 
     def block_report(self, seg_cn: Dict[Tuple[str, Haplotype], int], flips: Dict[str, int]) -> Tuple[Dict[str, int], List[Dict[str, object]]]:
@@ -242,6 +333,8 @@ class OptModelCircular:
         for sid, pieces in obs.pieces.items():
             norm = 1.0 / math.sqrt(max(obs.segments[sid].total, 1.0))
             w = self._seg_weight(sid)
+            beta = self._beta(sid)
+            scale = 1.0 - (float(beta.X) if beta is not None else 0.0)  # the targets the flow fitted (--depth-bias-window)
             for pc in pieces:
                 row = rows.setdefault(pc.block, {"phase_block": pc.block, "orientation": pc.orientation, "n_pieces": 0, "n_snps": 0})
                 row["n_pieces"] += 1
@@ -250,7 +343,7 @@ class OptModelCircular:
                 if not pc.has_alleles:
                     continue
                 for k, flip in enumerate((0, 1)):
-                    ta, tb = pc.alleles(flip)
+                    ta, tb = (scale * x for x in pc.alleles(flip))
                     cost[k] += w * pc.share * norm * (abs(seg_cn[(sid, Haplotype.A)] - ta) + abs(seg_cn[(sid, Haplotype.B)] - tb))
         final = {}
         for block in sorted(rows):
@@ -327,6 +420,11 @@ class OptModelCircular:
         for block in sorted(self.flippable_blocks()):
             self.flip[block] = m.addVar(vtype=GRB.BINARY, name="flip[{b}]".format(b=block))
 
+        if p.depth_bias_window > 0:
+            self.seg_window, windows, self.bias_pairs = depth_bias_windows(g, p.depth_bias_window)
+            for wid in windows:
+                self.beta[wid] = m.addVar(lb=-p.depth_bias_max, ub=p.depth_bias_max, name="beta[{w}]".format(w=wid))
+
         self.end_nodes = self.linear_end_nodes()
         for nid in self.end_nodes:
             ub = self.ub_seg[g.nodes[nid].segment]
@@ -381,11 +479,12 @@ class OptModelCircular:
                 terms.extend(self._piece_terms(gp, sid, w, norm))
             elif so.a is not None and so.b is not None:
                 for h, value in ((Haplotype.A, so.a), (Haplotype.B, so.b)):
-                    d = self._abs_dev(gp, self.xe[sid, h] + self.xb[sid, h], value, "dseg[{s},{h}]".format(s=sid, h=h))
+                    d = self._abs_dev(gp, self.xe[sid, h] + self.xb[sid, h], self._biased(value, self._beta(sid)),
+                                      "dseg[{s},{h}]".format(s=sid, h=h))
                     terms.append(w * norm * d)
             else:
                 total = gp.quicksum(self.xe[sid, h] + self.xb[sid, h] for h in HAPLOTYPES)
-                d = self._abs_dev(gp, total, so.total, "dseg[{s},T]".format(s=sid))
+                d = self._abs_dev(gp, total, self._biased(so.total, self._beta(sid)), "dseg[{s},T]".format(s=sid))
                 terms.append(w * norm * d)
             bg_total = gp.quicksum(self.xb[sid, h] for h in HAPLOTYPES)
             d = self._abs_dev(gp, bg_total, obs.background.get(sid, 2.0), "dbg[{s}]".format(s=sid))
@@ -409,6 +508,8 @@ class OptModelCircular:
                     terms.append((cost + extra) * self.pv[aid, ph])
         if self.te:
             terms.append(p.linear_end_penalty * gp.quicksum(self.te.values()))
+        if self.beta:
+            terms.extend(self._bias_terms(gp))
         for block, f in sorted(self.flip.items()):
             terms.append(self._flip_cost(block) * f)
         m.setObjective(gp.quicksum(terms), GRB.MINIMIZE)
@@ -457,9 +558,11 @@ class OptModelCircular:
         if self.obs.pieces:
             seg_cn = {k: seg_ec[k] + seg_bg[k] for k in seg_ec}
             flips, blocks = self.block_report(seg_cn, {b: val(v) for b, v in self.flip.items()})
+        depth_bias = {wid: float(b.X) for wid, b in self.beta.items()}
+        seg_bias = {sid: depth_bias[wid] for sid, wid in self.seg_window.items()} if depth_bias else {}
         solution = FlowSolution(status=status, objective=float(m.ObjVal), mip_gap=float(gap), seg_ec=seg_ec, seg_bg=seg_bg,
                                 adj_ec=adj_ec, adj_bg=adj_bg, terminal_bg=terminal, imputed_used=imputed, linear_ends=linear_ends,
-                                block_flips=flips, blocks=blocks)
+                                block_flips=flips, blocks=blocks, depth_bias=depth_bias, seg_bias=seg_bias)
         self.close()
         return solution
 

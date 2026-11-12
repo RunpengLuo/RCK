@@ -89,6 +89,14 @@ def build_parser() -> argparse.ArgumentParser:
     fl.add_argument("--linear-end-penalty", type=float, default=0.25, help="Cost per copy per linear end")
     fl.add_argument("--boundary-min-copies", type=float, default=2.0, help="Copy-number step that marks a boundary")
     fl.add_argument("--boundary-frac", type=float, default=0.25, help="... or this fraction of the larger copy number")
+    fl.add_argument("--depth-bias-window", type=int, default=0,
+                    help="Fit one multiplicative depth bias per window of about this many bp of nearby segments, so the "
+                         "flow need not follow a smooth coverage bias (GC, mappability) with few-copy dips no junction "
+                         "supports; 0 = off (default). 200000 matches the bench simulator's bias correlation length")
+    fl.add_argument("--depth-bias-cost", type=float, default=1.0,
+                    help="Cost per unit |bias| (a 10%% shift of one window costs 0.1 x this)")
+    fl.add_argument("--depth-bias-smooth", type=float, default=1.0, help="Cost per unit bias difference of neighbouring windows")
+    fl.add_argument("--depth-bias-max", type=float, default=0.3, help="Bound on |bias|")
 
     dc = parser.add_argument_group("decomposition")
     dc.add_argument("--max-species", type=int, default=4)
@@ -224,13 +232,19 @@ def run(args) -> Dict[str, object]:
                                  soft_junction_penalty=args.soft_junction_penalty, enforce_is=args.enforce_is,
                                  allow_background_novel=not args.no_background_novel, linear_ends=args.linear_ends,
                                  linear_end_penalty=args.linear_end_penalty, boundary_min_copies=args.boundary_min_copies,
-                                 boundary_frac=args.boundary_frac, flip_oriented_penalty=getattr(args, "flip_oriented_penalty", None),
+                                 boundary_frac=args.boundary_frac,
+                                 depth_bias_window=getattr(args, "depth_bias_window", 0), depth_bias_cost=getattr(args, "depth_bias_cost", 1.0),
+                                 depth_bias_smooth=getattr(args, "depth_bias_smooth", 1.0), depth_bias_max=getattr(args, "depth_bias_max", 0.3),
+                                 flip_oriented_penalty=getattr(args, "flip_oriented_penalty", None),
                                  flip_tol=getattr(args, "flip_tol", 0.01), time_limit=args.time_limit,
                                  threads=args.threads, mip_gap=args.mip_gap, log_file=os.path.join(args.outdir, "gurobi_flow.log"),
                                  log_to_console=args.verbose)
     sol = solve_flow(graph, obs, flow_params)
     log.info("flow: %s, objective %.4f, %d ecDNA edge copies, %d linear-end copies, imputed used: %s", sol.status, sol.objective,
              sum(sol.ecdna_edges().values()), sum(sol.linear_ends.values()), ",".join(sol.imputed_used) or "none")
+    if sol.depth_bias:
+        log.info("depth bias: %d windows, %d non-zero, range %.3f to %.3f", len(sol.depth_bias),
+                 sum(1 for v in sol.depth_bias.values() if abs(v) > 1e-6), min(sol.depth_bias.values()), max(sol.depth_bias.values()))
     if sol.blocks:
         log.info("phase blocks: %s", ", ".join("{b} {s}".format(b=b["phase_block"], s=b["status"]) for b in sol.blocks
                                                 if b["status"] != "fixed" or b["flip"]))

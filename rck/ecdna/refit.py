@@ -67,21 +67,22 @@ def observation_rows(graph: ECGraph, obs, flow, cparams) -> List[Row]:
         s, so = graph.segments[sid], obs.segments[sid]
         w = max(min(s.length / float(cparams.seg_length_cap), 1.0), cparams.min_seg_weight)
         norm = 1.0 / math.sqrt(max(so.total, 1.0))
+        scale = 1.0 - (getattr(flow, "seg_bias", None) or {}).get(sid, 0.0)  # the flow's depth bias (--depth-bias-window)
         if obs.pieces.get(sid):  # --block-flip: one row per piece, with the flow's block flips applied
             flips = getattr(flow, "block_flips", {}) or {}
             bg = {h: flow.seg_bg.get((sid, h), 0) for h in HAPLOTYPES}
             for pc in obs.pieces[sid]:
                 if pc.has_alleles:
                     for h, value in zip(HAPLOTYPES, pc.alleles(flips.get(pc.block, 0))):
-                        rows.append(Row(w * pc.share * norm, value - bg[h], (seg_key(sid, h),)))
+                        rows.append(Row(w * pc.share * norm, scale * value - bg[h], (seg_key(sid, h),)))
                 else:
-                    rows.append(Row(w * pc.share * norm, pc.total - sum(bg.values()), tuple(seg_key(sid, h) for h in HAPLOTYPES)))
+                    rows.append(Row(w * pc.share * norm, scale * pc.total - sum(bg.values()), tuple(seg_key(sid, h) for h in HAPLOTYPES)))
         elif so.a is not None and so.b is not None:
             for h, value in zip(HAPLOTYPES, (so.a, so.b)):
-                rows.append(Row(w * norm, value - flow.seg_bg.get((sid, h), 0), (seg_key(sid, h),)))
+                rows.append(Row(w * norm, scale * value - flow.seg_bg.get((sid, h), 0), (seg_key(sid, h),)))
         else:
             bg = sum(flow.seg_bg.get((sid, h), 0) for h in HAPLOTYPES)
-            rows.append(Row(w * norm, so.total - bg, tuple(seg_key(sid, h) for h in HAPLOTYPES)))
+            rows.append(Row(w * norm, scale * so.total - bg, tuple(seg_key(sid, h) for h in HAPLOTYPES)))
     for aid in sorted(graph.adjacencies):
         a, value = graph.adjacencies[aid], obs.adjacencies.get(aid)
         if value is None:

@@ -608,6 +608,48 @@ method, if any, the change is based on.
 
 ---
 
+### 4.8 Depth bias (`--depth-bias-window`, opt-in)
+
+> **Provenance:** (c) new, 2026-11-12. **Code:** `rck/ecdna/ilp_circular.py::depth_bias_windows`,
+> `::OptModelCircular._beta`, `::_biased`, `::_flip_beta`, `::_bias_terms`; `rck/ecdna/refit.py::observation_rows`.
+> **Evidence:** `results/bench_nested/NEXT_STEPS.md`, "Flow-stage noise, step 0".
+
+Read depth carries a smooth multiplicative bias (GC content, mappability) that nearby segments
+share. The integer flow follows it, and a few-copy dip that no junction supports then has to be
+covered by an extra species in the decomposition. On bench_nested, removing the simulator's
+correlated bias (σ = 0) fixed 5 of 8 failing cases, and the segment depth error was correlated
+between neighbouring segments (lag-1 r = 0.60) while the junction-read error was not affected.
+
+With `--depth-bias-window W` > 0 (default 0, off):
+
+- segments are grouped, per chromosome in coordinate order, into windows of at most about W bp
+  that start at a segment; a segment longer than W, and a gap over W, start a new window.
+  Consecutive windows not separated by such a gap are neighbours $\mathcal N$;
+- each window $k$ gets a continuous $\beta_k\in[-\beta_{\max},\beta_{\max}]$ (`--depth-bias-max`, 0.3);
+- every segment and piece target $\tau$ of §4.5–§4.6 in window $k$ becomes $\tau\,(1-\beta_k)$.
+  This is linear because $\tau$ is data. A flippable piece's target
+  $(a_\pi+f_b(b_\pi-a_\pi))(1-\beta_k)$ uses $z_{b,k}=f_b\beta_k$, linearised exactly
+  (McCormick, binary $f_b$, bounded $\beta_k$);
+- the objective adds
+
+  ```math
+  \kappa_\beta\sum_k|\beta_k|+\kappa_{\mathrm{sm}}\sum_{(k,j)\in\mathcal N}|\beta_k-\beta_j|
+  ```
+
+  with $\kappa_\beta$ = `--depth-bias-cost` (1.0; a 10% shift of one window costs 0.1) and
+  $\kappa_{\mathrm{sm}}$ = `--depth-bias-smooth` (1.0).
+
+Junction reads, the background prior and the linear-end boundaries are unchanged. The refit (§6) and
+the phase-block report use the corrected targets. `flow_segments.tsv` gains `depth_bias` and
+`obs_corrected`, and `summary.json` gains `depth_bias`, only when the option is on. With the option
+off the model and every output are as before.
+
+*Choice of costs.* The offline pricing in step 0 found that the bias removes most of the noisy
+flow's advantage only when it is cheap (κ_β ≈ 1–2). At 5 or more it does almost nothing. The risk
+of a cheap bias is that a true copy-number change without a junction inside the window is absorbed.
+The bound, the smoothness term and the bench guard cases are what check this. It is not yet
+validated by a solve on the bench.
+
 ## 5. Decomposition into species
 
 > **Provenance:** (c) modified from CoRAL's cycle decomposition, `minimize_cycles` [Zhu et al. 2024](pipeline/references.md#zhu2024)

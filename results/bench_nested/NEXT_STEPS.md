@@ -1304,11 +1304,115 @@ Reading:
 - **b2 is unstable.** It fixes s505, but loses s708, s710 and s502.
 - **The prior class does not move** (s301, s801, s803), as the σ = 0 control predicted. s801 passed
   at σ = 0 but not with the bias.
-- **s804 got worse** (0.841 → about 0.49, nested species lost) in both settings. It is the first sign
-  of the expected risk, that the bias absorbs a real copy-number difference. Being looked at offline
-  next.
+- **s804 got worse** (0.841 → about 0.49, nested species lost) in both settings. This is **not** the
+  bias absorbing a real copy-number change (checked offline, below). It moved s804 into the prior
+  class.
 - **Projection.** At b1 with cap 4, the bench would go from 17 to 12 failures, if the 22 untested
   cases hold. That needs the full 40-case rerun.
 - **Licence.** Every run succeeded, but Gurobi reported "5 active sessions for a baseline of 2" and
   "over the baseline for 30 minutes". Short tasks (2–20 s) leave sessions counted after they exit.
   Run arrays of short tasks at `%1`, or pause between tasks.
+
+### s804 under the depth bias (offline, 2026-11-12)
+
+Truth: an outer species at 40.8 copies and a nested one at 6.8, so chr3:40.99–42.21 Mb carries 47.7
+ecDNA copies plus 3 background.
+
+| chr3 | truth | depth | β (b1) | corrected | bench flow | b1 flow | σ = 0 flow |
+|---|---|---|---|---|---|---|---|
+| 40.99–41.12 Mb | 47.7 | 56.1 | +0.11 | 49.9 | 48 | 47 | 47 |
+| 41.12–41.52 Mb | 47.7 | 65.7 / 66.6 | +0.24 | 50.0 / 50.8 | **62** | **47** | **47** |
+| 41.52–42.21 Mb | 47.7 | 45–60 | −0.11 to +0.16 | ≈ 50 | 46–48 | 47 | 47 |
+
+- **The +32% bump is the simulator's depth bias.** The same region reads 49.8 at σ = 0.
+- **Without the bias, the bench flow followed it.** It put 62 copies there and used
+  `imputed_adj_intra_chr3_10` to balance them. That distorted flow happened to give a 6-copy walk
+  over the nested region, so s804 scored 0.841 with a wrong walk.
+- **With the bias,** the flow equals the σ = 0 flow (flat 47, no imputed edge), and the nested
+  junctions carry 7–8 copies (truth 6.8).
+- **Then the prior loses the nested species,** as at σ = 0 (0.493). Rank 1 is `38, 3L, 1L`. The
+  pool has 11 answers with the nested species ≥ 0.9. The best is 0.969 (`39, 5, 2, 1`), a same-fit
+  alternative, but the λ = 0.2 pruning drops it (11 more steps).
+- **So s804 now belongs to the prior class,** with s801, s803 and s301. That class is step 4.
+
+## Full 40-case rerun with the depth bias (Slurm 32228969, submitted 2026-11-12)
+
+The rerun is the bench protocol (`bench_nested.sbatch`: a λ = 0 run and a `--keep-pool` run at
+λ = 0.1 per case), with every run given
+`--depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --max-multiplicity 4`.
+`BENCH_NESTED_EXTRA` (run_case.py, commit b0302ae) passes these, and each `case.json` records them.
+
+- Array `0-39%1`: one task at a time, because of the licence-session overage seen in the
+  validation. Time limit 2 h per task.
+- Runs: `/n/fs/yubi-iw/runs/bench_nested_v2/depthbias/rck_runs/<case>/`.
+- Logs: `/n/fs/yubi-iw/runs/bench_nested_v2/depthbias/logs/bench-nested_32228969_<task>.out`.
+- The bench's own runs and tables are not touched.
+- Expected wall time: the bench took 7030 s of RCK time, so about 2–3 h at `%1`.
+
+### How to check it when it has finished
+
+All of this is offline (no Gurobi). Do not loop on `sacct`.
+
+```bash
+R=/n/fs/yubi-iw/runs/bench_nested_v2/depthbias
+sacct -j 32228969 -X -o JobID%14,State,Elapsed,ExitCode | awk 'NR>2{print $2}' | sort | uniq -c   # 40 COMPLETED?
+grep -l 'attempt .* failed' $R/logs/*.out | wc -l               # licence retries (fine if the run then finished)
+grep -h 'GurobiError' $R/logs/*.out | sed 's/.*GurobiError/GurobiError/' | sort | uniq -c
+# every case has both runs, and the options reached them:
+for d in $R/rck_runs/*/; do [ -f $d/lambda_0/summary.json ] && [ -f $d/pool/pool/pool.json ] || echo "MISSING $d"; done
+grep -L 'depth-bias-window' $R/rck_runs/*/case.json              # should print nothing
+# tables into their own folder (does not touch the repo's tables or README):
+cd ~/RCK/results/bench_nested
+BENCH_NESTED_OUT=$R/rck_runs BENCH_NESTED_RESULTS=$R/rck_results \
+  /n/fs/yubi-iw/conda/envs/gurobi-env/bin/python collect.py | tee $R/collect.log
+```
+
+- `collect.py` first prints the re-ranking check against `results/step_sweep/`. The demo cases ran
+  with different options, so mismatches there are expected and are not an error.
+- To compare per case with the bench at λ = 0.2:
+
+```bash
+/n/fs/yubi-iw/conda/envs/gurobi-env/bin/python - <<'PY'
+import pandas as pd
+R = "/n/fs/yubi-iw/runs/bench_nested_v2/depthbias/rck_results"
+old = pd.read_csv("pipeline.tsv", sep="\t").set_index("case")
+new = pd.read_csv(R + "/pipeline.tsv", sep="\t").set_index("case")
+cols = ["mean_composite", "n_species", "n_truth", "merged", "failure_stage"]
+t = old[cols].join(new[cols], lsuffix="_bench", rsuffix="_bias")
+t["fixed"] = t.failure_stage_bench.notna() & t.failure_stage_bias.isna()
+t["broken"] = t.failure_stage_bench.isna() & t.failure_stage_bias.notna()
+print(t.to_string()); print("fixed:", list(t.index[t.fixed])); print("broken:", list(t.index[t.broken]))
+PY
+```
+
+(The `pipeline.tsv` in the first line is the repo's bench table, read from `results/bench_nested/`.)
+
+What to look for, in this order:
+
+1. **Broken cases (the main risk).** Look for any bench case that passes in the bench and fails
+   here, or any control or demo more than 0.005 below its λ = 0 score (the README block's "control
+   / demo cases below λ = 0" row).
+   - The validation covered only s709, s506, s201, s306, demo3 and demo8 as guards. The other 22
+     cases are untested.
+   - For each broken case, read `flow_segments.tsv` (`depth_bias`, `obs_corrected`): is a window at
+     or near ±0.3, and does the flow now miss the truth where it did not before?
+     `diag/flow_noise.py`'s per-segment comparison does this.
+   - Note that `--max-multiplicity 4` also changes every pool, so a change can come from the cap,
+     not the bias. If it is unclear, rerun that case at cap 3 with `diag/rck_valid.sbatch`.
+2. **The failure count at λ = 0.2.** Expected 17 → 12: s703, s708, s710, s502 and s508 fixed.
+   s505 still fails on the species count at cost 1. s804 falls to about 0.49 (explained above).
+   The prior class (6to1, s301, s307) is unchanged.
+3. **The λ rule.** Is 0.2 still the recommended `--step-penalty`, and does λ = 0's mean go up? The
+   bias removes noise leftovers, so the step penalty may matter less.
+4. **The bias itself.** In each `summary.json` (`depth_bias`: windows, non-zero, min, max), count
+   the windows at the ±0.3 bound. A cluster at the bound in one case means the bias is doing more
+   than noise correction there.
+5. **The scale stage.** `collect.py`'s `scale` check uses the uncorrected `obs_total`. Read
+   s104's flag as before.
+6. **Runtime.** `collect.py`'s "Compute" line, against 7030 s.
+
+Decision after the check:
+- **If no passing case breaks and the failures fall as expected,** propose adopting the options for
+  the bench. That means rerunning `collect.py` into the repo tables and README, which needs your
+  decision; RCK's defaults stay off.
+- **If cases break,** diagnose them as in point 1 before any default or bench change.

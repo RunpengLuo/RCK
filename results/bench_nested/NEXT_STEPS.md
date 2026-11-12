@@ -1,5 +1,8 @@
 # bench_nested: next steps (written 2026-10-27)
 
+> **Resume here (2026-11-12):** the current state and the ordered steps to continue are in
+> "Resume here (2026-11-12): state and what to do next" at the end of this file. Read it first.
+
 State at the end of the 2026-10-27 session, and a plan for what comes next; progress of the
 2026-10-29 session is marked **[done 2026-10-29]** and in "Progress (2026-10-29)" at the end. The
 evidence is in `README.md`: the "bench_nested_v2" and "Follow-up checks" sections. The full
@@ -1474,3 +1477,148 @@ What to look for: no case broken or down > 0.005 (controls and demos especially)
 remaining failures. Projected: s505, s403, s308, s507 and perhaps s804. If it holds, implement it in
 `rck/ecdna/decompose.py` (`ranking_key` / `pool_keeps`) as an opt-in option, e.g.
 `--unexplained-junction-penalty 1`, and validate it with a solve.
+
+## Resume here (2026-11-12): state and what to do next
+
+Written at the end of the 2026-11-12 session, for a fresh session. Everything above is the record;
+this section is the plan.
+
+### State when the session ended
+
+- **RCK `yubi_dev`.** 9 local commits not pushed: 7c7e4d7 … 17a01d3, plus this note.
+  - `rck-ecdna --depth-bias-window` is implemented (13a308a; docs `docs/ecDNA.md` §4.8, tests
+    `tests/ecdna/test_depth_bias.py`). It is opt-in, and the defaults are unchanged.
+  - Untracked, and left alone on purpose: old `ecbench_*.out` files at the repo root, `logs/`, and
+    `results/bench/`.
+- **amplicon-allele-analysis.** Unchanged (5447a99). `git fetch` over HTTPS needs credentials.
+- **Running.** Slurm **32228969**, the full 40-case rerun with the depth bias
+  (`--depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --max-multiplicity 4`).
+  - Array `0-39%1`: the bench protocol, a λ = 0 run and a pool run per case.
+  - Started about 14:50; expected 2–3 h.
+  - Runs: `/n/fs/yubi-iw/runs/bench_nested_v2/depthbias/rck_runs/`.
+  - Logs: `/n/fs/yubi-iw/runs/bench_nested_v2/depthbias/logs/`.
+- **Results so far.**
+  1. Depth bias at cost 1 fixes s703, s708 and s710 (with cap 4), s502 and s508 in the 16-case
+     validation, and breaks no guard ("Depth-bias validation").
+  2. The "unexplained junction" prior at μ = 1 fixes s307, s801, s802, s805 and s806 on the bench
+     pools, and s301, s801 and s803 on the bias pools, offline, breaking nothing ("Step 4,
+     offline").
+  - Together they project roughly 17 → about 5 failures. This is not yet tested together.
+- **Open item outside this plan.** 380 graph-route Slurm logs exist only on scratch
+  (`/n/fs/scratch/$USER/graph_route/h2h/logs`, 13 MB). Scratch was being purged on 2026-11-12.
+  - The proposed copy (not run; it needs your approval):
+    `tar -czf /n/fs/yubi-iw/runs/graph_route/h2h_logs_2026-11-04.tar.gz -C /n/fs/scratch/$USER/graph_route h2h`.
+  - They may already be gone. Check with `ls /n/fs/scratch/$USER/graph_route/h2h/logs | wc -l`.
+
+### Rules that apply to every step
+
+- No Gurobi without an explicit yes from the user (`rck-ecdna`, `sbatch` of any RCK script, the
+  Gurobi unit tests). The WLS licence allows 2 sessions.
+  - Short tasks leave sessions counted after they exit. The 16-case validation hit "5 active
+    sessions" and "over the baseline for 30 minutes".
+  - So run arrays at `%1` and check that nothing else is running (`squeue -u $USER`).
+- Do not loop `sacct` or `squeue`. Check once, or wait at least 60 s between checks.
+- Offline scripts block gurobipy themselves (`sys.modules["gurobipy"] = None`), so they are safe.
+  Run them with `/n/fs/yubi-iw/conda/envs/gurobi-env/bin/python`.
+- Unit tests without Gurobi:
+
+  ```bash
+  cd ~/RCK && python -c "import sys; sys.modules['gurobipy']=None; import unittest; \
+  r=unittest.TextTestRunner().run(unittest.defaultTestLoader.discover('tests/ecdna', top_level_dir='.')); sys.exit(not r.wasSuccessful())"
+  ```
+
+  At the end of this session: 235 tests, OK, 59 skipped.
+- Do not run `collect.py` into the repo folder, or anything else that rewrites the repo's tables or
+  README, without the user's decision. Use `BENCH_NESTED_RESULTS=<elsewhere>`.
+
+### Steps, in order
+
+**1. Check the rerun (offline).**
+- Is it finished? `sacct -j 32228969 -X -o JobID%14,State,Elapsed | awk 'NR>2{print $2}' | sort | uniq -c`
+- Then follow "Full 40-case rerun with the depth bias" → "How to check it when it has finished"
+  above. It covers states, licence errors, missing outputs, `collect.py` into
+  `/n/fs/yubi-iw/runs/bench_nested_v2/depthbias/rck_results`, the per-case comparison with the
+  bench, and what to look for.
+- **The main question is whether any passing case breaks.** 22 of the 40 cases were never tested
+  with the bias. Expected: 17 → 12 failures at λ = 0.2.
+- If a task failed: read its log. Licence errors are retried 5 times inside the task. Resubmit only
+  the missing tasks (`--array=<ids>%1`, same environment variables as in the submission above; runs
+  that finished are skipped), and only after the user agrees.
+
+**2. Score the rerun's pools with the nested-species prior (offline).**
+
+```bash
+cd ~/RCK/results/bench_nested
+for L in 0.2 0; do /n/fs/yubi-iw/conda/envs/gurobi-env/bin/python diag/nested_prior.py \
+  /n/fs/yubi-iw/runs/bench_nested_v2/depthbias/rck_runs --lambda $L \
+  -o /n/fs/yubi-iw/runs/bench_nested_v2/depthbias/nested_prior_lambda$L.tsv \
+  | tee /n/fs/yubi-iw/runs/bench_nested_v2/depthbias/nested_prior_lambda$L.txt; done
+```
+
+- First check that the `default` row reproduces the rerun's own numbers (its failures and mean at
+  λ = 0.2 should match `depthbias/rck_results/pipeline.tsv` and `bench_sweep.tsv`).
+- Then read `unexpl 1` and `unexpl 1 np`:
+  - no case "broken" and no case "down > 0.005", above all the controls and demos;
+  - how many failures remain (projected: s505, s403, s308, s507, perhaps s804);
+  - whether `np` (no λ pruning) adds fixes. That says the RCK implementation must apply the rule in
+    the pruning too.
+- Record the result in this file, under a new heading, and commit.
+- **If anything breaks,** look at why (rank-1 weights, unexplained counts in the `-o` TSV, and
+  `diag/grow_failures.py <runs> <case>`) before going on.
+
+**3. Implement the prior in RCK as an opt-in option (code and tests; no Gurobi).** Only if step 2
+breaks nothing.
+- **Parameter.** `DecompositionParams.unexplained_junction_penalty` (default 0 = off), and an
+  `rck-ecdna --unexplained-junction-penalty` flag.
+- **Definition (as in `diag/nested_prior.py::unexplained`).**
+  - An unexplained junction is a NOVEL adjacency whose ecDNA flow (the sum of the flow over its
+    `ADJ` edge keys) is at least the decomposition's low_weight threshold (`_flag_low_weight`'s:
+    `min_species_weight` if set, else max(1, `min_species_weight_frac` × heaviest weight), on
+    integer weights).
+  - It is unexplained when no significant (not `low_weight`) species uses it.
+  - Species usage: `Species.counts` keys `(ADJ, aid, phasing)`.
+- **Ranking.** In `decompose.py`, add penalty × unexplained to the structure cost:
+  - in `ranking_key` (a new argument), in `decompose_with_pool`'s candidate loop, and in
+    `structure_cost`;
+  - **in the pruning too:** `pool_keeps` / `prune_pool` must compare the full structure cost,
+    including the new term, not only steps. s804's right answer is otherwise pruned at λ = 0.2.
+- **Pools.** Store `unexplained` in `_pool_record`'s entries, so `rank_pool` and
+  `rck.ecdna.rerank` can re-rank offline. Old pools without the field count as 0.
+- **Ambiguity report.** Check that `same_fit_structures` / `ambiguity_report` (`decided_by`) still
+  read sensibly with the new term.
+- **Tests without Gurobi** (`tests/ecdna/`, new file):
+  - the unexplained count on a hand-made flow and species;
+  - `ranking_key` and `rank_pool` order with the penalty on and off;
+  - the defaults are unchanged, and the CLI flag parses.
+  - Add one `requires_gurobi` solve test, and run it only with permission.
+- **Docs.** `docs/ecDNA.md` §5 (ranking), the CHANGELOG, and this file.
+- **Check offline.** With the implemented `rank_pool`, re-rank the rerun's pools. The result must
+  equal step 2's `unexpl 1` (pruned) or `unexpl 1 np`, depending on the pruning choice. This
+  needs no Gurobi, because the pools hold all the entries.
+
+**4. Validation solve (Gurobi; ask first).**
+- Use `diag/rck_valid.sbatch`, which runs each case in its exact bench configuration plus extra
+  options, as a pool run at λ = 0.2.
+- Options on every line:
+  `--depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --max-multiplicity 4 --unexplained-junction-penalty 1`.
+- Cases: the prior class (s301, s307, s801–s806), the noise class fixed by the bias (s703, s708,
+  s710, s502, s508), and guards (s709, s506, s201, s306, s402, s104, demo3, demo7_totalonly, demo8).
+- Run at `%1`. The format is in `diag/rck_depthbias/valid.list`; write the new list to
+  `/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/`.
+- Score as in "Depth-bias validation". The scoring snippet used `diag/junction_rules.py::Case`; it
+  is also how `diag/rck_depthbias/valid_scores.tsv` was made.
+
+**5. Whole-bench run with all options, and the adoption decision (Gurobi; the user decides).**
+- Repeat step 1 with `BENCH_NESTED_EXTRA` also holding `--unexplained-junction-penalty 1`, into a
+  new `BENCH_NESTED_OUT` (for example `/n/fs/yubi-iw/runs/bench_nested_v2/depthbias_unexpl/rck_runs`).
+- Check it the same way.
+- **The user decides** whether the bench adopts these options. If so, rerun `collect.py` into the
+  repo folder, which rewrites `bench_sweep.tsv`, `pipeline.tsv` and the README results block.
+- RCK's defaults stay off unless the user decides otherwise.
+
+**Not in this plan, still open** (see the sections above):
+- per-case θ (junction reads per copy), the companion of the depth bias for the junction-term gap
+  ("Flow-stage noise, step 0");
+- s505 at cost 1 (one 2-copy leftover);
+- s403 and s308;
+- seed repeats for tie-breaking noise (graph-route step e).

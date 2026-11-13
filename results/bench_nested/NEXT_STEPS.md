@@ -1889,3 +1889,212 @@ run's ranking. The counts of the default rank 1 equal `nested_prior.py`'s in eve
   - against the default row, the μ = 1 row is the prior in a real solve.
 - Compare per case with the bench at λ = 0.2 (`pipeline.tsv`), and with the cap-4 rerun
   (`depthbias/check_2026-11-13/compare_bench_lambda0.2.tsv`).
+
+## Step 4 results (2026-11-13): validation solve, Slurm 32249668
+
+- **Run:** 28 of 28 tasks COMPLETED. 4 licence-overage retries (`GurobiError 10030`, in tasks 19
+  and 24) all recovered. The slowest task was s806 (32 min, against the 1 h limit); the rest
+  took 3 s to 12 min.
+- **Pools:** every `pool.json` has μ = 1.
+- **Outputs**, in `/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/`:
+  `unexpl_check_lambda0.2.{tsv,txt}` and `compare_lambda0.2.tsv`.
+
+**The prior in a real solve.**
+- Each run's own rank 1 (`pool.json` `rank1` at 0.2) equals `diag/unexpl_check.py`'s μ = 1 pick
+  in all 28 cases.
+- The same pools ranked at μ = 0 give the depth bias at cap 3 without the prior.
+
+| 28 cases (25 bench), λ 0.2 | failures | mean |
+|---|---|---|
+| bench (cap 3, no bias, no prior), on these cases | 15 | – |
+| bias at cap 3, μ = 0 | 11 | 0.8326 |
+| **bias at cap 3, μ = 1** | **4** | **0.9524** |
+
+- **μ = 1 fixes** s301 and s801–s806 against μ = 0, and breaks nothing. No case falls by more than
+  0.005, including demo3, demo7_totalonly, demo8 and every guard.
+- **Against the bench,** bias + prior fixes 15 (s703, s708, s710, s502, s507, s508, s308, s301,
+  s307, s801–s806) and breaks 4 (s402, s509, s603, s706).
+- **The cap question.** At cap 3 the bias keeps every fix of the cap-4 rerun. It also restores s104
+  (0.971), s305 (0.966) and s508 (0.995): cap 4 was what broke them. s402, s509, s603 and s706 still
+  fail at cap 3, so the cap did not cause those.
+- **The 4 remaining breaks** (`diag/grow_failures.py` on these pools). In every one the right answer
+  is in the pool and kept by the pruning:
+
+  | case | rank 1 | right answer | why it loses |
+  |---|---|---|---|
+  | s402 | `12, 5, 1L, 1L` (0.540) | `12, 7, 5, 1` (0.979), rank 3 | a same-fit alternative; fewer species wins. 0 unexplained junctions, so the prior cannot help |
+  | s509 | `10, 9, 8` (0.865) | `9, 8, 1` (0.981), rank 2 | a same-fit alternative |
+  | s603 | `9, 8, 1, 1` (0.975, 3 reported) | the same | a 1-copy refit weight on the low_weight threshold |
+  | s706 | `28, 25` (0.731) | `25, 3` (0.986), rank 2 | a same-fit alternative |
+
+  These are the tie-break and threshold class (seed repeats, or a threshold rule), not the bias, the
+  cap or the prior.
+- **Projection for the whole bench** (32 cases):
+  - the 4 above, plus s505 and s403, which were not in this run and failed in every earlier run;
+  - about 6 failures, against 17 now, if the 7 bench cases not run here (s103, s202, s304, s403,
+    s505, s601, s702) do not change.
+  - That is step 5.
+- **A caveat on `diag/unexpl_check.py`.** It rebuilds counts from the pool's `decompositions.tsv`,
+  which is written after the refit and post-processing (species merged or dropped). So it can differ
+  from the counts RCK stores from the raw integer solution: 4 of the 28 pools have differing entries
+  (s708, s709, s710, s306). No rank 1 differed. On pools that store `unexplained`, use the stored
+  counts (`rank_pool` does).
+
+**Next (the user decides).**
+- Step 5: the full 40-case bench protocol with depth bias at cap 3 (cap 4 only where the truth needs
+  it: s708, s710) and `--unexplained-junction-penalty 1`, into a new `BENCH_NESTED_OUT`. That is
+  Gurobi, about 2 h at `%1`.
+- **Open question:** a per-case cap. The bench protocol passes one `BENCH_NESTED_EXTRA` to every
+  case, so cap 4 for s708 and s710 only needs a per-case option, e.g. in `run_case.py`'s case
+  options.
+
+## Step 5 submitted (2026-11-13): the full bench with depth bias + prior, Slurm 32251111
+
+The bench protocol (`bench_nested.sbatch`: per case, a λ = 0 run and a `--keep-pool` run at λ = 0.1),
+all 40 cases, with:
+- `BENCH_NESTED_EXTRA="--depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1"`;
+- `BENCH_NESTED_CASE_EXTRA="ctrl_dup_s708=--max-multiplicity 4;ctrl_dup_s710=--max-multiplicity 4"`.
+  Cap 3 everywhere else; only these two true walks traverse a segment 4 times.
+  `BENCH_NESTED_CASE_EXTRA` is new in `run_case.py` (`CASE=OPTIONS;CASE=OPTIONS`; default none),
+  and `case.json` `extra` records both.
+
+```bash
+R=/n/fs/yubi-iw/runs/bench_nested_v2/depthbias_unexpl
+cd ~/RCK/results/bench_nested && BENCH_NESTED_OUT=$R/rck_runs BENCH_NESTED_EXTRA="..." BENCH_NESTED_CASE_EXTRA="..." \
+  sbatch --array=0-39%1 --time=02:00:00 --output=$R/logs/bench-nested_%A_%a.out bench_nested.sbatch
+```
+
+- **Array:** `0-39%1`, one task at a time (licence). 2 h per task; each MILP stops at 1800 s
+  (`--time-limit`).
+- **Runs:** `$R/rck_runs/<case>/{lambda_0,pool}/`. **Logs:** `$R/logs/`.
+- **Code:** the working tree, at 97db161 plus the uncommitted `run_case.py` change.
+  **Do not edit `rck/ecdna/` or `run_case.py` until the array has finished**: every task imports
+  them when it starts.
+- **Expected time:** about 2–4 h. Step 4's pool runs took 3 s to 32 min (s806), and each case adds a
+  λ = 0 run.
+
+### How to follow up when it has finished (all offline; no Gurobi)
+
+**0. Is it finished?** Check once, not in a loop: `squeue --me` is empty, or
+
+```bash
+sacct -j 32251111 -X -o JobID%14,State,Elapsed | awk 'NR>2{print $2}' | sort | uniq -c   # 40 COMPLETED?
+```
+
+**1. Did every run succeed, with the options?**
+
+```bash
+R=/n/fs/yubi-iw/runs/bench_nested_v2/depthbias_unexpl
+grep -h 'GurobiError' $R/logs/*.out | sed 's/.*GurobiError/GurobiError/' | sort | uniq -c   # retries are fine if the run then finished
+grep -l 'Traceback\|attempt 5 failed' $R/logs/*.out                                         # should print nothing
+for d in $R/rck_runs/*/; do [ -f $d/lambda_0/summary.json ] && [ -f $d/pool/pool/pool.json ] || echo "MISSING $d"; done
+grep -L 'unexplained-junction-penalty' $R/rck_runs/*/case.json                               # should print nothing
+grep -l 'max-multiplicity' $R/rck_runs/*/case.json                                           # exactly s708 and s710
+grep -h '"unexplained_junction_penalty"' $R/rck_runs/*/pool/pool/pool.json | sort | uniq -c  # 40 x 1.0
+```
+
+- **If a task failed or ran out of time:** read its log first. Resubmit only the missing task ids
+  with the same three environment variables and `--array=<ids>%1`; finished runs are skipped.
+  Ask the user first (Gurobi). A task that hit the 2 h limit needs a longer `--time`.
+
+**2. The tables, into their own folders** (this does not touch the repo's tables or README):
+
+```bash
+cd ~/RCK/results/bench_nested
+P=/n/fs/yubi-iw/conda/envs/gurobi-env/bin/python
+BENCH_NESTED_OUT=$R/rck_runs BENCH_NESTED_RESULTS=$R/rck_results $P collect.py > $R/collect.log 2>&1
+BENCH_NESTED_OUT=$R/rck_runs BENCH_NESTED_RESULTS=$R/rck_results_lambda0.2 $P collect.py --lambda 0.2 > $R/collect_lambda0.2.log 2>&1
+```
+
+- Each run takes about 3 min.
+- `collect.py` prints the re-ranking check against `results/step_sweep/` first. The demos ran with
+  other options, so mismatches there are expected.
+- The `rck_results/` run reports `collect.py`'s own λ choice ("Recommended `--step-penalty`") and the
+  "control / demo cases below λ = 0" row. The `_lambda0.2` run is for the comparison with the bench.
+
+**3. Per-case comparison at λ = 0.2**: bench, cap-4 rerun, step 4 and step 5 side by side.
+
+```bash
+$P - <<'PY'
+import pandas as pd
+R = "/n/fs/yubi-iw/runs/bench_nested_v2/depthbias_unexpl"
+cols = ["mean_composite", "n_species", "n_truth", "merged", "failure_stage"]
+old = pd.read_csv("pipeline.tsv", sep="\t").set_index("case")[cols]
+new = pd.read_csv(R + "/rck_results_lambda0.2/pipeline.tsv", sep="\t").set_index("case")[cols]
+t = old.join(new, lsuffix="_bench", rsuffix="_new")
+t["fixed"] = t.failure_stage_bench.notna() & t.failure_stage_new.isna()
+t["broken"] = t.failure_stage_bench.isna() & t.failure_stage_new.notna()
+s4 = pd.read_csv("/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/compare_lambda0.2.tsv", sep="\t").set_index("case")
+t = t.join(s4[["bias cap3, μ1"]].rename(columns={"bias cap3, μ1": "step4"}))
+pd.set_option("display.width", 250); print(t.to_string())
+print("failures: bench", int(t.failure_stage_bench.notna().sum()), "new", int(t.failure_stage_new.notna().sum()))
+print("fixed:", list(t.index[t.fixed])); print("broken:", list(t.index[t.broken]))
+t.to_csv(R + "/compare_bench_lambda0.2.tsv", sep="\t")
+PY
+```
+
+**4. The prior's effect within this run, and the offline consistency check.**
+
+```bash
+$P diag/unexpl_check.py $R/rck_runs --lambda 0.2 -o $R/unexpl_check_lambda0.2.tsv | tee $R/unexpl_check_lambda0.2.txt
+$P diag/unexpl_check.py $R/rck_runs --lambda 0    -o $R/unexpl_check_lambda0.tsv   | tee $R/unexpl_check_lambda0.txt
+```
+
+- The "default" row is depth bias at cap 3 **without** the prior: the same pools at μ = 0.
+- "rck mu=1" must equal each pool run's own `pool.json` `rank1["0.2"]`. The snippet in "Step 4
+  results" checks this.
+- The stored counts are the ones to trust. The script's counts come from the post-refit
+  `decompositions.tsv` and can differ (see "Step 4 results").
+- The λ = 0 row re-ranks the pool. The λ = 0 *runs* (`lambda_0/`) are what `collect.py` reports at
+  λ = 0.
+
+**5. (Optional) the species matrix at λ = 0.2.** This needs AA exports of the new runs.
+`collect.py --aa-metrics` with `BENCH_NESTED_AA_OUT=$R/aa` writes them (offline,
+`diag/aa_regression.py`). Then run
+`diag/species_matrix_bench.py --aa $R/aa --out $R/species_matrix --plot <cases>` for the remaining
+failures.
+
+### What to look for, in this order
+
+1. **Broken cases:** any bench case that passes in the bench and fails here, or any control or demo
+   more than 0.005 below its λ = 0 score ("control / demo cases below λ = 0" in `collect.log`).
+   - Expected broken: s402, s509, s603 and s706 (step 4: tie-breaks and a threshold edge, with the
+     right answer in the pool).
+   - Any other break is new. Diagnose it with `diag/grow_failures.py $R/rck_runs <case> --lambda 0.2`
+     (is the right answer in the pool, at what rank, is it a same-fit alternative?), and with
+     `flow_segments.tsv` (`depth_bias` near ±0.3?).
+   - 7 bench cases were not in step 4 and are tested with these options for the first time: s103,
+     s202, s304, s403, s505, s601 and s702.
+2. **The failure count at λ = 0.2.** Expected about 6 of 32 (bench 17): s402, s509, s603, s706, plus
+   s505 and s403 if they still fail.
+   - Expected fixed: s703, s708, s710, s502, s507, s508, s308, s301, s307 and s801–s806.
+   - **Tie-break caveat:** step 4 was the same configuration but a separate solve. A case can come
+     out differently through solver ties (s703 and s706 have done so). A difference from step 4 with
+     the same pool size is a tie-break, not a regression.
+3. **The λ rule.** Which `--step-penalty` does `collect.py` recommend now, and is the plateau flat?
+   With the prior removing the leftover-merge failures, λ may matter less. Compare the per-λ means
+   with the bench's (0.7713 at λ 0 … 0.8542 at λ 0.5).
+4. **The depth bias.** Windows at ±0.3 per case (`flow_segments.tsv` `depth_bias`). In the cap-4
+   rerun only s710 and demo4_amp0 reached it.
+5. **The scale stage.** s104's `scale` flag (ratio 1.59) stays, because it reads the uncorrected
+   depth. It only labels a failure.
+6. **Runtime.** `collect.py`'s "Compute" line, against 7030 s for the bench and 24 579 s for the
+   cap-4 rerun.
+
+### Decision after the check (the user's)
+
+- **If nothing new breaks and the count is about 6:** propose adopting these options as the bench
+  configuration. That means:
+  - rerunning `collect.py` into the repo folder (no `BENCH_NESTED_RESULTS`), which rewrites
+    `bench_sweep.tsv`, `pipeline.tsv` and the README results block. **Only with the user's decision.**
+  - recording the options in README.md, `bench_nested.sbatch`'s comment and docs/ecDNA.md §5.7;
+  - `collect.py --aa-metrics` for the aa_eval tables;
+  - **leaving RCK's defaults off** unless the user decides otherwise.
+- **If cases break:** diagnose them as in point 1 before any bench change.
+- **Still open, whatever the result:**
+  - the tie-break class (s402, s509, s706): seed repeats, or a rule for same-fit alternatives;
+  - s603's threshold edge (a refit weight exactly at max(1, 0.1 × heaviest));
+  - s505 (one 2-copy leftover at depth-bias cost 1);
+  - s403 (a ploidy-class scale error);
+  - per-case θ;
+  - how a per-case cap would be chosen outside the bench (from the subgraph?).

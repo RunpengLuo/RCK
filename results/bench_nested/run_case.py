@@ -48,6 +48,22 @@ COMMON = ["--no-plots", "--threads", os.environ.get("SLURM_CPUS_PER_TASK", "4"),
 # BENCH_NESTED_EXTRA adds rck-ecdna options to every run of every case (default none), e.g. a whole-bench
 # rerun with "--depth-bias-window 200000 --depth-bias-cost 1 --max-multiplicity 4" into its own BENCH_NESTED_OUT
 EXTRA = os.environ.get("BENCH_NESTED_EXTRA", "").split()
+# BENCH_NESTED_CASE_EXTRA adds options to named cases only (default none): "CASE=OPTIONS;CASE=OPTIONS", e.g.
+# "ctrl_dup_s708=--max-multiplicity 4;ctrl_dup_s710=--max-multiplicity 4" (their true walks traverse a segment 4 times)
+
+
+def parse_case_extra(text):
+    """{case: [options]} from BENCH_NESTED_CASE_EXTRA's "CASE=OPTIONS;CASE=OPTIONS"."""
+    out = {}
+    for item in filter(None, (x.strip() for x in text.split(";"))):
+        name, sep, opts = item.partition("=")
+        if not sep or not name.strip():
+            raise SystemExit("BENCH_NESTED_CASE_EXTRA: expected CASE=OPTIONS, got {i!r}".format(i=item))
+        out[name.strip()] = opts.split()
+    return out
+
+
+CASE_EXTRA = parse_case_extra(os.environ.get("BENCH_NESTED_CASE_EXTRA", ""))
 
 # the step sweep's cases (results/step_sweep/sweep.py), unchanged
 REGRESSION = [
@@ -101,7 +117,8 @@ def rck_run(case, outdir, extra, pool=False):
     if done(outdir, pool):
         print("done already: " + outdir, flush=True)
         return True
-    argv = ["--subgraph-dir", case["subgraph"], "--truth-dir", case["truth"], "--outdir", outdir] + COMMON + case["options"] + EXTRA + extra
+    argv = (["--subgraph-dir", case["subgraph"], "--truth-dir", case["truth"], "--outdir", outdir] + COMMON + case["options"] + EXTRA
+            + CASE_EXTRA.get(case["name"], []) + extra)
     for attempt in range(1, RETRIES + 1):
         started = time.time()
         try:
@@ -141,7 +158,7 @@ def run_case(key):
                                                      "--pool-lambdas"] + [str(x) for x in LAMBDAS], pool=True)
     release_licence()
     with open(os.path.join(base, "case.json"), "w") as handle:
-        json.dump(dict(case, extra=EXTRA), handle, indent=2)
+        json.dump(dict(case, extra=EXTRA + CASE_EXTRA.get(case["name"], [])), handle, indent=2)
     return 0 if ok else 1
 
 

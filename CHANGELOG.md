@@ -541,6 +541,23 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
   split with a discordant edge at the boundary fails both, and `merge_benign_splits` on its own.
 - **`aa_eval`: `aa_eval.json` `info.mixture_graphs`**, the truth mixture graph files a run was
   scored against.
+- **`aa_eval`: per-cell species matrix, `aa_species_matrix.tsv`** (new module
+  `rck.ecdna.species_matrix`; docs/pipeline/evaluation.md §4.7, "Per-cell species matrix").
+  - **Layout:** one cell per (in-scope truth species, inferred species). Rows are ordered by truth
+    copy number; columns are the strict rank-1 species by copy number, then the `low_weight` ones.
+  - **Cell:** (J_seg, J_adj).
+    - J_seg is §3.1's base-pair Jaccard: `segment_jaccard` blind, `haplotype_jaccard` phased.
+    - J_adj is the Jaccard index over M2's novel-adjacency items, NaN for an empty union. Strict
+      columns use exactly M2's item sets; `low_weight` adjacencies are added afterwards and never
+      take a strict item.
+  - **Per cell also:** `exact_cycle`, the pair form `j_adj_pairs`, the copy-weighted `j_seg_cn`,
+    the item counts, and `merge_column` / `split_row` flags over the strict columns.
+  - **Options:** `aa_eval --case` names the answer; `--matrix-plot` (or
+    `python -m rck.ecdna.species_matrix OUTDIR`) draws a two-panel heatmap.
+  - Existing outputs are unchanged.
+  - Tests: `tests/ecdna/test_species_matrix.py` (14, no Gurobi).
+  - Bench check: `results/bench_nested/diag/species_matrix_bench.py`. At λ = 0.2, the 55
+    `exact_cycle` cells are all (1, 1), up to J_seg ≥ 0.99996 (the AA export's 1 bp convention).
 - **Graph route (Task 2): one AA breakpoint graph for CoRAL 3.1.1, CycleExtractor, original RCK and
   RCK-ecDNA** (`results/graph_route/`, docs/ecDNA.md section 6 "Graph route"):
   - `aa_format.write_graph`, a graph writer both CoRAL 3.1.1 and CycleExtractor 1.0.0 read (no

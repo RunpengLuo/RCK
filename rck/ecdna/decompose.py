@@ -35,6 +35,17 @@ of the best objective (and never less than ``pool_gap``), so that the alternativ
 chooses between, which can need more species, reach the ranking. ``multiplicity_penalty``
 remains in the MILP as a much smaller tie-break on all edge traversals.
 
+**Unexplained junctions (``unexplained_junction_penalty``, opt-in).** A nested species with a few
+copies under a heavy outer one can be explained at the same fit by "outer species + 1-3 copy
+leftovers": the leftovers, flagged low_weight, carry the nested species' own novel junctions, and
+the ranking, which counts significant species only, prefers the decomposition with fewer of
+them. An *unexplained junction* is a novel junction whose ecDNA flow is at least the
+decomposition's low_weight threshold, but which no significant species uses
+(:func:`unexplained_junctions`). Each adds ``unexplained_junction_penalty`` to the structure
+cost, in the ranking and in the pool pruning (:func:`pool_keeps`), and like ``step_penalty`` it
+widens the pool. At 1 an unexplained junction costs as much as a species. Pool records store
+the count, so :mod:`rck.ecdna.rerank` can re-rank at any penalty offline.
+
 **Ambiguity.** After ranking, the top decomposition is checked for alternatives that the data
 cannot tell apart (:meth:`CycleDecomposer.same_fit_alternatives`). The ecDNA flow covered by
 each edge is fixed to the top decomposition's, two species may not share the same support (which
@@ -102,6 +113,7 @@ class DecompositionParams:
     species_penalty: float = 1.0
     multiplicity_penalty: float = 1e-4  # tie-break: prefer the walk with fewer edge traversals
     step_penalty: float = 0.0  # cost per segment traversal of a species (walk complexity); 0 = tie-break only
+    unexplained_junction_penalty: float = 0.0  # cost per novel junction with species-size flow no significant species uses; 0 = off
     ambiguity_window: float = 2.0  # objective window for same-fit alternatives to the top decomposition; 0 = off
     ambiguity_pool: int = 50  # same-fit alternatives enumerated (Gurobi pool size)
     min_species_weight: Optional[int] = None  # species below this weight are flagged low_weight
@@ -177,6 +189,7 @@ class Decomposition:
     data_objective_int: Optional[float] = None  # the same with the integer weights
     pruned: List[Dict[str, object]] = field(default_factory=list)  # species the refit dropped
     steps: int = 0  # segment traversals of the significant species
+    unexplained: int = 0  # unexplained junctions (:func:`unexplained_junctions`)
     ambiguity: Optional[Dict[str, object]] = None  # same-fit alternatives (top decomposition only)
 
     @property
@@ -483,8 +496,8 @@ class CycleDecomposer:
 
     def solve(self) -> List[Tuple[float, List[Species]]]:
         """Raw (objective, species) solutions, best first, deduplicated and validated. With
-        ``step_penalty`` > 0 the pool is the widened one; :func:`prune_pool` then drops what the
-        ranking prior cannot prefer."""
+        ``step_penalty`` or ``unexplained_junction_penalty`` > 0 the pool is the widened one;
+        :func:`prune_pool` then drops what the ranking prior cannot prefer."""
         import gurobipy as gp
 
         if not self.edges:
@@ -507,7 +520,7 @@ class CycleDecomposer:
             m.Params.PoolSearchMode = 2
             m.Params.PoolSolutions = max(20, 4 * p.num_alternatives)
             m.Params.PoolGap = p.pool_gap
-            if p.step_penalty > 0:
+            if _widened(p):
                 # the ranking prior may prefer solutions with more species: keep an absolute window
                 m.Params.PoolGap = GRB_INFINITY
                 m.Params.PoolGapAbs = p.ambiguity_window if p.ambiguity_window > 0 else 2.0 * p.species_penalty
@@ -533,7 +546,7 @@ class CycleDecomposer:
                     break
                 objective = float(m.ObjVal)
                 window = abs(best) * p.pool_gap if best is not None else 0.0
-                if p.step_penalty > 0:
+                if _widened(p):
                     window = max(window, p.ambiguity_window if p.ambiguity_window > 0 else 2.0 * p.species_penalty)
                 if best is None:
                     best = objective
@@ -621,14 +634,50 @@ def classify(species: Sequence[Species], params: DecompositionParams) -> Tuple[s
     return "mixed", fraction
 
 
-def _flag_low_weight(species: List[Species], params: DecompositionParams) -> None:
-    if not species:
-        return
+def _low_weight_threshold(species: Sequence[Species], params: DecompositionParams) -> float:
+    """The weight below which a species of this decomposition is flagged low_weight."""
     threshold = params.min_species_weight
     if threshold is None:  # for integer weights this is the same as ceil(frac x heaviest)
         threshold = max(1.0, params.min_species_weight_frac * max(s.weight for s in species))
+    return float(threshold)
+
+
+def _flag_low_weight(species: List[Species], params: DecompositionParams) -> None:
+    if not species:
+        return
+    threshold = _low_weight_threshold(species, params)
     for s in species:
         s.low_weight = len(species) > 1 and s.weight < threshold
+
+
+def _widened(params: DecompositionParams) -> bool:
+    """Whether a ranking prior can prefer solutions the plain pool would leave out (more species)."""
+    return params.step_penalty > 0 or params.unexplained_junction_penalty > 0
+
+
+def novel_junction_flow(graph: ECGraph, flow: Dict[EdgeKey, int]) -> Dict[str, float]:
+    """ecDNA flow of every novel junction (adjacency id), summed over its phased edge keys."""
+    out: Dict[str, float] = {}
+    for key, value in flow.items():
+        if key[0] == ADJ and key[1] in graph.adjacencies and graph.adjacencies[key[1]].kind == NOVEL:
+            out[key[1]] = out.get(key[1], 0.0) + float(value)
+    return out
+
+
+def unexplained_junctions(species: Sequence[Species], junction_flow: Dict[str, float], params: DecompositionParams) -> int:
+    """Novel junctions whose ecDNA flow (``junction_flow``, :func:`novel_junction_flow`) is at least
+    the decomposition's low_weight threshold, but which no significant species uses.
+
+    Such a junction carries a species' worth of flow that only low_weight leftovers explain: the
+    signature of a nested species lost to "outer species + leftovers". Low_weight is decided on
+    a copy of ``species`` (their weights as given: integer for pool solutions)."""
+    if not species or not junction_flow:
+        return 0
+    flagged = [replace(s) for s in species]
+    _flag_low_weight(flagged, params)
+    threshold = _low_weight_threshold(flagged, params)
+    used = {k[1] for s in flagged if not s.low_weight for k in s.counts if k[0] == ADJ}
+    return sum(1 for aid, f in junction_flow.items() if f >= threshold - 1e-9 and aid not in used)
 
 
 def _steps(species: Sequence[Species]) -> int:
@@ -654,38 +703,55 @@ def _significant_steps(species: Sequence[Species], params: DecompositionParams) 
     return len(significant), _steps(significant)
 
 
-def structure_cost(species: Sequence[Species], params: DecompositionParams) -> float:
-    """species_penalty x significant species + step_penalty x their steps (the ranking prior)."""
+def structure_cost(species: Sequence[Species], params: DecompositionParams, unexplained: int = 0) -> float:
+    """species_penalty x significant species + step_penalty x their steps + unexplained_junction_penalty
+    x ``unexplained`` (:func:`unexplained_junctions`): the ranking prior."""
     significant = [s for s in species if not s.low_weight]
-    return params.species_penalty * len(significant) + params.step_penalty * _steps(significant)
+    return (params.species_penalty * len(significant) + params.step_penalty * _steps(significant)
+            + params.unexplained_junction_penalty * unexplained)
 
 
-def pool_keeps(objective: float, steps: int, best_objective: float, best_steps: int, params: DecompositionParams) -> bool:
-    """Whether the ranking keeps a widened-pool solution (``step_penalty`` > 0): within ``pool_gap``
-    of the best objective, or cheaper in steps than the best by more than the objective lost.
-    ``steps`` are the significant species' steps. With ``step_penalty`` 0 only the first test
-    remains, which is the pool a λ = 0 run keeps (up to Gurobi's own PoolGap bookkeeping)."""
+def _prior(steps: int, unexplained: int, params: DecompositionParams) -> float:
+    """The structure-cost terms other than the species count."""
+    return params.step_penalty * steps + params.unexplained_junction_penalty * unexplained
+
+
+def pool_keeps(objective: float, steps: int, best_objective: float, best_steps: int, params: DecompositionParams,
+               unexplained: int = 0, best_unexplained: int = 0) -> bool:
+    """Whether the ranking keeps a widened-pool solution: within ``pool_gap`` of the best
+    objective, or cheaper in the prior (``step_penalty`` x steps + ``unexplained_junction_penalty``
+    x unexplained junctions) than the best by more than the objective lost. ``steps`` are the
+    significant species' steps. With both penalties 0 only the first test remains, which is the
+    pool a λ = 0 run keeps (up to Gurobi's own PoolGap bookkeeping)."""
     return (objective <= best_objective + abs(best_objective) * params.pool_gap + 1e-6
-            or params.step_penalty * steps + objective - best_objective < params.step_penalty * best_steps)
+            or _prior(steps, unexplained, params) + objective - best_objective < _prior(best_steps, best_unexplained, params))
 
 
-def prune_pool(solutions: List[Tuple[float, List[Species]]], params: DecompositionParams) -> List[Tuple[float, List[Species]]]:
-    """The widened pool (``step_penalty`` > 0) is for the ranking prior; keep what it can prefer
-    (:func:`pool_keeps`). Solutions are (objective, species), best first."""
-    if params.step_penalty <= 0 or len(solutions) <= 1:
+def prune_pool(solutions: List[Tuple[float, List[Species]]], params: DecompositionParams,
+               junction_flow: Optional[Dict[str, float]] = None) -> List[Tuple[float, List[Species]]]:
+    """The widened pool is for the ranking prior; keep what it can prefer (:func:`pool_keeps`).
+    Solutions are (objective, species), best first. ``junction_flow`` (:func:`novel_junction_flow`)
+    is needed when ``unexplained_junction_penalty`` > 0."""
+    if not _widened(params) or len(solutions) <= 1:
         return solutions
+
+    def ux(species):
+        return unexplained_junctions(species, junction_flow or {}, params) if params.unexplained_junction_penalty > 0 else 0
+
     best, best_species = solutions[0]
-    best_steps = _significant_steps(best_species, params)[1]
-    return [t for t in solutions if pool_keeps(t[0], _significant_steps(t[1], params)[1], best, best_steps, params)]
+    best_steps, best_ux = _significant_steps(best_species, params)[1], ux(best_species)
+    return [t for t in solutions
+            if pool_keeps(t[0], _significant_steps(t[1], params)[1], best, best_steps, params, ux(t[1]), best_ux)]
 
 
 def ranking_key(residual: float, significant: int, n_species: int, steps: int, objective: float,
-                params: DecompositionParams) -> Tuple:
+                params: DecompositionParams, unexplained: int = 0) -> Tuple:
     """Sort key of a decomposition: residual, structure cost (``species_penalty`` per significant
-    species plus ``step_penalty`` per step of those species), significant species, all species,
-    objective. Ties keep the pool order. With ``rank_residual`` ``sum`` the first key is residual
-    plus structure cost, so that a residual cheaper than a species can win (noise tolerance)."""
-    cost = params.species_penalty * significant + params.step_penalty * steps
+    species plus ``step_penalty`` per step of those species plus ``unexplained_junction_penalty``
+    per unexplained junction), significant species, all species, objective. Ties keep the pool
+    order. With ``rank_residual`` ``sum`` the first key is residual plus structure cost, so that a
+    residual cheaper than a species can win (noise tolerance)."""
+    cost = params.species_penalty * significant + _prior(steps, unexplained, params)
     if params.rank_residual == "sum":
         return round(residual + cost, 6), round(cost, 6), significant, n_species, round(objective, 9)
     if params.rank_residual != "first":
@@ -699,8 +765,9 @@ class PoolRecord:
     re-ranking at other ``step_penalty`` values (:mod:`rck.ecdna.rerank`).
 
     ``entries`` hold, per pool solution in pool order, what the ranking and the pruning read
-    (objective, residual, species, significant species and their steps, from the integer
-    weights). ``decompositions`` are the same solutions annotated (rank = pool index + 1), to be
+    (objective, residual, species, significant species and their steps, and the unexplained
+    junctions, from the integer weights; the count does not depend on the penalties).
+    ``decompositions`` are the same solutions annotated (rank = pool index + 1), to be
     refitted and evaluated like ranked ones. ``same_fit`` maps a pool index to the raw same-fit
     alternatives of that solution (:func:`same_fit_structures`), for every solution that is rank 1
     at some λ of ``lambdas``."""
@@ -717,14 +784,16 @@ def rank_pool(entries: Sequence[Dict[str, object]], params: DecompositionParams)
     :func:`pool_keeps` relative to the first (best) entry, then :func:`ranking_key`. This is what
     :func:`decompose_with_pool` ranks for that λ when ``entries`` come from a widened pool (any
     λ > 0 gives the same pool). At λ = 0 it keeps the solutions within ``pool_gap``, which
-    emulates the narrower pool of a λ = 0 run; ties there may come out in another order."""
+    emulates the narrower pool of a λ = 0 run; ties there may come out in another order. Entries
+    without ``unexplained`` (pools written before the field existed) count 0."""
     if not entries:
         return []
     best = entries[0]
     kept = [e for e in entries if len(entries) <= 1
-            or pool_keeps(e["objective"], e["steps"], best["objective"], best["steps"], params)]
+            or pool_keeps(e["objective"], e["steps"], best["objective"], best["steps"], params,
+                          e.get("unexplained", 0), best.get("unexplained", 0))]
     kept = sorted(kept, key=lambda e: ranking_key(e["residual"], e["n_significant"], e["n_species"], e["steps"],
-                                                  e["objective"], params))
+                                                  e["objective"], params, e.get("unexplained", 0)))
     return [int(e["index"]) for e in kept]
 
 
@@ -764,46 +833,50 @@ def decompose_with_pool(graph: ECGraph, flow: Dict[EdgeKey, int], params: Option
         decomposer = CycleDecomposer(graph, flow, params, paths)
         pool = decomposer.solve()
     record = _pool_record(graph, flow, params, paths, decomposer, pool, pool_lambdas) if pool_lambdas is not None else None
-    raw = prune_pool(pool, params)
+    jflow = novel_junction_flow(graph, flow)
+    raw = prune_pool(pool, params, jflow)
     candidates = []
     for objective, species in raw:
         species = sorted(species, key=lambda s: (-s.weight, -sum(s.counts.values())))
         _flag_low_weight(species, params)
         significant = [s for s in species if not s.low_weight]
-        key = ranking_key(decomposer._residual(species), len(significant), len(species), _steps(significant), objective, params)
-        candidates.append((key, objective, species))
+        ux = unexplained_junctions(species, jflow, params)
+        key = ranking_key(decomposer._residual(species), len(significant), len(species), _steps(significant), objective, params, ux)
+        candidates.append((key, objective, species, ux))
     candidates.sort(key=lambda c: c[0])
     result = []
-    for rank, (_, objective, species) in enumerate(candidates[:max(1, params.num_alternatives)], start=1):
-        result.append(_decomposition(graph, params, paths, decomposer, rank, objective, species))
+    for rank, (_, objective, species, ux) in enumerate(candidates[:max(1, params.num_alternatives)], start=1):
+        result.append(_decomposition(graph, params, paths, decomposer, rank, objective, species, ux))
     if result and result[0].species and params.ambiguity_window > 0:
         result[0].ambiguity = ambiguity_report(graph, flow, params, paths, result)
     return result, record
 
 
-def _decomposition(graph, params, paths, decomposer, rank, objective, species) -> Decomposition:
+def _decomposition(graph, params, paths, decomposer, rank, objective, species, unexplained=0) -> Decomposition:
     annotated = [_annotate(graph, s, params, paths) for s in species]
     call, fraction = classify(annotated, params)
     total, explained = explained_reads(graph, annotated, decomposer.reads)
     return Decomposition(rank=rank, objective=objective, residual=decomposer._residual(annotated), species=annotated,
                          call=call, circular_fraction=fraction, reads_total=total, reads_explained=explained,
-                         steps=_steps([s for s in annotated if not s.low_weight]))
+                         steps=_steps([s for s in annotated if not s.low_weight]), unexplained=unexplained)
 
 
 def _pool_record(graph, flow, params, paths, decomposer, pool, lambdas) -> PoolRecord:
     """Record the unpruned pool: entries, annotated decompositions, and the same-fit alternatives
     of every solution that is rank 1 at some λ in ``lambdas``."""
     entries, decompositions, species_by_index = [], [], []
+    jflow = novel_junction_flow(graph, flow)
     for index, (objective, species) in enumerate(pool):
         species = sorted((replace(s, counts=dict(s.counts)) for s in species), key=lambda s: (-s.weight, -sum(s.counts.values())))
         _flag_low_weight(species, params)
         significant = [s for s in species if not s.low_weight]
         entries.append({"index": index, "objective": objective, "residual": round(decomposer._residual(species), 6),
                         "n_species": len(species), "n_significant": len(significant), "steps": _steps(significant),
+                        "unexplained": unexplained_junctions(species, jflow, params),
                         "weights_int": [s.weight for s in species], "low_weight": [s.low_weight for s in species]})
         species_by_index.append(species)
         decompositions.append(_decomposition(graph, params, paths, decomposer, index + 1, objective,
-                                             [replace(s, counts=dict(s.counts)) for s in species]))
+                                             [replace(s, counts=dict(s.counts)) for s in species], entries[-1]["unexplained"]))
     rank1 = {}
     for lam in lambdas:
         order = rank_pool(entries, replace(params, step_penalty=float(lam)))
@@ -814,7 +887,8 @@ def _pool_record(graph, flow, params, paths, decomposer, pool, lambdas) -> PoolR
         for index in sorted(set(rank1.values())):
             if species_by_index[index]:
                 same_fit[index] = same_fit_structures(graph, flow, params, paths, species_by_index[index])
-    settings = {k: getattr(params, k) for k in ("species_penalty", "step_penalty", "pool_gap", "ambiguity_window",
+    settings = {k: getattr(params, k) for k in ("species_penalty", "step_penalty", "unexplained_junction_penalty",
+                                                "pool_gap", "ambiguity_window",
                                                 "num_alternatives", "max_species", "max_multiplicity", "mode",
                                                 "min_species_weight", "min_species_weight_frac", "adj_residual_weight",
                                                 "seg_residual_scale", "residual_mode", "residual_sigma", "rank_residual")}
@@ -830,6 +904,7 @@ def same_fit_structures(graph: ECGraph, flow: Dict[EdgeKey, int], params: Decomp
     significant structures other than the top one's, best objective first. Independent of
     ``step_penalty``: :func:`ambiguity_summary` turns them into the report for a given λ."""
     mine = _structures(top_species)
+    jflow = novel_junction_flow(graph, flow)
     alts, seen = [], {mine}
     for objective, species in CycleDecomposer(graph, flow, params, paths).same_fit_alternatives(top_species):
         species = sorted(species, key=lambda s: (-s.weight, -sum(s.counts.values())))
@@ -839,30 +914,37 @@ def same_fit_structures(graph: ECGraph, flow: Dict[EdgeKey, int], params: Decomp
         seen.add(_structures(species))
         significant = [s for s in species if not s.low_weight]
         alts.append({"objective": objective, "n_species": len(significant), "steps": _steps(significant),
+                     "unexplained": unexplained_junctions(species, jflow, params),
                      "weights": [s.weight for s in significant], "structures": _structures(species)})
     return alts
 
 
 def ambiguity_summary(top_objective: float, top_steps: int, top_n_species: int, alts: Sequence[Dict[str, object]],
                       params: DecompositionParams, ranks: Optional[Sequence[Optional[int]]] = None,
-                      warn: bool = True) -> Dict[str, object]:
+                      warn: bool = True, top_unexplained: int = 0) -> Dict[str, object]:
     """The ambiguity report of a top decomposition from its same-fit alternatives
-    (:func:`same_fit_structures`) at ``params.step_penalty``; ``ranks`` gives each alternative's
-    rank in the ranked list, if listed."""
-    top_score = top_objective + params.step_penalty * top_steps
+    (:func:`same_fit_structures`) at ``params.step_penalty`` and ``unexplained_junction_penalty``;
+    ``ranks`` gives each alternative's rank in the ranked list, if listed. Alternatives without
+    ``unexplained`` (recorded before the field existed) count 0."""
+    top_score = top_objective + _prior(top_steps, top_unexplained, params)
     rows = []
     for i, a in enumerate(alts):
-        score = a["objective"] + params.step_penalty * a["steps"]
+        ux = a.get("unexplained", 0)
+        score = a["objective"] + _prior(a["steps"], ux, params)
         rows.append({"objective": round(a["objective"], 6), "gap": round(score - top_score, 6),
-                     "n_species": a["n_species"], "steps": a["steps"], "rank": ranks[i] if ranks else None,
+                     "n_species": a["n_species"], "steps": a["steps"], "unexplained": ux, "rank": ranks[i] if ranks else None,
                      "weights": list(a["weights"])})
     report = {"ambiguous": bool(rows), "window": params.ambiguity_window, "n_alternatives": len(rows),
               "n_species": top_n_species, "steps": top_steps, "alternatives": rows[:10]}
+    if params.unexplained_junction_penalty > 0:
+        report["unexplained"] = top_unexplained
     if rows:
         closest = min(rows, key=lambda a: abs(a["gap"]))
         report["gap"] = closest["gap"]
         if closest["n_species"] != report["n_species"]:
             report["decided_by"] = "species_penalty"
+        elif closest["unexplained"] != top_unexplained and params.unexplained_junction_penalty > 0:
+            report["decided_by"] = "unexplained_junction_penalty"
         elif closest["steps"] != top_steps and params.step_penalty > 0:
             report["decided_by"] = "step_penalty"
         elif closest["steps"] != top_steps:
@@ -880,14 +962,16 @@ def ambiguity_report(graph: ECGraph, flow: Dict[EdgeKey, int], params: Decomposi
     """Alternatives to the top decomposition with exactly the same fit to the flow (module docstring).
 
     ``gap`` is an alternative's score minus the top decomposition's, where the score is the MILP
-    objective plus ``step_penalty`` x the steps of the significant species: positive means the
+    objective plus ``step_penalty`` x the steps of the significant species plus
+    ``unexplained_junction_penalty`` x the unexplained junctions: positive means the
     priors (and reads) prefer the top one by that much, negative that the top one was chosen by
     the ranking (fewer significant species) over a lower score. ``decided_by`` names what
     separates the top decomposition from its closest alternative."""
     top = ranked[0]
     alts = same_fit_structures(graph, flow, params, paths, top.species)
     ranks = [next((d.rank for d in ranked if _structures(d.species) == a["structures"]), None) for a in alts]
-    return ambiguity_summary(top.objective, top.steps, sum(1 for s in top.species if not s.low_weight), alts, params, ranks)
+    return ambiguity_summary(top.objective, top.steps, sum(1 for s in top.species if not s.low_weight), alts, params, ranks,
+                             top_unexplained=top.unexplained)
 
 
 def explained_reads(graph: ECGraph, species: Sequence[Species], reads: Sequence[ReadConstraint]) -> Tuple[float, float]:

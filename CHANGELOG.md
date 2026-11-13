@@ -465,6 +465,19 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
   - `flow_segments.tsv` and `summary.json` report the bias only when the option is on.
   - Tests: `tests/ecdna/test_depth_bias.py`.
 
+- **`rck-ecdna --unexplained-junction-penalty μ`** (opt-in, default 0 = off). Adds μ per
+  *unexplained junction* to the decomposition's structure cost: a novel junction whose ecDNA flow is
+  at least the decomposition's low_weight threshold but which no significant species uses, the
+  signature of a nested species lost to low_weight leftovers (docs/ecDNA.md §5.7).
+  - Applied in the ranking (`ranking_key`) and in the pool pruning (`pool_keeps`, `prune_pool`); μ > 0
+    widens the pool as `--step-penalty` does.
+  - `decompose.novel_junction_flow`, `decompose.unexplained_junctions`; `Decomposition.unexplained`,
+    `summary.json` `decompositions[].unexplained`; the ambiguity report's gap includes the term and
+    `decided_by` can be `unexplained_junction_penalty`.
+  - Pools (`--keep-pool`) store each entry's count (`pool.tsv` column `unexplained`), and
+    `python -m rck.ecdna.rerank --unexplained-junction-penalty μ` re-ranks with it; older pools count 0.
+  - Tests: `tests/ecdna/test_unexplained_junctions.py` (one solve test needs Gurobi).
+
 ### Changed
 
 - **Environments, tools and run outputs now live in project space, `/n/fs/yubi-iw`** (2026-11-04;

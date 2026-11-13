@@ -105,6 +105,10 @@ def build_parser() -> argparse.ArgumentParser:
     dc.add_argument("--step-penalty", type=float, default=0.0,
                     help="Cost per segment traversal of a species (walk complexity): favours separate simple walks over "
                          "walks that re-traverse shared sequence, e.g. merged nested cycles. 0 = tie-break only")
+    dc.add_argument("--unexplained-junction-penalty", type=float, default=0.0,
+                    help="Cost per unexplained junction: a novel junction whose ecDNA flow is at least the low_weight "
+                         "threshold but that no significant species uses (a nested species lost to low_weight leftovers). "
+                         "Applied in the ranking and the pool pruning; 1 = one species. 0 = off")
     dc.add_argument("--ambiguity-window", type=float, default=2.0,
                     help="Report alternatives to the top decomposition that fit the flow exactly as well and whose objective "
                          "is within this window (summary.json ambiguity); 0 = off")
@@ -252,6 +256,7 @@ def run(args) -> Dict[str, object]:
     paths = read_paths(inputs["paths"], graph) if inputs["paths"] else None
     dec_params = DecompositionParams(max_species=args.max_species, max_multiplicity=args.max_multiplicity,
                                      species_penalty=args.species_penalty, step_penalty=getattr(args, "step_penalty", 0.0),
+                                     unexplained_junction_penalty=getattr(args, "unexplained_junction_penalty", 0.0),
                                      ambiguity_window=getattr(args, "ambiguity_window", 2.0), min_species_weight=args.min_species_weight,
                                      min_species_weight_frac=args.min_species_weight_frac, min_ecdna_copies=args.min_ecdna_copies,
                                      ecdna_call_fraction=args.ecdna_call_fraction, num_alternatives=args.num_alternatives,

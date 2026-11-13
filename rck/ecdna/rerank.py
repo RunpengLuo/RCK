@@ -15,6 +15,9 @@ penalty acts in the ranking only, and every λ > 0 widens the pool to the same
   on the recorded same-fit alternatives. They are missing for a λ whose rank-1 solution was not
   rank 1 at any λ of ``--pool-lambdas``.
 
+``--unexplained-junction-penalty`` re-ranks with that penalty (default: the pool's run's). Pools
+written before the unexplained-junction count existed have none, and count 0.
+
 λ = 0 is emulated: a λ = 0 run solves a narrower pool (``--pool-gap`` relative, fewer
 solutions), here approximated by the solutions within ``--pool-gap`` of the best. Solutions that
 tie in the ranking may then come out in another order (``source`` says ``pool, λ=0 emulated``).
@@ -46,10 +49,14 @@ def load_pool(run_dir: str) -> Dict[str, object]:
         return json.load(handle)
 
 
-def pool_params(pool: Dict[str, object], step_penalty: float) -> DecompositionParams:
-    """The ranking settings of the pool's run, at ``step_penalty``."""
+def pool_params(pool: Dict[str, object], step_penalty: float,
+                unexplained_junction_penalty: Optional[float] = None) -> DecompositionParams:
+    """The ranking settings of the pool's run, at ``step_penalty`` (and ``unexplained_junction_penalty``
+    if given)."""
     p = pool["params"]
+    mu = p.get("unexplained_junction_penalty", 0.0) if unexplained_junction_penalty is None else unexplained_junction_penalty
     return DecompositionParams(species_penalty=float(p["species_penalty"]), step_penalty=float(step_penalty),
+                               unexplained_junction_penalty=float(mu),
                                pool_gap=float(p["pool_gap"]), ambiguity_window=float(p["ambiguity_window"]),
                                rank_residual=str(p.get("rank_residual", "first")))
 
@@ -72,7 +79,7 @@ def _evaluation(run_dir: str) -> Optional[pd.DataFrame]:
         return None
 
 
-def rerank(run_dir: str, lambdas: Sequence[float]) -> pd.DataFrame:
+def rerank(run_dir: str, lambdas: Sequence[float], unexplained_junction_penalty: Optional[float] = None) -> pd.DataFrame:
     """One row per λ: the rank-1 pool solution, its refitted significant species, its composites
     per truth species and the ambiguity fields, as a run at that λ reports them."""
     pool = load_pool(run_dir)
@@ -81,7 +88,7 @@ def rerank(run_dir: str, lambdas: Sequence[float]) -> pd.DataFrame:
     frame = _evaluation(run_dir)
     rows = []
     for lam in lambdas:
-        params = pool_params(pool, lam)
+        params = pool_params(pool, lam, unexplained_junction_penalty)
         order = rank_pool(entries, params)
         row = {"step_penalty": float(lam), "source": "pool" if lam > 0 else "pool, λ=0 emulated"}
         if not order:
@@ -100,7 +107,8 @@ def rerank(run_dir: str, lambdas: Sequence[float]) -> pd.DataFrame:
             row["mean_composite"] = round(float(scored["composite"].mean()), 4) if len(scored) else None
         alts = pool["same_fit"].get(str(top["index"]))
         if params.ambiguity_window > 0 and alts is not None:
-            report = ambiguity_summary(top["objective"], top["steps"], top["n_significant"], alts, params, warn=False)
+            report = ambiguity_summary(top["objective"], top["steps"], top["n_significant"], alts, params, warn=False,
+                                       top_unexplained=top.get("unexplained", 0))
             row.update({"ambiguous": report["ambiguous"], "decided_by": report.get("decided_by"), "gap": report.get("gap"),
                         "n_alternatives": report["n_alternatives"]})
         rows.append(row)
@@ -111,10 +119,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("run_dir", help="rck-ecdna --keep-pool output folder (with pool/)")
     parser.add_argument("--lambdas", type=float, nargs="+", default=None, help="Step penalties (default: the pool's --pool-lambdas)")
+    parser.add_argument("--unexplained-junction-penalty", type=float, default=None,
+                        help="Re-rank with this penalty per unexplained junction (default: the pool's run's)")
     parser.add_argument("-o", "--out", default=None, help="Write the table here (TSV) instead of printing it")
     args = parser.parse_args(argv)
     lambdas = args.lambdas if args.lambdas is not None else load_pool(args.run_dir)["lambdas"]
-    table = rerank(args.run_dir, lambdas)
+    table = rerank(args.run_dir, lambdas, args.unexplained_junction_penalty)
     if args.out:
         table.to_csv(args.out, sep="\t", index=False)
     else:

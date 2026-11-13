@@ -1,0 +1,28 @@
+nest_samehap_3to1_s301 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_3to1_s301_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_samehap_3to1_s307 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_3to1_s307_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_samehap_6to1_s801 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_6to1_s801_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_samehap_6to1_s802 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_6to1_s802_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_samehap_6to1_s803 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_6to1_s803_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_samehap_6to1_s804 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_6to1_s804_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_samehap_6to1_s805 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_6to1_s805_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_samehap_6to1_s806 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_6to1_s806_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+ctrl_dup_s703 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/ctrl_dup_s703_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_cross_1to1_s502 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_cross_1to1_s502_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_cross_1to1_s508 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_cross_1to1_s508_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_cross_1to1_s507 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_cross_1to1_s507_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_samehap_3to1_s308 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_3to1_s308_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_cross_2to1_s104 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_cross_2to1_s104_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_samehap_3to1_s305 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_3to1_s305_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_cross_3sp_s402 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_cross_3sp_s402_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_cross_1to1_s509 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_cross_1to1_s509_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+ctrl_separate_s603 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/ctrl_separate_s603_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+ctrl_dup_s706 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/ctrl_dup_s706_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+ctrl_dup_s709 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/ctrl_dup_s709_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_cross_1to1_s506 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_cross_1to1_s506_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_samehap_2to1_s201 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_2to1_s201_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+nest_samehap_3to1_s306 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/nest_samehap_3to1_s306_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+demo3 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/demo3_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+demo7_totalonly /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/demo7_totalonly_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+demo8 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/demo8_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1
+ctrl_dup_s708 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/ctrl_dup_s708_m4_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1 --max-multiplicity 4
+ctrl_dup_s710 /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/ctrl_dup_s710_m4_u1 --depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1 --max-multiplicity 4

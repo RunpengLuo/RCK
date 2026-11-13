@@ -1046,6 +1046,50 @@ pool costs time: demo8 went from 8 s to 31 s. On the 40-case `results/bench_nest
 losing against λ = 0, and is the recommended setting for nested amplicons. RCK's default stays 0, so
 earlier results are unchanged.
 
+#### Unexplained junctions (`--unexplained-junction-penalty`, opt-in)
+
+> **Provenance:** (c) new, 2026-11-13. **Code:** `rck/ecdna/decompose.py::novel_junction_flow`,
+> `::unexplained_junctions`, `::ranking_key`, `::pool_keeps`, `::prune_pool`, `::rank_pool`.
+> **Evidence:** `results/bench_nested/NEXT_STEPS.md`, "Step 4, offline: an 'unexplained junction'
+> prior" and "Step 3 implemented (2026-11-13)".
+
+A nested species with a few copies under a heavy outer one (bench_nested's 6:1 cases: 6 copies
+under 36–43) can be explained at the same fit by "outer species + 1–3-copy leftovers". The
+leftovers are flagged `low_weight` (§5.6), so the ranking counts one significant species instead of
+two and prefers them. Yet the leftovers carry the nested species' own novel junctions, at a flow the
+size of a species. An **unexplained junction** of a decomposition $D$ is a novel junction $j$ with
+
+```math
+F_j \ge 	au(D)\quad	ext{and}\quad j
+otinigcup_{k\in D,\ k\ 	ext{significant}} \mathrm{junctions}(k),
+```
+
+where $F_j$ is the ecDNA flow on $j$ summed over its phasings, and $	au(D)$ is $D$'s own `low_weight`
+threshold (`--min-species-weight`, else $\max(1, 0.1	imes$ heaviest integer weight$)$). With
+`--unexplained-junction-penalty` μ > 0 (default 0, off) the structure cost becomes
+
+```math
+\mathrm{cost}(D) = ho\,n_	ext{sig}(D) + \lambda S(D) + \mu\,U(D),
+```
+
+with $U(D)$ the number of unexplained junctions. μ = 1 makes an unexplained junction cost as much as
+a species.
+
+- The term enters the ranking (`ranking_key`) **and the pool pruning** (`pool_keeps`), which
+  compares $\lambda S + \mu U$ with the best solution's. Pruning on steps alone drops answers the
+  ranking would then prefer (bench s803, s804).
+- Like λ, μ > 0 widens the pool (§5.5), so a λ = 0 run with μ > 0 sees more species too.
+- Single-species decompositions are never `low_weight`, but the count still applies: a lone outer
+  species leaves the nested junctions unexplained.
+- *Effect, offline* (saved pools re-ranked with this code, `diag/unexpl_check.py`, μ = 1, λ = 0.2;
+  failures of 32 bench cases): bench pools 17 → 12; depth-bias validation pools (16 cases) 5 → 1;
+  the depth bias + cap-4 rerun 17 → 9. No case broke or fell by more than 0.005, controls and
+  demos included. What it fixes is the nested class (6:1, s307, s301, s804). Failures with no
+  unexplained junction (noise splits, 1:1 crossing, three species) are out of its reach.
+- *Caveats.* Tested on pools a solve made without the term. It changes no MILP, so a fresh solve
+  gives the same pool, but the result has not yet been checked with a solve. The threshold reuses
+  `--min-species-weight-frac`.
+
 ### 5.8 Ambiguity report
 
 > **Provenance:** (c) new, `90ac98a`. **Code:** `rck/ecdna/decompose.py::CycleDecomposer.same_fit_alternatives`,
@@ -1065,13 +1109,17 @@ on the same support, which excludes one walk split into copies. Solutions within
 distinct set of significant structures other than the top one's is an alternative $A$ with
 
 ```math
-\mathrm{gap}(A) = \bigl(\mathrm{obj}(A)+\lambda S(A)\bigr)-\bigl(\mathrm{obj}(D^\ast)+\lambda S(D^\ast)\bigr)
+\mathrm{gap}(A) = \bigl(\mathrm{obj}(A)+\lambda S(A)+\mu U(A)\bigr)-\bigl(\mathrm{obj}(D^\ast)+\lambda S(D^\ast)+\mu U(D^\ast)\bigr)
 ```
+
+(μ U is 0 unless `--unexplained-junction-penalty` is on; the report then also gives the top
+decomposition's `unexplained`.)
 
 The report (`summary.json` `ambiguity`) gives `ambiguous`, `n_alternatives`, the closest
 alternative's `gap`, and `decided_by`:
 
 - `species_penalty` if the closest alternative has another number of significant species;
+- else `unexplained_junction_penalty` if its unexplained junctions differ and μ > 0;
 - else `step_penalty` if its steps differ and λ > 0;
 - else `tie-break` if its steps differ;
 - else `reads or tie-break`.
@@ -1107,7 +1155,11 @@ refitted and evaluated like a ranked decomposition, plus, for each solution that
 in `--pool-lambdas`, its same-fit alternatives. `python -m rck.ecdna.rerank RUN --lambdas …` applies
 the run's own `pool_keeps` and `ranking_key` per λ. λ = 0 is only emulated (solutions within
 `--pool-gap` of the best): a λ = 0 run solves a narrower pool whose ties can come out differently
-(demo3: 12.77 copies at λ = 0, an equivalent 12.70 at λ > 0). *Effect:* on the bench, re-ranked
+(demo3: 12.77 copies at λ = 0, an equivalent 12.70 at λ > 0). Pool entries also store each
+solution's unexplained-junction count, which does not depend on μ, so `rerank
+--unexplained-junction-penalty μ` re-ranks at any μ; pools written before the count existed have
+none and count 0 (`results/bench_nested/diag/unexpl_check.py` fills it from the saved species).
+*Effect:* on the bench, re-ranked
 composites and ambiguity fields matched direct runs at 32/32 (case, λ), so each case needs two runs
 (λ = 0 and one pool run) instead of one per λ.
 
@@ -1476,7 +1528,7 @@ Options by group (defaults in brackets; section in parentheses):
   `--enforce-is`, `--no-background-novel`, `--linear-ends boundaries|all|none` [boundaries],
   `--linear-end-penalty` [0.25], `--boundary-min-copies` [2.0], `--boundary-frac` [0.25].
 - **Decomposition (§5):** `--max-species` [4], `--max-multiplicity` [3], `--species-penalty` [1.0],
-  `--step-penalty` [0], `--ambiguity-window` [2.0], `--keep-pool`, `--pool-lambdas` [0 0.02 0.05
+  `--step-penalty` [0], `--unexplained-junction-penalty` [0], `--ambiguity-window` [2.0], `--keep-pool`, `--pool-lambdas` [0 0.02 0.05
   0.1 0.2 0.5], `--min-species-weight`, `--min-species-weight-frac` [0.10], `--min-ecdna-copies`
   [2], `--ecdna-call-fraction` [0.8], `--num-alternatives` [10], `--pool-gap` [0.10],
   `--alternatives-mode pool|nogood` [pool], `--adj-residual-weight` [1.0], `--seg-residual-scale`
@@ -1501,7 +1553,7 @@ Options by group (defaults in brackets; section in parentheses):
 | `observations.json` | scales, how each was estimated, and every observation; with `--block-flip`, also `pieces`: each piece's segment, block, span, totals, A / B in its base frame, `fixed`, `flipped` and the A / B after the flip (`a_final`, `b_final`) |
 | `block_flips.tsv` | with `--block-flip` only: one row per phase block with a piece: `phase_block`, `orientation` (from the subgraph), `flip`, `status` (`fixed`, `flipped`, `kept` or `unresolved`), `n_pieces`, `n_snps`, `delta_if_reversed` |
 | `summary.json` | graph normalisation log, flow status (with `linear_end_copies`), top-level `amplicon_call` and `circular_fraction`, decompositions (with `reads_total`, `reads_explained`, `data_objective`, `data_objective_int`, `pruned`: species the refit dropped, and `steps`), top-level `ambiguity` (§5.8); with `--block-flip`, `block_flip` (mode, number of pieces and blocks, counts per status, the flipped blocks) |
-| `pool/pool.tsv`, `pool/pool.json`, `pool/decompositions.tsv`, `pool/evaluation.tsv` | with `--keep-pool` only: every pool solution before the λ-dependent pruning (`pool_index`, objective, residual, species, significant species and their steps, integer weights), the same solutions as decompositions (`decomposition_rank` = pool index + 1) and their evaluation; `pool.json` adds the settings, the rank-1 solution per `--pool-lambdas` value and those solutions' same-fit alternatives |
+| `pool/pool.tsv`, `pool/pool.json`, `pool/decompositions.tsv`, `pool/evaluation.tsv` | with `--keep-pool` only: every pool solution before the λ-dependent pruning (`pool_index`, objective, residual, species, significant species and their steps, unexplained junctions, integer weights), the same solutions as decompositions (`decomposition_rank` = pool index + 1) and their evaluation; `pool.json` adds the settings, the rank-1 solution per `--pool-lambdas` value and those solutions' same-fit alternatives |
 | `gurobi_flow.log`, `gurobi_decompose.log` | solver logs |
 | `evaluation.tsv`, `evaluation.json`, `truth_cycles.tsv`, `recovery_matrix.tsv` | only with `--truth-dir` or `--truth-cycles` ([evaluation](pipeline/evaluation.md)) |
 | (`python -m rck.ecdna.aa_export`) | not written by a run: the answer, its same-fit alternatives, the graph and allele copy numbers in the AA format the method-agnostic scorer reads ([evaluation](pipeline/evaluation.md)) |

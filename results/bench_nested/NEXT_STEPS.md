@@ -1,7 +1,8 @@
 # bench_nested: next steps (written 2026-10-27)
 
 > **Resume here (2026-11-12):** the current state and the ordered steps to continue are in
-> "Resume here (2026-11-12): state and what to do next" at the end of this file. Read it first.
+> "Resume here (2026-11-12): state and what to do next" near the end of this file. Read it first.
+> Steps 1 and 2 of it were done on 2026-11-13: see "Rerun checked (2026-11-13)" at the end.
 
 State at the end of the 2026-10-27 session, and a plan for what comes next; progress of the
 2026-10-29 session is marked **[done 2026-10-29]** and in "Progress (2026-10-29)" at the end. The
@@ -1622,3 +1623,269 @@ breaks nothing.
 - s505 at cost 1 (one 2-copy leftover);
 - s403 and s308;
 - seed repeats for tie-breaking noise (graph-route step e).
+
+## Rerun checked (2026-11-13): depth bias + cap 4 on 40 cases, and the prior on its pools
+
+Resume steps 1 and 2 above, all offline (no Gurobi). Step 3 (implementing the prior) is **not
+started**; it waits for the user.
+
+Outputs (none in the repo):
+- `collect.py` at its own λ choice: `/n/fs/yubi-iw/runs/bench_nested_v2/depthbias/rck_results/`
+  (`collect.log`). At `--lambda 0.2`, for the comparison with the bench: `rck_results_lambda0.2/`.
+- `diag/nested_prior.py`: `depthbias/nested_prior_lambda{0.2,0}.{tsv,txt}`.
+- The per-case comparison, `diag/grow_failures.py` and `diag/flow_noise.py` on the changed cases,
+  and the multiplicity count below: `depthbias/check_2026-11-13/`.
+
+### Step 1: the run
+
+- **Slurm 32228969:** 40 of 40 tasks COMPLETED. 2 tasks met the licence overage
+  (`GurobiError 10030`, "5 active sessions for a baseline of 2"): s706 (one retry) and
+  demo7_blockflip (two retries). Both then finished. No case is missing either run, and every
+  `case.json` carries `--depth-bias-window` and `--max-multiplicity 4`.
+- **Compute:** 24 579 s of RCK time, against 7030 s for the bench (3.5×), most of it in five
+  tasks of 35–95 min each. This is the larger MILP at cap 4.
+
+### Step 1: the six points
+
+**1. Broken cases: 6.** At λ = 0.2 the result is **17 → 17 failures, with 6 fixed and 6 broken**,
+not 17 → 12.
+
+| case | bench λ 0.2 | rerun λ 0.2 | rank 1 (rerun) | flow vs truth | max \|β\| |
+|---|---|---|---|---|---|
+| nest_cross_2to1_s104 | 0.962 | **0.488** | `11, 1L, 1L`: the 5-copy nested species goes to two 1-copy leftovers at multiplicity 4 | unchanged (miss 0.48 → 0.60 copies) | 0.23 |
+| nest_samehap_3to1_s305 | 0.960 | **0.726** | `21, 6, 2L, 1L`: leftovers at multiplicity 4 | slightly better (2.27 → 1.97) | 0.06 |
+| nest_cross_3sp_s402 | 0.978 | **0.502**, merged | `12, 3, 1L`: a 3-copy walk and a leftover at multiplicity 4 | slightly worse (1.35 → 1.81); ≤ 2 copies on chr7:133.5–134.5 Mb | 0.13 |
+| nest_cross_1to1_s509 | 0.993 | **0.865**, 3 species | `10, 9, 8`, multiplicity ≤ 2; `9, 8, 1` (0.981) is rank 2 | unchanged (0.78 → 0.81) | 0.13 |
+| ctrl_separate_s603 | 0.976 | 0.975, **3 species** | the bench's structure `9, 8, 1, 1`, but one leftover's refit weight is now exactly 1.00 (bench 0.92). That is on the low_weight threshold max(1, 0.1 × 9.15), so it is reported | slightly better (0.41 → 0.30) | 0.22 |
+| ctrl_dup_s706 | 0.983 | **0.731**, 2 species | `28, 25` (multiplicity 1); `25, 3` (0.986) is a same-fit alternative at rank 2 | better (3.20 → 1.80; the flow is 25 / 53, truth 27 / 54) | 0.15 |
+
+- **The depth bias is not what breaks them.** No window in a broken case is at or near ±0.3. Only
+  s710 and demo4_amp0 reach +0.3 (3 segments each), and both pass. In every broken case the flow is
+  within about 0.5 copies of the bench's flow on the truth's segments, or closer to the truth.
+- **3 of the 6 are cap 4** (s104, s305 and s402), and so is s508 (below). Rank 1 uses multiplicity
+  4 on some edge, so it cannot exist at cap 3. The bench's cap-3 pools never exceed 3. The mechanism is new:
+  a 1–2-copy **low_weight leftover walked 4 times carries 4–8 copies of flow**. The ranking does
+  not count it, so it absorbs a nested species (s104, s305) or a third species (s402).
+- **s508 loses its validated fix in the same way.** In the validation (cap 3, b1) it passed at
+  0.995, with the identical bias fit (12 non-zero windows, −0.117 to +0.045). Here, at cap 4,
+  rank 1 is a merged `12` walked 4 times, at 0.309. The right answer `14, 12, 1` (0.995) is rank 4.
+- **s706, s509 and s603 are not explained by the cap**: rank 1 uses multiplicity ≤ 2. s706 and s509
+  are same-fit tie-breaks with the right answer at rank 2. s603 is a threshold edge (weight exactly 1).
+  - The cap still changed their pools (s509 has 22 entries, against 41 in the bench). So the cap
+    cannot be ruled out without a cap-3 run.
+- **Controls and demos:** none is more than 0.005 below its λ = 0 score. Against the bench at λ = 0.2,
+  demo7_blockflip falls 0.997 → 0.984 and demo4_amp1 0.997 → 0.991, both still passing. demo3 rises
+  0.959 → 0.975, and demo4_amp0, demo6_union and demo7_totalonly also rise.
+
+**2. The failure count at λ = 0.2: 17 (bench 17).**
+- **Fixed:** s703, s708 and s710 (as projected); s502 (as projected); and s507 and s308, which were
+  not projected.
+- **Not fixed:** s508 (cap 4, above) and s505 (still 3 species, 0.962).
+- **Broken:** s104, s305, s402, s509, s603 and s706.
+- **As predicted:** s804 falls 0.841 → 0.496. The prior class (s301, s307, s801–s806) is unchanged.
+  s403 is unchanged.
+
+**3. The λ rule.**
+- `collect.py` now recommends **λ = 0.05**, against 0.2 for the bench. λ 0.1–0.5 give the same mean
+  (0.8183). The "same rank 1 on every case" λ is 0.05.
+- **The mean falls at every λ:**
+
+  | λ | 0 | 0.02 | 0.05 | 0.1 | 0.2 | 0.5 |
+  |---|---|---|---|---|---|---|
+  | bench | 0.7713 | 0.8155 | 0.8417 | 0.8417 | 0.8531 | 0.8542 |
+  | rerun | 0.7130 | 0.7628 | 0.8002 | 0.8183 | 0.8183 | 0.8183 |
+
+- λ = 0's mean goes **down**, not up. The plateau starting earlier fits "the bias removes noise
+  leftovers", but the cap-4 leftovers cost more than that gains.
+
+**4. The bias itself.** 40 of 40 runs fitted it, with 5–24 windows and most of them non-zero.
+Windows at the ±0.3 bound:
+- ctrl_dup_s710: 3 segments (chr2:103.67–103.76 Mb, at the subgraph edge; obs 209 against a flow of 116);
+- demo4_amp0: 3 segments (chr16:25.45–25.59 Mb, low depth, 5–9);
+- no other case. No cluster at the bound in a broken case.
+
+**5. The scale stage.** s104 is flagged as before (depth per copy 13.6; segment scale 1.075, junction
+scale 0.675, ratio 1.59), because `scale` reads the uncorrected `obs_total`. Before, s104 passed
+despite the flag. Now it fails, and `collect.py` labels it `scale`. The cause is the cap-4 leftover
+(point 1), not the scale.
+
+**6. Runtime.** 24 579 s against 7030 s (3.5×). See "Step 1: the run".
+
+### Changed pass/fail status: could `--max-multiplicity 4` alone explain it?
+
+"Rank-1 mult." is the largest multiplicity of any phased edge in any rank-1 species at λ = 0.2
+(`check_2026-11-13/multiplicity.tsv`). Traversals are the bench's `segment_max_traversals`. Nothing
+was rerun.
+
+| case | change | traversals | rank-1 mult. | other evidence | cap 4 alone? | rerun candidate |
+|---|---|---|---|---|---|---|
+| ctrl_dup_s708 | fixed | 4 | 4 (true walk) | the cap-4 diagnostic alone did not fix it; b1 + cap 4 did | no, needs both | – |
+| ctrl_dup_s710 | fixed | 4 | 4 (true walk) | the same | no, needs both | – |
+| ctrl_dup_s703 | fixed | 3 | 3 | the cap-4 diagnostic alone fixed it (0.971), and so did b1 at cap 3 (0.990) | **yes, but so could the bias alone**: a tie-break | seed |
+| nest_cross_1to1_s502 | fixed | 1 | 2 | b1 at cap 3 fixed it (0.974, the same `12, 10, 1`) | no, the bias explains it | – |
+| nest_cross_1to1_s507 | fixed | 1 | 2 | not in any diagnostic | unknown | cap 3 |
+| nest_samehap_3to1_s308 | fixed | 2 | 3 | not in any diagnostic | unknown | cap 3 |
+| nest_cross_2to1_s104 | broken | 1 | **4** (leftovers) | the rank 1 is impossible at cap 3 | **yes, the cap is necessary** | cap 3 |
+| nest_samehap_3to1_s305 | broken | 2 | **4** (leftovers) | the same | **yes** | cap 3 |
+| nest_cross_3sp_s402 | broken | 2 | **4** | the same | **yes** | cap 3 |
+| nest_cross_1to1_s509 | broken | 2 | 2 | right answer at rank 2; the pool shrank 41 → 22 | possible (pool change), not shown | cap 3, seed |
+| ctrl_separate_s603 | broken | 1 | 2 | the bench structure, with a leftover's weight on the low_weight threshold | unlikely | seed |
+| ctrl_dup_s706 | broken | 2 | 1 | `25, 3` (0.986) is a same-fit alternative at rank 2 | unlikely (tie-break) | cap 3, seed |
+| nest_cross_1to1_s508 | not fixed (validation fixed it) | 2 | **4** (merged walk) | b1 at cap 3: 0.995 with the identical bias | **yes** | cap 3 |
+
+Reading: the simple test "≤ 3 traversals" is **not enough**. A walk with merged species or a
+leftover can need multiplicity 4 even when no true species traverses a segment more than 3 times
+(s104 has 1, s508 has 2). The multiplicity of the rank-1 answer is the test that decides.
+
+### Step 2: the prior on the rerun's pools
+
+- **The default row reproduces step 1.** At λ 0.2: mean 0.8183 and 17 failures, the same as
+  `rck_results_lambda0.2`. At λ 0: 22 failures, as in `bench_sweep.tsv`. The λ 0 mean is 0.7145
+  against 0.7130, because `nested_prior.py` re-ranks the pool at λ 0 while `collect.py` reads the
+  separate λ = 0 run. The bench showed the same small gap (0.7714 against 0.7713).
+
+| pools, λ | rule | mean | failures | fixed | broken / down > 0.005 |
+|---|---|---|---|---|---|
+| rerun (40), 0.2 | default | 0.8183 | 17 | – | – |
+| | **unexpl 1** | **0.8989** | **11** | s104, s301, s307, s802, s805, s806 | **none** |
+| | **unexpl 1 np** | **0.9287** | **9** | + s803, s804 | **none** |
+| | unexpl 2 (np) | 0.9082 (0.9312) | 11 (9) | the same as μ = 1 | none |
+| | unexpl 0.25, 0.5 | 0.8183 | 17 | none | none |
+| | mass | 0.8356 | 16 | s508 | none |
+| rerun (40), 0 | default | 0.7145 | 22 | – | – |
+| | unexpl 1 | 0.7647 | 19 | s802, s805, s806 | none |
+| | unexpl 1 np | 0.7829 | 18 | + s804 | none |
+
+- **No case broken or down > 0.005** at μ = 1, with or without pruning, at either λ. This includes
+  every control and demo. (At λ 0, μ = 0.25 np and 0.5 np lower s307; μ ≥ 1 does not.)
+- **np adds fixes** (s803 and s804 at λ 0.2; s804 at λ 0). So the RCK implementation must apply the
+  rule in the pruning (`pool_keeps`), as planned in step 3.
+- **The prior also fixes s104** (6 unexplained junctions at rank 1): it repairs one of the cap-4
+  breaks, because a leftover that absorbs a nested species leaves that species' junctions to
+  low_weight walks.
+- **Remaining failures with `unexpl 1 np` (9):** s305, s402, s509, s603 and s706 (5 of the 6
+  breaks of point 1), s508 (cap 4), s403 and s505 (the old noise class), and s801 (5 unexplained
+  junctions, still not fixed). The projection had s505, s403, s308, s507
+  and s804.
+- **Unexplained junctions at rank 1** (λ 0.2, default ranking, failing cases): s104 6, s301 3,
+  s305 4, s307 2, s801–s806 4–6. Every other failing case has 0, so the prior cannot touch it. s305
+  (4) and s801 (5) stay failures even with the prior.
+
+### What this means (for the user's decision; nothing started)
+
+- **The depth bias holds up.** It breaks nothing by itself: no window near the bound in a broken
+  case, and flows equal to or closer to the truth.
+- **Cap 4 bench-wide does harm.** It lets light leftovers carry 4–8 copies, which breaks s104,
+  s305 and s402 and undoes s508. It is needed only by s708 and s710 (4 true traversals). It also
+  costs 3.5× the compute. This is what the 2026-11-12 note "Do not adopt cap 4 bench-wide" warned
+  about.
+- **The prior is still clean** on these pools, and fixes 6–8 cases.
+- **Candidates for a Gurobi rerun** (not submitted; it needs the user's yes):
+  - **cap 3 + bias b1**, pool runs at λ 0.2 with `diag/rck_valid.sbatch`, `%1`: s104, s305, s402,
+    s508, s509, s706, s507 and s308. This separates bias from cap for every changed case not
+    already covered by the validation.
+  - **seeds** for the tie-break cases: s703, s706, s509 and s603.
+  - Expectation if the cap is the cause: the bias at cap 3 keeps s502, s507 (?), s308 (?), s703
+    and s508, and restores s104, s305 and s402. Then s708 and s710 are the only cases that need
+    cap 4. Options are a per-case cap (from the subgraph) or the seed rule "traversals ≤ cap"
+    (§ "How steps 1–3 would be carried out").
+- **Step 3 (the prior in `decompose.py`) does not depend on the cap question.** It can go ahead
+  when the user says so.
+
+### Housekeeping (2026-11-13)
+
+- `git status`: apart from this file, the RCK tracked files are unchanged (only the old untracked
+  `ecbench_*.out`, `logs/` and `results/bench/`). amplicon-allele-analysis is clean at 5447a99. No table or README was
+  rewritten.
+- The graph-route h2h logs **still exist** on scratch (`/n/fs/scratch/$USER/graph_route/h2h/logs`,
+  380 files). The proposed archive, not run:
+  `tar -czf /n/fs/yubi-iw/runs/graph_route/h2h_logs_2026-11-04.tar.gz -C /n/fs/scratch/$USER/graph_route h2h`.
+
+## Step 3 implemented (2026-11-13): `--unexplained-junction-penalty`, opt-in
+
+The prior of "Step 4, offline" is now in RCK, as planned in step 3 of the resume section. No
+Gurobi was used. The defaults are unchanged (μ = 0).
+
+**Code.**
+- `rck/ecdna/decompose.py`:
+  - `DecompositionParams.unexplained_junction_penalty` (0 = off).
+  - `novel_junction_flow(graph, flow)`: the ecDNA flow per novel junction, summed over its phasings.
+  - `unexplained_junctions(species, junction_flow, params)`: junctions with flow ≥ the
+    decomposition's low_weight threshold (`_low_weight_threshold`, shared with `_flag_low_weight`)
+    that no significant species uses. Low_weight is decided on a copy.
+  - The term μ × unexplained is in `ranking_key`, `structure_cost`, the candidate loop of
+    `decompose_with_pool`, and **the pruning** (`pool_keeps` compares λ S + μ U against the best's;
+    `prune_pool` computes the counts).
+  - μ > 0 widens the pool as λ > 0 does (`_widened`).
+- `Decomposition.unexplained`; `summary.json` `decompositions[].unexplained`.
+- **Pool entries store `unexplained`** (a count, independent of μ), and so does `pool.tsv`.
+  `rank_pool` reads it (old pools count 0). `rck.ecdna.rerank --unexplained-junction-penalty μ`
+  re-ranks with it.
+- **Ambiguity report:** the gap includes μ U. `decided_by` is `unexplained_junction_penalty` when
+  the closest alternative has the same species count but another unexplained count (checked after
+  `species_penalty`, before `step_penalty`). With μ > 0 the report also gives the top's
+  `unexplained`.
+- `rck-ecdna --unexplained-junction-penalty` [0]. `--keep-pool` still needs `--step-penalty` > 0.
+- Docs: `docs/ecDNA.md` §5.7 ("Unexplained junctions"), §5.8, §5.9, Appendices C and D; CHANGELOG.
+
+**Tests.** `tests/ecdna/test_unexplained_junctions.py` (14 tests). These run without Gurobi: the
+count on a hand-made 36:6 flow, the `--min-species-weight` threshold, the ranking and pruning
+order with the penalty on and off, old pools, ambiguity `decided_by`, and the CLI and `rerank`
+flags. Without Gurobi: 249 tests, OK, 60 skipped (59 before, plus `TestSolve`).
+
+`TestSolve` (`requires_gurobi`) was run on 2026-11-13 with the user's yes: one solve, about 2 s.
+- First run: a test bug. The default rank 1 is `33 + a 3-copy low_weight walk x a x b`, not
+  `36 + leftovers` as the test assumed. That is the same failure pattern: 1 significant species,
+  2 unexplained junctions.
+- μ = 1 ranks `{36, 6}` first, with 0 unexplained junctions.
+- The assertion was fixed to check the pattern; it now passes.
+
+**Offline check with the implemented code** (`diag/unexpl_check.py`). It fills each saved pool
+entry's count with RCK's `unexplained_junctions`, from the saved species junctions and
+`flow_adjacencies.tsv`, then runs RCK's `rank_pool` at μ = 0 and μ = 1. μ = 0 reproduces every
+run's ranking. The counts of the default rank 1 equal `nested_prior.py`'s in every case.
+
+| pools, λ | default fails (mean) | μ = 1 fails (mean) | fixed | broken / down > 0.005 |
+|---|---|---|---|---|
+| depth bias + cap 4 rerun (40), 0.2 | 17 (0.8183) | **9 (0.9223)** | s104, s301, s307, s802–s806 | none |
+| the same, λ 0 | 22 (0.7145) | 18 (0.7765) | s802, s804, s805, s806 | none |
+| bench (40, cap 3, no bias), 0.2 | 17 (0.8531) | 12 (0.9113) | s307, s801, s802, s805, s806 | none |
+| the same, λ 0 | 21 (0.7714) | 17 (0.8325) | s307, s802, s805, s806 | none |
+| depth-bias validation (16), 0.2 | 5 (0.8621) | 1 (0.9815) | s301, s801, s803, s804 | none |
+
+- **Pruning on the full cost works as intended.** On the rerun pools it reaches step 2's `np`
+  failure count (9, at λ 0.2 and 18 at λ 0). It gets s803 and s804, which step-only pruning loses.
+- It differs from `np` only in s706's rank 1, which fails either way (2 species for 1).
+- Outputs: `depthbias/unexpl_check_lambda{0.2,0}.{tsv,txt}`.
+
+**Not done (needs the user's yes).**
+- Step 4's validation solve.
+- The cap-3 reruns proposed in "Rerun checked (2026-11-13)".
+- Nothing is committed.
+
+## Step 4 submitted (2026-11-13): validation solve, Slurm 32249668
+
+- **Array:** `0-27%1`, with `diag/rck_valid.sbatch`: one `--keep-pool` run per case at λ = 0.2, in the
+  case's exact bench configuration, 1 h limit per task.
+- **List:** `diag/rck_unexpl/valid.list`.
+- **Runs:** `/n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl/<case>_u1/`; logs in `logs/` there.
+- **Options on every line:**
+  `--depth-bias-window 200000 --depth-bias-cost 1 --depth-bias-smooth 1 --unexplained-junction-penalty 1`.
+  **Cap 3**, except s708 and s710 (`_m4_u1`, with `--max-multiplicity 4`: their true walks need 4).
+- **Code:** the working tree, with step 3 uncommitted, on top of 1860fbe.
+- **Cases (28):**
+  - prior class: s301, s307, s801–s806;
+  - fixed by the bias: s703, s708, s710, s502, s508, s507, s308;
+  - broken by the cap-4 rerun: s104, s305, s402, s509, s603, s706;
+  - guards: s709, s506, s201, s306, demo3, demo7_totalonly, demo8.
+
+**When it has finished (offline; one `sacct`, no loop):**
+- `sacct -j 32249668 -X -o JobID%14,State,Elapsed | awk 'NR>2{print $2}' | sort | uniq -c`, and
+  `grep -h GurobiError` in the logs.
+- `diag/unexpl_check.py /n/fs/yubi-iw/runs/bench_nested_v2/diag/rck_unexpl --suffix _u1 --lambda 0.2`.
+  Its "default" row is now the depth bias at cap 3 **without** the prior (the pool is the same,
+  because μ changes only the ranking). Its "rck mu=1" row must equal each run's own rank 1. So:
+  - against the bench, the default row answers the cap question;
+  - against the default row, the μ = 1 row is the prior in a real solve.
+- Compare per case with the bench at λ = 0.2 (`pipeline.tsv`), and with the cap-4 rerun
+  (`depthbias/check_2026-11-13/compare_bench_lambda0.2.tsv`).

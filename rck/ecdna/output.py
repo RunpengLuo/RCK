@@ -149,7 +149,7 @@ def write_all(outdir: str, graph: ECGraph, obs: Observations, sol: FlowSolution,
             {"rank": d.rank, "objective": d.objective, "residual": d.residual, "call": d.call, "circular_fraction": d.circular_fraction,
              "reads_total": d.reads_total, "reads_explained": d.reads_explained,
              "data_objective": d.data_objective, "data_objective_int": d.data_objective_int, "pruned": d.pruned,
-             "steps": d.steps, "ambiguity": d.ambiguity,
+             "steps": d.steps, "unexplained": d.unexplained, "ambiguity": d.ambiguity,
              "species": [{"weight": s.weight, "weight_int": s.weight_int, "topology": s.topology, "status": s.status, "length_bp": s.length_bp, "n_orderings": len(s.orderings),
                           "imputed": s.imputed, "junctions": s.junctions} for s in d.species]}
             for d in decompositions
@@ -169,7 +169,8 @@ def write_all(outdir: str, graph: ECGraph, obs: Observations, sol: FlowSolution,
     return paths
 
 
-POOL_COLUMNS = ["pool_index", "objective", "residual", "n_species", "n_significant", "steps", "weights_int", "low_weight"]
+POOL_COLUMNS = ["pool_index", "objective", "residual", "n_species", "n_significant", "steps", "unexplained", "weights_int",
+                "low_weight"]
 
 
 def write_pool(outdir: str, graph: ECGraph, record) -> Dict[str, str]:
@@ -186,7 +187,7 @@ def write_pool(outdir: str, graph: ECGraph, record) -> Dict[str, str]:
     paths = {"dir": outdir, "pool_table": os.path.join(outdir, "pool.tsv"),
              "decompositions": os.path.join(outdir, "decompositions.tsv"), "pool": os.path.join(outdir, "pool.json")}
     rows = [{"pool_index": e["index"], "objective": e["objective"], "residual": e["residual"], "n_species": e["n_species"],
-             "n_significant": e["n_significant"], "steps": e["steps"],
+             "n_significant": e["n_significant"], "steps": e["steps"], "unexplained": e.get("unexplained", 0),
              "weights_int": ",".join("%g" % w for w in e["weights_int"]),
              "low_weight": ",".join(str(bool(f)) for f in e["low_weight"])} for e in record.entries]
     pd.DataFrame(rows, columns=POOL_COLUMNS).to_csv(paths["pool_table"], sep="\t", index=False)

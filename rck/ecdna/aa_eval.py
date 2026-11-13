@@ -38,7 +38,10 @@ sample level
 confusion-matrix metrics (``aa_partition_metrics.tsv``, docs/pipeline/evaluation.md section 4.7)
     species detection (M1: TP, FP, FN, precision, recall, F1 of species, exact and over a
     composite threshold) and pairwise co-membership of novel adjacencies (M2: TP, FP, FN, TN,
-    precision, recall, FPR, F1 of adjacency pairs, which charge merged and split species).
+    precision, recall, FPR, F1 of adjacency pairs, which charge merged and split species);
+species matrix (``aa_species_matrix.tsv``, section 4.7, ``rck.ecdna.species_matrix``)
+    per (truth species, inferred species) cell, strict columns then low_weight ones: the base-pair
+    Jaccard ``j_seg`` and the novel-adjacency item Jaccard ``j_adj`` on M2's items.
 
 Two modes, both always reported: ``strict`` (the method's own answer, after ``--strict-rule``;
 counts false species) and ``best_of`` (per truth species, the best of every cycle the method
@@ -924,13 +927,16 @@ class ScoreResult:
     candidates: List[Cycle] = field(default_factory=list)
     info: Dict[str, object] = field(default_factory=dict)
     partition: pd.DataFrame = field(default_factory=lambda: pd.DataFrame(columns=PARTITION_COLUMNS))  # M1 and M2
+    matrix: Optional[pd.DataFrame] = None  # per-cell (J_seg, J_adj), rck.ecdna.species_matrix
 
 
 def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = None, alt_cycles: Sequence[str] = (),
           mixture: Optional[Sequence[MixtureAmplicon]] = None, segment_cn: Optional[str] = None, paths: Optional[str] = None,
           strict_rule: str = "auto", species_tol: int = SPECIES_TOL, graph_tol: int = GRAPH_TOL,
-          min_truth_fraction: float = 0.5, all_truth_species: bool = False, cn_min: float = CN_EXPLAINED_MIN_CN) -> ScoreResult:
-    """Score one method answer. ``truth`` is the species truth (evaluate.load_truth)."""
+          min_truth_fraction: float = 0.5, all_truth_species: bool = False, cn_min: float = CN_EXPLAINED_MIN_CN,
+          case: Optional[str] = None) -> ScoreResult:
+    """Score one method answer. ``truth`` is the species truth (evaluate.load_truth). ``case``
+    names the answer in the species matrix (default: the cycles file name)."""
     records = aaf.read_cycles(cycles_path)
     cycles = aaf.to_cycles(records)
     graph = aaf.read_graph(graph_path) if graph_path else None
@@ -951,6 +957,11 @@ def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = 
     rows += best_of_rows(scored, candidates, phased, species_tol, graph_tol)
     species = pd.DataFrame(rows, columns=SPECIES_COLUMNS)
     partition = partition_metrics(scored, strict, species, phased, species_tol, graph_tol, graph)
+    from rck.ecdna.species_matrix import species_matrix  # imports this module
+    strict_names = {c.name for c in strict}
+    others = [c for c in cycles if c.name not in strict_names]
+    case = case or os.path.basename(cycles_path).replace("_cycles.txt", "")
+    matrix = species_matrix(scored, strict, others, phased, species_tol, graph_tol, case)
 
     graph_rows, mixture_graphs = [], []
     if mixture is not None and graph is not None:
@@ -991,7 +1002,8 @@ def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = 
             "species_tol_bp": species_tol, "graph_tol_bp": graph_tol, "n_truth_total": len(truth),
             "truth_in_scope": [t.name for t in scored], "regions": regions,
             "mixture_graphs": mixture_graphs}
-    return ScoreResult(graph_frame, species, pd.DataFrame(sample_rows), list(scored), list(strict), candidates, info, partition)
+    return ScoreResult(graph_frame, species, pd.DataFrame(sample_rows), list(scored), list(strict), candidates, info, partition,
+                       matrix)
 
 
 def write(outdir: str, result: ScoreResult) -> Dict[str, str]:
@@ -999,6 +1011,9 @@ def write(outdir: str, result: ScoreResult) -> Dict[str, str]:
     paths = {"graph": os.path.join(outdir, "aa_graph_metrics.tsv"), "species": os.path.join(outdir, "aa_species_metrics.tsv"),
              "sample": os.path.join(outdir, "aa_sample_metrics.tsv"), "summary": os.path.join(outdir, "aa_eval.json"),
              "partition": os.path.join(outdir, "aa_partition_metrics.tsv")}
+    if result.matrix is not None:
+        paths["matrix"] = os.path.join(outdir, "aa_species_matrix.tsv")
+        result.matrix.to_csv(paths["matrix"], sep="\t", index=False)
     result.graph.to_csv(paths["graph"], sep="\t", index=False)
     result.species.to_csv(paths["species"], sep="\t", index=False)
     result.sample.to_csv(paths["sample"], sep="\t", index=False)
@@ -1032,6 +1047,9 @@ def main(argv=None) -> int:
     parser.add_argument("--min-truth-fraction", type=float, default=0.5)
     parser.add_argument("--all-truth-species", action="store_true")
     parser.add_argument("--cn-explained-min-cn", type=float, default=CN_EXPLAINED_MIN_CN)
+    parser.add_argument("--case", default=None, help="name of the answer in aa_species_matrix.tsv (default: the cycles file name)")
+    parser.add_argument("--matrix-plot", action="store_true",
+                        help="also draw aa_species_matrix_<blind|phased>.png (the per-cell J_seg, J_adj heatmap)")
     parser.add_argument("--outdir", required=True)
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -1041,8 +1059,13 @@ def main(argv=None) -> int:
     if mixture is None:
         log.warning("no truth mixture graph: graph-level metrics skipped (build it with simulations/truth_mixture.py)")
     result = score(args.cycles, truth, args.graph, args.alt_cycles, mixture, args.segment_cn, args.paths, args.strict_rule,
-                   args.species_tol, args.graph_tol, args.min_truth_fraction, args.all_truth_species, args.cn_explained_min_cn)
+                   args.species_tol, args.graph_tol, args.min_truth_fraction, args.all_truth_species, args.cn_explained_min_cn,
+                   args.case)
     write(args.outdir, result)
+    if args.matrix_plot and result.matrix is not None:
+        from rck.ecdna.species_matrix import plot_species_matrix
+        for hap in result.matrix["haplotype"].unique():
+            plot_species_matrix(result.matrix, os.path.join(args.outdir, "aa_species_matrix_%s.png" % hap), hap, args.case)
     with pd.option_context("display.width", 200, "display.max_columns", 40):
         print(result.sample.to_string(index=False))
     return 0

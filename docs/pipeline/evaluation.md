@@ -1230,6 +1230,152 @@ gives 6 pairs: 2 positive in the truth ($j_1 j_2$, $j_3 j_4$) and 4 negative.
   gives averaged precision and recall per item, but no TP, FP and TN counts, so it cannot give the FPR
   asked for here; it is not computed.
 
+#### Per-cell species matrix: (J_seg, J_adj) (`aa_species_matrix.tsv`)
+
+> **Provenance:** (c) new, RCK yubi_dev, 2026-11-13. Its two elements reuse (c) pieces defined
+> above: J_seg is §3.1's base-pair Jaccard [Jaccard 1912](references.md#jaccard1912), and J_adj is a
+> Jaccard index over M2's items. The tuple, the column layout and the merge and split read-out are
+> (c). **Code:** `rck/ecdna/species_matrix.py::species_matrix`, `::column_items`, `::item_jaccard`,
+> `::pair_jaccard`, `::weighted_jaccard`, `::plot_species_matrix`; written by `aa_eval.score` /
+> `::write`. Bench run: `results/bench_nested/diag/species_matrix_bench.py`.
+
+**Why.** M1 and M2 score a whole answer. They say *that* an answer merges or splits, not *which*
+truth species went into *which* inferred walk. The matrix shows that per (truth, inferred) pair.
+
+**Layout.**
+- **Rows:** the in-scope truth species $\mathcal T$ (§2.3), by truth copy number, high to low.
+- **Columns:**
+  1. the strict species $\mathcal S$ (§4.6), by copy number (`Copy_count`, the refitted weight
+     for `rck-ecdna`), high to low;
+  2. then the answer's other cycles, by copy number, flagged `low_weight`. For `rck-ecdna` these
+     are its `low_weight` species; for AA and CoRAL, the cycles under `cn-frac:0.1`.
+- Ties are broken by name.
+- Rows and columns are both ordered by copy number, so a correct answer is the diagonal.
+
+**Cell.** For truth species $T$ and column $C$, $\mathrm{cell}(T, C) = (J_\mathrm{seg}, J_\mathrm{adj})$:
+
+```math
+J_\mathrm{seg}(T, C) = \frac{O(T, C)}{\lvert T \rvert + \lvert C \rvert - O(T, C)},
+\qquad
+J_\mathrm{adj}(T, C) = \frac{\lvert \iota(T) \cap \iota(C) \rvert}{\lvert \iota(T) \cup \iota(C) \rvert}
+```
+
+- **$J_\mathrm{seg}$** is §3.1's Jaccard with multiplicity (`evaluate.jaccard`):
+  - `segment_jaccard` on haplotype-stripped walks in the `blind` rows;
+  - `haplotype_jaccard` ($O_H$) in the `phased` rows;
+  - 0 for an empty union.
+- **$J_\mathrm{adj}$** is a Jaccard index over M2's items $\iota$, at $\tau_s$:
+  - items are novel adjacencies (`blind`), or novel adjacencies with their labelling (`phased`);
+  - a linear walk has no wrap-around adjacency;
+  - it is NaN for an empty union, never 1, as in M2.
+- `exact_cycle` is §4.4 per cell: `exact_cycle` in the `blind` rows and `exact_cycle_phased` in the
+  `phased` rows.
+- **Optional columns:**
+  - `j_adj_pairs`: M2's pair form on one cell, $\binom{k}{2} / \big(\binom{a}{2} + \binom{b}{2} - \binom{k}{2}\big)$,
+    with $k = \lvert\iota(T)\cap\iota(C)\rvert$, $a = \lvert\iota(T)\rvert$, $b = \lvert\iota(C)\rvert$;
+  - `j_seg_cn`: copy-weighted,
+    $\sum_x \min(w_T m_T, w_C m_C) / \sum_x \max(w_T m_T, w_C m_C)$;
+  - `n_items_truth`, `n_items_inferred` and `n_items_shared`, so that either form can be recomputed.
+
+**Items.**
+1. **Strict columns** use exactly M2's universe and item sets (`aa_eval.adjacency_items`): truth
+   items, then the strict adjacencies matched one to one, nearest first, within $\tau_s$.
+2. **The adjacencies of `low_weight` columns are added afterwards** (`column_items`). Each takes,
+   in order:
+   - an existing item it equals exactly;
+   - otherwise a truth item that no strict adjacency took, one to one and nearest first within
+     $\tau_s$;
+   - otherwise a new false item.
+
+**Worked example** (`tests/ecdna/test_species_matrix.py`, blind). Two truth species:
+- the outer O: 2 Mb, novel adjacencies $j_1, j_2$;
+- the nested I: 0.5 Mb inside O in base space, novel adjacencies $j_3, j_4$.
+
+The merged walk M is their Euler union: 2.5 Mb, I's bases covered twice, $j_1$ to $j_4$.
+
+| answer | cells on row O | cells on row I |
+|---|---|---|
+| correct, columns O, I | (O, O) = (1, 1); (O, I) = (0.25, 0) | (I, O) = (0.25, 0); (I, I) = (1, 1) |
+| merged, one column M | (O, M) = (0.8, 0.5) | (I, M) = (0.2, 0.5) |
+| truth is M; the answer reports O and I (split) | (M, O) = (0.8, 0.5); (M, I) = (0.2, 0.5) | |
+
+**Reading 0 and 1.**
+
+| cell | meaning |
+|---|---|
+| (1, 1) | the same molecule, up to walk order (order: `exact_cycle`) |
+| (high, low) | C lies on T's DNA but joins it differently: the nested-merge signature |
+| (> 0, 0) | a neighbour: shared reference DNA, no shared novel adjacency (a nested species against its outer one) |
+| (0, 0) | unrelated |
+
+Two flags on the strict columns:
+- a column with $\ge 2$ rows of $J_\mathrm{adj} > 0$ is a **merge** (`merge_column`);
+- a row with $\ge 2$ strict columns of $J_\mathrm{adj} > 0$ is a **split** (`split_row`).
+
+**Bench, λ = 0.2** (`diag/species_matrix_bench.py`, 40 cases, blind):
+- The 55 cells with `exact_cycle` = 1 are all $(1, 1)$, up to $J_\mathrm{seg} \ge 0.99996$ (next
+  paragraph).
+- `nest_samehap_3to1_s301`:
+  - the outer species is exact;
+  - the two light strict walks score (0.75, 0.38) and (0.32, 0.25) on the outer row, and
+    (0.07, 0.50) and (0.09, 0.60) on the nested row;
+  - so both are merge columns: walks re-traversing the outer that carry the nested species'
+    adjacencies.
+- `nest_samehap_6to1_s801`:
+  - the outer species is exact;
+  - the nested species is spread over the three `low_weight` columns: (0.97, 0.80), (0.55, 0.67)
+    and (0.51, 0.44).
+- `ctrl_dup_s708`: one truth species, two strict columns, (0.20, 0.40) and (0.80, 0.80): a split.
+- The passing `nest_cross` cases (s103, s506): a clean diagonal of (1, 1), and (0.47–0.50, 0)
+  off it.
+
+**Decisions and reasoning.**
+
+- **Items, not pairs, in J_adj.**
+  - The pair form is $0/0$ for every cell where both species have at most one novel adjacency: a
+    simple circle with only its closing adjacency, or s306's nested species.
+  - On one cell, the pair form is a function of the three item counts only, so it adds no
+    information.
+  - It is still written (`j_adj_pairs`) for comparison with M2.
+- **M2's universe, unchanged for strict columns.** Every strict cell then uses the same item sets
+  as M2. Adding `low_weight` adjacencies into the nearest-first matching could hand a truth item to
+  a leftover and change a strict cell, so they come second and take only what the strict answer
+  left.
+- **`low_weight` columns shown, but kept out of the flags.**
+  - They are not part of the answer (M1 and M2 leave them out).
+  - But the 6:1 failure *is* the nested species living in them, so they are shown.
+  - Leftovers often reuse the outer species' adjacencies (s801's leftovers score 0.11 and 0.18 on
+    the outer row), which would flag a false split.
+- **No copy number in the tuple.** The tuple asks *which molecule*; copy number is §3.5's and the
+  composite's job. `j_seg_cn` is the copy-weighted variant, for when it matters.
+- **Rows and columns by copy number**, so that the diagonal is the right answer, and the
+  highest-copy, most confident species comes first.
+
+**Caveats and undefined cases.**
+- **$J_\mathrm{adj}$ is undefined (NaN)** when neither species has a novel adjacency. That means two
+  linear walks without one; a circle always has its closing adjacency.
+- **`exact_cycle` = 1 does not give exactly (1, 1).**
+  - `exact_cycle` allows 100 bp at each run end, so $J_\mathrm{seg}$ can fall just short of 1. On the
+    bench every exact cell has $0.99996 \le J_\mathrm{seg} < 1$, the AA export's 1 bp coordinate
+    convention (§5.1), the same as `segment_jaccard_h0` in `aa_species_metrics.tsv`.
+  - $J_\mathrm{adj}$ can fall below 1 if another strict species has a different adjacency nearer to
+    the same truth item, because the one-to-one matching then makes the exact walk's adjacency a
+    false item. This never happens on the bench.
+- **Multiplicity is invisible to $J_\mathrm{adj}$.** Items are distinct, so a junction traversed
+  twice counts once. Duplications (bench `ctrl_dup`) are separated by $J_\mathrm{seg}$, which counts
+  multiplicity, and by `exact_cycle`.
+- **The flags are diagnostics, not classes.** A merged walk that re-traverses the outer species'
+  adjacencies (s301) makes its column a merge *and* the outer row a split. A truth adjacency shared
+  by two species (none on the bench, §4.7 M2) would flag a correct answer.
+- **Fold-backs and tolerance.** Items use M2's extremity matching (same chromosome and strand,
+  either direction), so a fold-back is an item like any other. Two distinct predicted adjacencies
+  within $\tau_s$ of one truth item still match one to one.
+- **Summing cells does not reproduce M2.**
+  - Inferred species can share items (a merged walk and its outer species), and M2 counts a pair
+    once if *some* species holds it.
+  - The matrix also holds `low_weight` columns that M2 leaves out.
+  - Per cell, $J_\mathrm{adj}$ is a ratio of item counts, not of pairs.
+
 #### How M1 and M2 handle methods, modes, linear walks, `low_weight` and tolerance
 
 | | M1 species detection | M2 adjacency pairs |
@@ -1547,6 +1693,9 @@ Files, written only with these options and in addition to the existing tables, w
   molecules with the same novel adjacencies but different multiplicities (for example a segment
   traversed twice) are the same set of items: M1's `exact` separates them, M2 does not.
 - **M2 is strict-only** and is not computed over rank 1's alternative decompositions.
+- **The species matrix's J_adj does not see multiplicity**, and its merge and split flags can both
+  fire on one merged walk, or on a correct answer whose truth species share a novel adjacency
+  (§4.7, "Per-cell species matrix").
 - **M2's `graph` universe** adds every discordant edge of `--graph`, not only those within the truth
   amplicon. It is meant for the graph route, where that graph is the amplicon's shared input.
 - **Unobserved concordant joins** (at imputed grid points, 10 in demo7) get the smaller
@@ -1716,6 +1865,26 @@ tolerance, universe):
 The pooled files of §6.3 add `n_cases`, `headline_pooling`, `micro_<rate>`, `macro_<rate>` and
 `n_cases_<rate>`.
 
+**`aa_species_matrix.tsv`** (§4.7, "Per-cell species matrix"): one row per (haplotype mode, truth
+species, column), long format:
+
+| Column | Meaning |
+|---|---|
+| `case` | the answer's name (`aa_eval --case`, default the cycles file name) |
+| `haplotype` | `blind`, and `phased` for a phased answer |
+| `tol_bp` | $\tau_s$, the tolerance of the items |
+| `truth`, `truth_rank`, `truth_weight` | the row: truth species, its rank by copy number, its copy number |
+| `column_rank`, `inferred`, `copy_number`, `low_weight` | the column: rank (strict first, then `low_weight`, each by copy number), name, copy number, whether it is outside the strict answer |
+| `j_seg`, `j_adj` | the cell |
+| `exact_cycle` | §4.4 for this cell (`exact_cycle_phased` in the `phased` rows) |
+| `j_adj_pairs`, `j_seg_cn` | optional: M2's pair form on the cell; copy-weighted J_seg |
+| `n_items_truth`, `n_items_inferred`, `n_items_shared` | the item counts behind `j_adj` |
+| `merge_column`, `split_row` | the flags (strict columns only) |
+
+`aa_eval --matrix-plot` also draws `aa_species_matrix_<blind|phased>.png`: two panels (J_seg,
+J_adj), with the `low_weight` columns after a dashed line and NaN in grey
+(`python -m rck.ecdna.species_matrix OUTDIR` draws it from the table).
+
 **`aa_eval.json`**: `info` (inputs, rule, tolerances, `truth_in_scope`, `regions`,
 `mixture_graphs`), `sample`, `graph`.
 
@@ -1727,6 +1896,7 @@ The pooled files of §6.3 add `n_cases`, `headline_pooling`, `micro_<rate>`, `ma
 | `test_recovery.py` | recovery matrix, composite, `best_*` | no |
 | `test_aa_eval.py` | AA parsing, graph metrics incl. `error_free_merged` and `merge_benign_splits`, CoRAL metrics (code and supplement), modes, sample metrics | no |
 | `test_aa_partition.py` | M1 and M2 (§4.7): a merge, a split, a nested pair sharing a novel adjacency (blind and phased), a background SV left unused (graph universe) and one routed into a walk, 10 kb against 100 bp, one-to-one matching, a linear walk, undefined rates, micro and macro pooling, the AA-file path end to end | no |
+| `test_species_matrix.py` | the per-cell species matrix (§4.7): the worked example (correct and merged), a split, a single-junction species (pair form NaN), an empty union (NaN), the copy-weighted variant, `low_weight` columns (strict item sets unchanged from M2's; a leftover cannot take a strict item), J_seg equal to the recovery matrix's Jaccard for matched pairs, the AA-file path end to end | no |
 | `test_aa_import.py` | subgraph export, import, scale fit, round trip; reference tokens written by CoRAL in `tests/ecdna/data/graph_route/` | no |
 | `test_coral_flank.py` | flank lengths, residual copy numbers, renumbered constraints | no |
 

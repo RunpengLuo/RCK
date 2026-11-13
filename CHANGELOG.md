@@ -5,6 +5,31 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This file covers the `yubi_dev` branch relative to `rck/version-fix`.
 
+## [yubi_CNP_ionic] - 2026-11-13
+
+Branch `yubi_CNP_ionic`, made locally on the ionic cluster from `origin/yubi_CNP` @ `a58f167`,
+for the multi-clone plan ([`docs/multiclone_plan.md`](docs/multiclone_plan.md)). Steps 1–2 of
+the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and reasons in its
+`CHANGELOG.md`). No RCK code has changed yet.
+
+### Added
+
+- [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md): status of the plan, the
+  decisions taken in step 1 that need confirming, RCK issues found in step 2, and the detailed
+  next steps (3: `OptModelMultiCloneEcDNA`; 4: joint decomposition; 5: small runs; 6: the
+  benchmark, only with approval).
+
+### Found (not fixed)
+
+- `rck_run.py:224` fails on `--scnb`: `SegmentCopyNumberBoundaries.update()` is given an object
+  but iterates its argument as a dict. The DIAG passes the bounds through `--scnt` (`cnb=`)
+  instead.
+- `rck_run.py` imports PyVCF (`vcf`, via `rck/utils/adj/convert.py`), which the gurobi env
+  lacks. The run never calls it; an empty stub module works around it.
+- The unmodified `rck_run.py --no-pre` loads and solves the demo5 DIAG from
+  amplicon-allele-analysis: optimal in 2 s, objective 0, every `--post-check-all` check passes,
+  and the fragment flips recover the true phase.
+
 ## [Unreleased]
 
 ### Added

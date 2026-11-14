@@ -9,8 +9,10 @@ from rck.ecdna.evaluate import CStep, Cycle, evaluate, write_evaluation, write_t
 from tests.ecdna.helpers import temp_dir
 
 try:  # pragma: no cover - depends on the environment
-    import cnplot  # noqa: F401
+    # matplotlib first: when cnplot is missing, a first import of matplotlib inside the
+    # importlib.import_module mock below would leave a half-initialised module in sys.modules
     import matplotlib  # noqa: F401
+    import cnplot  # noqa: F401
 
     HAVE_PLOTTING = True
 except ImportError:  # pragma: no cover

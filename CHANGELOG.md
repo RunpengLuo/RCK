@@ -93,18 +93,39 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
   - `docs/ecDNA.md` §11.4 is updated, and `docs/multiclone_NEXT_STEPS.md` corrects the earlier
     accuracy measurement, which used stale bench runs.
 
-- **Per-cell species matrix (J_seg, J_adj), ported from `yubi_dev`** (`97db161`, cherry-picked;
-  docs/pipeline/evaluation.md §4.7, "Per-cell species matrix"). `aa_eval` writes
-  `aa_species_matrix.tsv` next to its M1/M2 outputs, which are unchanged. Two changes adapt it to
-  the multi-clone route:
-  - **`aa_eval` leaves `Status=chromosomal` walks out** (`aa_eval.species_cycles`). The multi-clone
-    route's `decompositions.tsv` keeps its telomere-to-telomere paths with that status, and
-    `aa_export.write_cycles` carries it into the cycles file. `strict_select` drops only
-    `low_weight`, so each chromosome path was counted as a false species in M1, gave M2 false
-    items, and was a strict column of the matrix. `evaluate.read_inferred` already drops them.
-  - **`rck-ecdna --model multiclone` records `summary.json` `graph`** (name and regions, as the
-    bulk route does). `aa_export.export` reads it and raised `KeyError` on a multi-clone run.
-  - Test: `test_species_matrix.py::TestEndToEnd::test_chromosomal_paths_are_not_species`.
+- **Jaccard index score: per-cell species matrix (J_seg, J_adj)**, ported from `yubi_dev`
+  (`97db161`, cherry-picked; docs/pipeline/evaluation.md §4.7, "Per-cell species matrix").
+  - **What it adds:** M1 (species detection) and M2 (adjacency pairs) score a whole answer. The
+    matrix scores every (truth species, inferred species) pair, so it shows *which* truth species
+    went into *which* inferred walk: a merge, a split or a match.
+  - **Layout:** rows are the in-scope truth species, by copy number. Columns are the strict
+    inferred species, by copy number, then the `low_weight` ones. A correct answer is the diagonal.
+  - **Cell:** two Jaccard indices, each |shared| / |union|, from 0 to 1.
+    - `j_seg` (the M1 side): shared reference base pairs, counted with multiplicity.
+      `blind` rows ignore haplotypes; `phased` rows require them to agree. 0 for an empty union.
+    - `j_adj` (the M2 side): shared novel adjacencies (junctions), on M2's own item sets. NaN
+      when neither walk has a novel adjacency.
+  - **Reading a cell:** (1, 1) is the same molecule up to walk order (`exact_cycle` checks order);
+    (high, low) is the nested-merge signature; (> 0, 0) shares DNA but no junction; (0, 0) is
+    unrelated.
+  - **Per cell also:** `exact_cycle`, `j_adj_pairs` (M2's pair form), `j_seg_cn` (copy-weighted
+    J_seg), item counts, and `merge_column` / `split_row` flags.
+  - **Output and options:** `aa_eval` writes `aa_species_matrix.tsv` next to its M1/M2 outputs,
+    which are unchanged. `--case` names the answer; `--matrix-plot` (or
+    `python -m rck.ecdna.species_matrix OUTDIR`) draws a two-panel heatmap.
+  - **Adapted to the multi-clone route** (`eb5c85a`):
+    - `aa_eval` leaves `Status=chromosomal` walks out (`aa_eval.species_cycles`). The route's
+      telomere-to-telomere paths reach the cycles file with that status, and `strict_select`
+      drops only `low_weight`. So each path was a false species in M1, gave M2 false items and
+      was a strict column of the matrix. `evaluate.read_inferred` already drops them.
+    - `rck-ecdna --model multiclone` records `summary.json` `graph` (name and regions, as the bulk
+      route does). `aa_export.export` reads it and raised `KeyError` on a multi-clone run.
+  - **Known limit on this route:** `phased` cells compare absolute haplotypes, but the route's
+    phase is identified only within phase blocks (§3.10). Read the `blind` rows until the matrix
+    applies the per-block swaps.
+  - **Tests:** `tests/ecdna/test_species_matrix.py` (15, no Gurobi), including
+    `test_chromosomal_paths_are_not_species`. `test_plot.py` now imports matplotlib before cnplot,
+    which fixes a suite-order failure of the heatmap test without cnplot (also on `yubi_dev`).
 
 ### Changed
 

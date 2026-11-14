@@ -1,9 +1,64 @@
 # Multi-clone RCK-ecDNA: status and next steps (branch `yubi_CNP_ionic`)
 
-*Written 2026-11-13; updated the same day after step 3, the plan revision (no layers;
-heaviest-first decomposition), step 4, and the junction-read labelling groups. The plan is [`multiclone_plan.md`](multiclone_plan.md); this file says where
-it stands and what comes next. Changes and their reasons are in the `[yubi_CNP_ionic]` sections of
-the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELOG.md` (step 3).*
+*Written 2026-11-13; updated at the end of that session, after steps 3–4, the plan revision (no
+layers; heaviest-first decomposition) and the per-end junction-read labelling groups. The plan is
+[`multiclone_plan.md`](multiclone_plan.md); this file says where it stands and what comes next.
+Changes and their reasons are in the `[yubi_CNP_ionic]` sections of both repos' `CHANGELOG.md`.*
+
+## Resume here (next session)
+
+**State.** Steps 1–4 are done and committed on `yubi_CNP_ionic` in both worktrees (none pushed;
+RCK last commit is the one that wrote this section, amplicon-allele-analysis `380b3fc`). The
+pipeline in one line:
+- `subgraph_construct.py --clone-profiles truth --diag-labeling-groups block` writes the annotated
+  DIAG (`<subgraph>/rck_input/`);
+- `rck-ecdna --model multiclone --rck-input <dir>` then runs RCK's unmodified `OptModelMultiClone`
+  plus off-by-default additions, decomposes heaviest first (AA's copy rule) into cycles (ecDNA)
+  and telomere-to-telomere paths, and evaluates ψ and within-block phasing.
+- demo5 and demo7 are exact (composite 1.0, ψ all exact).
+
+**Rules (unchanged).** Small tests and single demo or bench cases with a short `--time-limit` and
+2 threads are fine. The full bench, sweeps, many cases in parallel, long limits and Slurm need
+Yubi's explicit approval (Gurobi WLS has 2 sessions). Commit locally; Yubi pushes. Do not touch
+`~/RCK` or `~/amplicon-allele-analysis` (`yubi_dev`).
+
+**Next steps, in order:**
+1. **Regenerate the bench simulations (no Gurobi; ask before running all 40 at once).**
+   - The runs in `/n/fs/yubi-iw/runs/bench_nested/sim_runs/` date from 2026-10-25, before the
+     simulator's junction-read change (`618697f`, 2026-10-27). 6 of the 10 checked cases no longer
+     regenerate their `obs/` with the current simulator.
+   - They also lack `obs/adjacency_allele_ends.tsv`, which `--diag-labeling-groups block` needs.
+   - Regenerate into a new folder, so the old runs stay as they are. For example,
+     `BENCH_NESTED_ROOT=<new root>` with `configs/` copied there, then `bench_nested.py` (it
+     simulates each accepted seed). Alternatively, call `src/simulation.py -c
+     configs/bench_nested/<case>.yaml -g $REF/hg38.sizes -b $REF/hg38.regions.bed -o <dir>
+     --no-plots` per case (about 1 min each, CPU only); the scratch script `bench_case.sh` of
+     2026-11-13 did this for 10 cases.
+2. **Make `bench_nested.py --cnp` build the DIAG with the labelling groups.** Its `CNP_FLAGS` is
+   `["--clone-profiles", "truth"]` only; add `--diag-labeling-groups block` (or a separate
+   option, so both variants can be built), and document it.
+3. **Step 5 (section 4):** build the DIAGs of 2–3 nested bench cases (for example
+   `nest_cross_2to1_s103`, `nest_cross_3sp_s402`, `nest_samehap_3to1_s301`) and run
+   `rck-ecdna --model multiclone ... --truth-dir <run> --time-limit 60 --threads 2`, with and
+   without the labelling groups. Compare with the bulk route's results for the same cases.
+   **Stop and report.**
+4. **Step 6 (section 5): the 40-case benchmark, only with Yubi's approval.** It needs
+   `results/bench_nested/run_case.py --model multiclone` and a `--subgraphs` root (not written
+   yet).
+5. **Open questions to raise with Yubi** (not blocking):
+   - real-data per-end haplotags (switch errors, which the simulator leaves out);
+   - whether "opposite haplotype" within a block is ever needed (RCK's groups cannot say it);
+   - the perturbation option (section 6);
+   - demo4 (3 clones, 2 samples; plan 4.5).
+
+**Where to look.**
+- Plan: `docs/multiclone_plan.md`.
+- Model, decomposition, labelling groups and their deviations: `docs/ecDNA.md` §11.
+- Scores: `docs/pipeline/evaluation.md` §3.9–3.10.
+- DIAG and per-end labels: amplicon-allele-analysis `simulations/subgraph_construct.md` §3.3 and
+  §5.6.
+- Simulator observation file: amplicon-allele-analysis `simulations/README.md`, "Observations, SV
+  tables".
 
 ## Where things are
 
@@ -21,8 +76,9 @@ the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELO
   first version with layers), `d3b0448` (route, outputs, tests), `a496a12` (docs), `ea99498`
   (layers removed: the model is RCK's own), `690d089` (docs), `fc22a34` (step 4: heaviest-first
   decomposition, ψ evaluation), `8faaace` (docs), `140e938` (within-block phasing score) and the
-  docs commit after it; amplicon-allele-analysis `8c89156` (`--diag-labeling-groups`) and
-  `c6f24cc` (docs), `54226ed` (per-end labels) and `380b3fc` (docs).
+  docs commits `73030c2`, `3c6e077`, `fb04319` and the one that wrote "Resume here";
+  amplicon-allele-analysis `8c89156` (`--diag-labeling-groups`), `c6f24cc` (docs), `54226ed`
+  (per-end labels) and `380b3fc` (docs).
 - `~/RCK` and `~/amplicon-allele-analysis` stay on `yubi_dev`. In `~/RCK`, `yubi_dev` is 3 commits
   ahead of GitHub (23b5ecf, 97db161, cfbc8ca), none of them pushed. They are not on
   `yubi_CNP_ionic`.
@@ -33,7 +89,7 @@ the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELO
 | 2. the DIAG with the unmodified `rck` on demo5 | **done**: optimal, objective 0, all post-checks pass |
 | 3. RCK: `OptModelMultiCloneEcDNA`, CLI route, outputs, tests | **done**, simplified after risk 1: RCK's own model plus off-by-default additions (section 2) |
 | 4. RCK: heaviest-first decomposition of the clones' karyotypes (cycles = ecDNA, telomere-to-telomere paths = chromosomes), evaluation against `ecdna_psi` | **done** (section 3); `junction_hap` passed as RCK labelling groups within phase blocks (section 3a) |
-| 5. small end-to-end runs (demo5, demo7, one or two bench cases) | demo5 and demo7 done in step 4; bench cases open |
+| 5. small end-to-end runs (demo5, demo7, one or two bench cases) | demo5 and demo7 done (exact); bench cases **next**, after regenerating the bench simulations ("Resume here") |
 | 6. full benchmark | only with Yubi's explicit approval |
 
 ## 0. Decisions taken in step 1 (accepted by Yubi, 2026-11-13)
@@ -196,26 +252,34 @@ Described in `docs/ecDNA.md` §11.3 (with a table of deviations from CoRAL's gre
 
 **Stop and report after step 4.** (Done 2026-11-13.)
 
-## 4. Step 5: small end-to-end runs
+## 4. Step 5: small end-to-end runs (next)
 
-- demo5 and demo7 were run in step 4 (section 3). Still open: build the DIAG for one or two bench
-  cases (no Gurobi), then run `rck-ecdna --model multiclone` with a short time limit, for example
-  s103 (which the bulk route solves) and s402 (which it fails).
-  - The demo5 subgraph command is in amplicon-allele-analysis `subgraph_construct.md`
-    section 5.6.
+- **Done:** demo5 and demo7 (sections 3 and 3a). Rebuild their DIAGs with
+  `subgraph_construct.py --sim-dir runs/<demo> --out-dir <dir> [--amplicons 0 | --union]
+  --observed-seeds-only --strong-sv-support 20 --jump-sv-support 20 --rck-junction-reads-per-copy
+  6.5 --no-plot --clone-profiles truth --diag-labeling-groups block`. demo5 uses
+  `--amplicons 0`, demo7 `--union`. Both runs now have `obs/adjacency_allele_ends.tsv` tracked.
+- **Open:** 2–3 nested bench cases, after the bench simulations are regenerated (see "Resume
+  here", steps 1–3). Bench subgraphs use `--union` and the flags above.
+  - Run each case with and without `--diag-labeling-groups block`, with `--time-limit 60
+    --threads 2`, one case at a time.
+  - Report ψ exact, composite and composite within blocks, the walks, and runtimes. Compare with
+    the bulk route on the same cases (`results/bench_nested/`).
 - demo3 and demo5–8 have `truth/rck/rck.scnt.tsv`. For demo4 (3 tumor clones, 2 tumor samples),
   first check that the samples' clone copy numbers agree (plan 4.5).
 
 ## 5. Step 6: full benchmark (only with explicit approval)
 
+- Regenerated bench simulations first ("Resume here", step 1).
 - `amplicon-allele-analysis/simulations/bench_nested.py --cnp rebuild` builds
-  `subgraphs/bench_nested_cnp/` (no Gurobi, about 35 s per case).
-  - It needs the bench simulation runs, which are untracked and live in
-    `~/amplicon-allele-analysis/simulations/runs/bench_nested`. Run it with `BENCH_NESTED_ROOT`
-    or from that checkout.
+  `subgraphs/bench_nested_cnp/` (no Gurobi, about 35 s per case). Add the labelling-group flag
+  first ("Resume here", step 2). `BENCH_NESTED_ROOT` points it at another root (configs, runs,
+  subgraphs, subgraphs_cnp).
 - `results/bench_nested/run_case.py`: add `--model multiclone` and a `--subgraphs` root for the
   `_cnp` subgraphs; results go under `results/bench_nested_cnp/`. Same 40 cases. This is a Slurm
   array and needs Yubi's approval. Gurobi WLS has 2 sessions, so use `%1` or `%2`.
+- Report per case: ψ exact, composite (absolute and within blocks), amplicon call, runtime; and
+  pooled against the bulk route.
 
 ## 6. Later
 

@@ -224,6 +224,26 @@ class TestEndToEnd(unittest.TestCase):
         if png is not None:
             self.assertTrue(os.path.getsize(png) > 0)
 
+    def test_chromosomal_paths_are_not_species(self):
+        """The multi-clone route's telomere-to-telomere paths (Status=chromosomal) are left out of
+        M1, M2 and the matrix, as evaluate.read_inferred leaves them out of the composite."""
+        from tests.ecdna.test_aa_partition import S1, S2, S3, S4, S5, truth_pair as pair
+
+        segs = [("chr1", s + 1, e + 1) for s, e in (S1, S2, S3, S4, S5)]
+        outer = "Copy_count=8.0;Segments=1+,2+,3+,5+;Haplotypes=A,A,A,A;Status=species;Species=ec1"
+        inner = "Copy_count=4.0;Segments=2+,4+;Haplotypes=A,A;Status=species;Species=ec2"
+        chrom = "Copy_count=2.0;Segments=0+,1+,2+,3+,4+,5+,0-;Haplotypes=.,B,B,B,B,B,.;Status=chromosomal;Species=path1"
+        cycles = os.path.join(self.dir, "mc_cycles.txt")
+        with open(cycles, "w") as handle:
+            handle.write(cycles_text([("chr1", 1, 6000)], segs, [outer, inner, chrom]))
+        result = aa_eval.score(cycles, pair(), case="mc")
+        self.assertNotIn("path1", set(result.matrix.inferred))
+        self.assertEqual({c.name for c in result.strict}, {"ec1", "ec2"})
+        self.assertNotIn("path1", {c.name for c in result.candidates})
+        m1 = result.partition[(result.partition["metric"] == "species_detection") & (result.partition["mode"] == "strict")]
+        self.assertTrue(len(m1))
+        self.assertTrue((m1["n_predicted"] == 2).all())  # ec1 and ec2; the chromosome is not a predicted species
+
 
 if __name__ == "__main__":
     unittest.main()

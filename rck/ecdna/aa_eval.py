@@ -862,6 +862,16 @@ def subwalks_satisfied(paths: Sequence[ReadPath], cycles: Sequence[Cycle], tol: 
 # strict rule
 # ---------------------------------------------------------------------------------------------- #
 
+def species_cycles(records: aaf.AACycles, prefix: str = "") -> List[Cycle]:
+    """``records``' cycles (``aa_format.to_cycles``) without the ones flagged ``Status=chromosomal``:
+    the multi-clone route's telomere-to-telomere paths are chromosomes, not species, as in
+    ``evaluate.read_inferred``."""
+    cycles = aaf.to_cycles(records, prefix=prefix)
+    status = {prefix + (rec.fields.get("Species") or "cycle{k}".format(k=rec.cycle_id)): rec.fields.get("Status")
+              for rec in records.cycles}
+    return [c for c in cycles if status.get(c.name) != "chromosomal"]
+
+
 def strict_select(records: aaf.AACycles, cycles: Sequence[Cycle], rule: str = "auto") -> Tuple[List[Cycle], str]:
     """The method's own answer among its cycles, and the rule applied.
 
@@ -938,7 +948,7 @@ def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = 
     """Score one method answer. ``truth`` is the species truth (evaluate.load_truth). ``case``
     names the answer in the species matrix (default: the cycles file name)."""
     records = aaf.read_cycles(cycles_path)
-    cycles = aaf.to_cycles(records)
+    cycles = species_cycles(records)
     graph = aaf.read_graph(graph_path) if graph_path else None
     phased = records.phased
     strict, rule = strict_select(records, cycles, strict_rule)
@@ -946,7 +956,7 @@ def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = 
     for k, path in enumerate(alt_cycles, start=1):
         alt = aaf.read_cycles(path)
         phased = phased and alt.phased
-        candidates += aaf.to_cycles(alt, prefix="alt{k}.".format(k=k))
+        candidates += species_cycles(alt, prefix="alt{k}.".format(k=k))
     regions = None if all_truth_species else regions_of(records, graph)
     scored = []
     for t in truth:

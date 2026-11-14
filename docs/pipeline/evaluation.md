@@ -1766,6 +1766,13 @@ Files, written only with these options and in addition to the existing tables, w
 - **The species matrix's J_adj does not see multiplicity**, and its merge and split flags can both
   fire on one merged walk, or on a correct answer whose truth species share a novel adjacency
   (§4.7, "Per-cell species matrix").
+- **The species matrix's `phased` mode scores absolute haplotypes.** The multi-clone route's
+  phase is identified only within phase blocks (§3.10), so a correct answer with a flipped block
+  loses J_seg and J_adj in `phased` mode. Read `blind` for that route until the matrix applies
+  §3.10's per-block swaps.
+- **Multi-clone runs:** `aa_eval` leaves out walks with `Status=chromosomal` (the route's
+  telomere-to-telomere paths), so they are neither species nor matrix columns. The route writes no
+  `aa/*_graph.txt`, so the graph-level metrics are skipped; M1, M2 and the matrix do not need it.
 - **M2's `graph` universe** adds every discordant edge of `--graph`, not only those within the truth
   amplicon. It is meant for the graph route, where that graph is the amplicon's shared input.
 - **Unobserved concordant joins** (at imputed grid points, 10 in demo7) get the smaller

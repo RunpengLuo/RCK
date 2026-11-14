@@ -93,6 +93,19 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
   - `docs/ecDNA.md` §11.4 is updated, and `docs/multiclone_NEXT_STEPS.md` corrects the earlier
     accuracy measurement, which used stale bench runs.
 
+- **Per-cell species matrix (J_seg, J_adj), ported from `yubi_dev`** (`97db161`, cherry-picked;
+  docs/pipeline/evaluation.md §4.7, "Per-cell species matrix"). `aa_eval` writes
+  `aa_species_matrix.tsv` next to its M1/M2 outputs, which are unchanged. Two changes adapt it to
+  the multi-clone route:
+  - **`aa_eval` leaves `Status=chromosomal` walks out** (`aa_eval.species_cycles`). The multi-clone
+    route's `decompositions.tsv` keeps its telomere-to-telomere paths with that status, and
+    `aa_export.write_cycles` carries it into the cycles file. `strict_select` drops only
+    `low_weight`, so each chromosome path was counted as a false species in M1, gave M2 false
+    items, and was a strict column of the matrix. `evaluate.read_inferred` already drops them.
+  - **`rck-ecdna --model multiclone` records `summary.json` `graph`** (name and regions, as the
+    bulk route does). `aa_export.export` reads it and raised `KeyError` on a multi-clone run.
+  - Test: `test_species_matrix.py::TestEndToEnd::test_chromosomal_paths_are_not_species`.
+
 ### Changed
 
 - **The chromosome/ecDNA layer split was removed** (`ea99498`; the plan is revised: decision 2,

@@ -410,6 +410,9 @@ def run_multiclone(args) -> Dict[str, object]:
         name = args.name or os.path.basename(os.path.dirname(os.path.abspath(args.rck_input))) or "amplicon"
         result, decomposition = decompose_karyotypes(inp, scnt, acnt, gparams, name=name)
         outputs["decompositions"] = write_decompositions(args.outdir, inp, result, decomposition)
+        # name and regions, as the bulk route records them: aa_export.export and
+        # evaluate.regions_from_summary read summary["graph"]
+        summary["graph"] = result.graph.summary()
         cycles = [w for w in result.walks if w.kind == "cycle"]
         summary["decomposition"] = {
             "method": "heaviest_first_" + gparams.heaviest, "stopped": result.stopped, "walks": len(result.walks), "cycles": len(cycles),

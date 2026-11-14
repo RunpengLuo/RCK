@@ -170,6 +170,28 @@ Described in `docs/ecDNA.md` §11.3 (with a table of deviations from CoRAL's gre
 
 - **Still open:** phase *between* blocks is undetermined by the data (hence the within-block
   score). Junction ends alone in their block stay free.
+- **Known issue, found 2026-11-13; fix before step 5.** `--diag-labeling-groups block` gives a
+  junction's single `junction_hap` label to *both* of its ends. That is wrong for a junction that
+  crosses haplotypes (truth AB/BA).
+  - Measured on 12 simulated cases (demo5, demo7, and the 10 bench_nested cases that have both a
+    tracked subgraph and a simulation run on disk; 117 ecDNA junctions; scratch script
+    `jhap_accuracy.py`):
+    - truth AA: label A 33, B 2, mixed 9;
+    - truth BB: B 36, A 1, mixed 8;
+    - truth crossing (AB/BA): mixed 12, A 10, B 6.
+  - Of the 88 junctions labelled A or B, 69 are right, 3 are on the opposite haplotype, and 16
+    actually cross haplotypes.
+  - As a hard RCK constraint, those 19 would force a wrong labelling, or make the model
+    infeasible, wherever they share a block with another grouped end. demo7's group (6 junctions,
+    all truth AA) is not affected.
+  - Keeping only labels that agree with the flank-BAF call at both ends (`expected_hap`) leaves 56:
+    51 right, 1 opposite, 4 crossing.
+  - Options:
+    - label each end separately (per-end read haplotags), which also expresses a crossing junction;
+    - and/or require `expected_hap` to agree;
+    - and/or skip junctions whose ends lie in different blocks.
+  - The simulator's read haplotags are exact, so on real data (phasing switch errors) the label
+    accuracy would be lower.
 - **Next: step 5.** One or two nested bench cases (for example s103, and s402, which the bulk route
   fails), with `--clone-profiles truth --diag-labeling-groups block`, as single runs with short
   time limits. Check that `junction_hap` purity holds on the bench, and compare with and without

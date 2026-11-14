@@ -4,8 +4,6 @@ from collections import defaultdict
 from copy import deepcopy
 from enum import Enum
 
-import vcf
-
 from rck.core.io import EXTERNAL_NA_ID, SVTYPE, write_adjacencies_to_destination, COPY_NUMBER, parse_segment_extra
 from rck.core.structures import Strand, Position, Adjacency, AdjacencyType, Phasing, Segment
 
@@ -124,6 +122,7 @@ def get_vcf_records_from_file(vcf_file_name):
 
 def get_vcf_records_from_source(source):
     result = []
+    import vcf  # PyVCF; imported here so that modules not reading VCF don't need it
     vcf_reader = vcf.Reader(source)
     if "RNAMES" in vcf_reader.infos:
         vcf_reader.infos["RNAMES"] = vcf_reader.infos["RNAMES"]._replace(num='.')
@@ -923,6 +922,7 @@ def delly_vcf_to_nas_stream(source, dest, setup=None, extra=None):
 
 
 def generate_nas_from_delly_vcf_records(source, setup=None):
+    import vcf  # PyVCF; imported here so that modules not reading VCF don't need it
     vcf_reader = vcf.Reader(source)
     for record in vcf_reader:
         extra = deepcopy(record.INFO)

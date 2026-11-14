@@ -219,9 +219,9 @@ def main():
             segments_from_scnb_file, scnb_from_file = read_scnb_from_file(file_name=scnb_file_path, clone_ids=clone_ids, allow_missing=True,
                                                                           separator=args.scnb_separator, extra_separator=args.scnb_extra_separator)
             logger.info("Successfully extracted (at least some) segment copy numbers from {scnb_path}. Updating previous segment copy number boundaries data (if exists)."
-                        "".format(scnb_path=scnb_from_file))
+                        "".format(scnb_path=scnb_file_path))
             for clone_id in clone_ids:
-                scnb[clone_id].update(scnb_from_file[clone_id])
+                scnb[clone_id].update(scnb_from_file[clone_id]._records)
     except ValueError:
         logger.info("Unsuccessfully tried to extract segment copy number boundaries from {scnb_path}. Not to worry just yet.".format(scnb_path=scnb_file_path))
 

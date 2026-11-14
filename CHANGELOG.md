@@ -49,6 +49,26 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
   has no layers (§11.2). §8 has the two RCK fixes below; Appendices C and G have the options and
   tests.
 
+- **Step 4: heaviest-first decomposition** (`rck/ecdna/greedy.py`, `fc22a34`; plan 4.3).
+  - Every clone's RCK karyotype is split into walks shared by the clones, with integer ψ per
+    clone. One walk is taken per round with a one-walk MILP built on `decompose.py`'s machinery,
+    subtracted, and the search repeats until nothing is left.
+  - Cycles are ecDNA; paths, which end only at RCK telomeres, are chromosomes.
+  - `--mc-heaviest copies` (default) is AmpliconArchitect's rule: the most copies first, then
+    CoRAL's length-weighted copy number. `length` is CoRAL 3.1.1's greedy weight alone.
+    - *Why `copies`:* the DIAG's 1 Mb flanks let a looping chromosome path outweigh a short ecDNA
+      under CoRAL's weight. demo7 scores composite 0.747 with `copies` against 0.256 with
+      `length`; with the labelling right (see "Found"), `copies` scores 1.0.
+  - Also `--mc-max-walks`, `--mc-read-alpha` (CoRAL's α, over RCK molecule groups),
+    `--mc-stop-fraction` and `--mc-no-decompose`.
+  - `decompositions.tsv` gains `kind`, `order`, `psi_<clone>`, `proportion_<clone>` and
+    `proportion_bulk`.
+  - `evaluate.psi_scores` and `evaluation_psi.tsv` score ψ and the proportions against
+    `ecdna_psi`. `read_inferred` skips `chromosomal` paths.
+  - `tests/ecdna/test_greedy.py`: 4 tests. Docs: `docs/ecDNA.md` §11.3 and
+    `docs/pipeline/evaluation.md` §3.9.
+  - Results: demo5 composite 1.0 with ψ exact; demo7 0.747 with 2/4 ψ exact.
+
 ### Changed
 
 - **The chromosome/ecDNA layer split was removed** (`ea99498`; the plan is revised: decision 2,
@@ -77,6 +97,12 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 
 ### Found
 
+- **RCK's junction labelling is free (step 4).** RCK does not read `junction_hap`.
+  - On demo7 it labelled the inner species' junctions AB/BA, while the truth says AA, at the same
+    objective.
+  - The decomposition then merges the inner species into the outer one.
+  - Holding the labelling to `junction_hap` (scratch probe) gives an exact result.
+  - Not changed: it would be a new deviation (`docs/multiclone_NEXT_STEPS.md` section 3a).
 - **RCK's 1 − fp rule is infeasible without novel adjacencies** (0 ≥ 1 − fp). The subclass skips
   it then; plain RCK still fails on such an input (demo5 `amplicon_2`: 0 observed, 18 imputed).
 - **Step 2:** the unmodified `rck_run.py --no-pre` loads and solves the demo5 DIAG from
@@ -84,7 +110,7 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
   and the fragment flips recover the true phase.
 - **Validation:**
   - The bulk route on demo5 matches `18dd969` file for file, except log timestamps and `runtime_s`.
-  - Full suite: 263 tests, 3 skipped. The 7 failures in the old `tests/test_graph.py` and
+  - Full suite: 267 tests, 3 skipped. The 7 failures in the old `tests/test_graph.py` and
     `tests/test_structures.py` are already present at `32f2244`.
 
 ## [Unreleased]

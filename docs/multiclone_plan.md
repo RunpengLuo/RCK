@@ -3,7 +3,7 @@
 *Status: plan agreed 2026-11-13. Revised 2026-11-13 after step 3 (risk 1): the karyotype is no
 longer split into a chromosome and an ecDNA layer. RCK's `OptModelMultiClone` runs as is, and the
 decomposition separates circles from linear chromosomes, heaviest walk first, as in
-AmpliconArchitect and CoRAL (decision 2, sections 4.1 and 4.3, risk 1). Steps 1–3 are done; status
+AmpliconArchitect and CoRAL (decision 2, sections 4.1 and 4.3, risk 1). Steps 1–4 are done; status
 in [`multiclone_NEXT_STEPS.md`](multiclone_NEXT_STEPS.md).*
 
 ## 0. Goal
@@ -183,9 +183,17 @@ walk weight drops below a resolution. The multi-clone version:
   - alternating segment and adjacency edges, with integer multiplicities m_σ(e) up to
     `--max-multiplicity`, as in `decompose.py`;
   - integer copies ψ_{σ,k} ≥ 0 per clone, with ψ_{σ,k} m_σ(e) ≤ R_k(e) for every clone k and edge e.
-- **Heaviest:** maximise Σ_k ψ_{σ,k} Σ_s m_σ(s) L_s, i.e. CoRAL's length-weighted copy number,
-  summed over clones, plus CoRAL's long-read term when `paths.tsv` support exists.
-  - Ties: fewer segment traversals (the existing step penalty as a tie-break).
+- **Heaviest** (`--mc-heaviest`; decided in step 4, 2026-11-13):
+  - `copies` (default): AA's rule. First maximise the copies, Σ_k ψ_{σ,k}. Then maximise CoRAL's
+    length-weighted copy number Σ_k ψ_{σ,k} Σ_s m_σ(s) L_s plus CoRAL's long-read term (RCK
+    molecule groups). Remaining ties go to fewer segment traversals.
+  - `length`: CoRAL's weight alone.
+  - *Why `copies`:*
+    - The DIAG's 1 Mb flanks let a long chromosome path that loops through the amplicon outweigh a
+      short ecDNA under CoRAL's weight. CoRAL's own graphs have no such flanks.
+    - On demo7, `copies` scores composite 0.747 (2/4 ψ exact), against 0.256 (0/4) for `length`.
+    - With the junction labelling held to `junction_hap` (risk 5), `copies` is exact (1.0, 4/4)
+      and `length` is unchanged (0.256).
   - The walk is then subtracted from every clone's R_k, and the search repeats.
 - **Stop:** when R_k = 0 everywhere, or at `--max-species` walks. RCK's karyotype is an exact
   integer balanced flow, so it can be used up exactly. CoRAL's 10% rule is kept as an option for
@@ -235,6 +243,12 @@ walk weight drops below a resolution. The multi-clone version:
    - Nested species on one haplotype are the likely failure: a merged walk could outweigh the inner species. The bulk route handles this with a minimum-species decomposition and the step penalty.
    - Measure it on small cases in step 5 (demo7, a nested bench case) before the benchmark.
    - If needed, a CoRAL-style post-processing pass is the documented fallback.
+   - *Step 4:* on demo7 the nested species are recovered exactly once the labelling is right (risk 5). The error seen comes from the labelling, not from the greedy.
+5. **RCK's junction labelling is free.** *Found in step 4.*
+   - RCK does not read `junction_hap`. A novel adjacency's labelling (AA/AB/BA/BB) together with the fragment flips can change at the same objective.
+   - On demo7, RCK labelled the inner species' junctions sim00005–8 AB/BA. The truth and `junction_hap` both say AA.
+   - The karyotype then has no single-haplotype inner cycle, and the decomposition merges it into the outer species.
+   - Holding labellings to `junction_hap` (A → AA, B → BB; `mixed` free) recovers demo7 exactly. It would be a new deviation from RCK (hard, or as a soft cost), and needs Yubi's decision.
 
 ## 6. Order of work
 

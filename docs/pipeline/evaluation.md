@@ -457,6 +457,37 @@ alternatives. `evaluation.json` also reports:
 
 **Failures.** If the truth files cannot be read, `rck-ecdna` still finishes: the reconstruction
 outputs are written, and `evaluation.json` records the error and traceback.
+### 3.9 Per-clone copies ψ (multi-clone route)
+
+> **Provenance:** (c) new, RCK `yubi_CNP_ionic` (2026-11-13). **Code:** `rck/ecdna/evaluate.py::psi_scores`,
+> called by `rck-ecdna --model multiclone --truth-dir` (`docs/ecDNA.md` §11.3).
+
+The multi-clone route reports each cycle's integer copies per clone, ψ_{σ,k}.
+
+**Truth.** The `ecdna_psi` rows of `truth/proportions.tsv` give `ID` (species), `CLONE` and
+`PSI`.
+
+**Structure scoring is unchanged.** §3.1–§3.8 run on `decompositions.tsv` as for the bulk route,
+with two differences:
+- the paths (status `chromosomal`, the telomere-to-telomere chromosome walks) are skipped by
+  `read_inferred`;
+- a cycle's `weight` is its bulk copies per cell, Σ_k u_k ψ_k, comparable to the truth's bulk
+  weight.
+
+**Pairing.** Each truth species in scope is paired with the cycle that §3.6 matched to it at
+rank 1 (none: ψ = 0).
+
+**`evaluation_psi.tsv`** has one row per (truth species, clone):
+- `truth_psi`, `inferred_psi` and `abs_err`;
+- `truth_proportion` (ψ over the clone's in-scope truth species);
+- `inferred_proportion` (ψ over the clone's inferred cycles).
+
+**`evaluation.json`** `psi` holds:
+- `psi_exact` (the pairs with ψ equal) of `n_pairs`;
+- `psi_mean_abs_err`;
+- `proportion_mean_abs_err`;
+- `bulk`: Σ_k u_k ψ_k per species, truth and inferred, and their shares over the species, with
+  u_k from the DIAG's `clone_proportions.tsv`.
 
 ---
 

@@ -1,7 +1,7 @@
 # Multi-clone RCK-ecDNA: status and next steps (branch `yubi_CNP_ionic`)
 
-*Written 2026-11-13; updated the same day after step 3 and after the plan revision (no layers;
-heaviest-first decomposition). The plan is [`multiclone_plan.md`](multiclone_plan.md); this file says where
+*Written 2026-11-13; updated the same day after step 3, the plan revision (no layers;
+heaviest-first decomposition) and step 4. The plan is [`multiclone_plan.md`](multiclone_plan.md); this file says where
 it stands and what comes next. Changes and their reasons are in the `[yubi_CNP_ionic]` sections of
 the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELOG.md` (step 3).*
 
@@ -19,7 +19,8 @@ the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELO
 - Commits on `yubi_CNP_ionic`, none pushed: amplicon-allele-analysis up to `2811efe` (steps 1–2)
   and `36d7ff8` (docs); RCK `60ca24d` (`--scnb` fix), `18dd969` (lazy PyVCF), `8e6fb74` (model,
   first version with layers), `d3b0448` (route, outputs, tests), `a496a12` (docs), `ea99498`
-  (layers removed: the model is RCK's own) and the docs commit after it.
+  (layers removed: the model is RCK's own), `690d089` (docs), `fc22a34` (step 4: heaviest-first
+  decomposition, ψ evaluation) and the docs commit after it.
 - `~/RCK` and `~/amplicon-allele-analysis` stay on `yubi_dev`. In `~/RCK`, `yubi_dev` is 3 commits
   ahead of GitHub (23b5ecf, 97db161, cfbc8ca), none of them pushed. They are not on
   `yubi_CNP_ionic`.
@@ -29,8 +30,8 @@ the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELO
 | 1. amplicon-allele-analysis: clone profiles, refinement, flanks, DIAG writer, tests | **done** (not pushed) |
 | 2. the DIAG with the unmodified `rck` on demo5 | **done**: optimal, objective 0, all post-checks pass |
 | 3. RCK: `OptModelMultiCloneEcDNA`, CLI route, outputs, tests | **done**, simplified after risk 1: RCK's own model plus off-by-default additions (section 2) |
-| 4. RCK: heaviest-first decomposition of the clones' karyotypes (cycles = ecDNA, telomere-to-telomere paths = chromosomes), evaluation against `ecdna_psi` | **next** (section 3) |
-| 5. small end-to-end runs (demo5, demo7, one or two bench cases) | open |
+| 4. RCK: heaviest-first decomposition of the clones' karyotypes (cycles = ecDNA, telomere-to-telomere paths = chromosomes), evaluation against `ecdna_psi` | **done** (section 3); a decision on `junction_hap` (section 3a) is open |
+| 5. small end-to-end runs (demo5, demo7, one or two bench cases) | demo5 and demo7 done in step 4; bench cases open |
 | 6. full benchmark | only with Yubi's explicit approval |
 
 ## 0. Decisions taken in step 1 (accepted by Yubi, 2026-11-13)
@@ -102,68 +103,74 @@ reason for having no layers in §11.2, and in RCK's `CHANGELOG.md`.
     --jump-sv-support 20 --rck-junction-reads-per-copy 6.5 --no-plot --clone-profiles truth` (no
     Gurobi, about 2 min). The default arguments give a different subgraph.
 
-## 3. Step 4: heaviest-first decomposition and evaluation (plan 4.3, 4.4)
+## 3. Step 4: done (plan 4.3, 4.4)
 
-Yubi's decision (2026-11-13): use AmpliconArchitect's heaviest-cycle-first rule.
-- **Source of the rule.** CoRAL 3.1.1 implements it as its greedy mode,
-  `coral/cycle_decomposition.py::maximize_weights_greedy` with `models/concrete.py::get_greedy_objective`
-  (installed in `/n/fs/yubi-iw/conda/envs/coral-3.1.1`). AA's own source is not on ionic.
-- **What CoRAL's greedy mode does.** It solves a one-walk MILP that maximises the walk's
-  length-weighted copy number, Σ_seq x_e · w · len_e, plus a bonus for unsatisfied long-read
-  subpaths. The walk's copies are capped by the remaining copy number on every edge. It subtracts
-  the walk and repeats, until less than 10% (`p_total_weight`) of the length-weighted copy number
-  is left or the weight drops below `resolution`. CoRAL can then post-process the greedy solution
-  with its full model.
+Described in `docs/ecDNA.md` §11.3 (with a table of deviations from CoRAL's greedy model) and in
+`docs/pipeline/evaluation.md` §3.9.
+- **`rck/ecdna/greedy.py`:**
+  - Builds the DIAG as an `ECGraph` and every clone's RCK karyotype as phased edge copy numbers,
+    with telomere excess as linear ends.
+  - Each round solves one one-walk MILP, reusing `decompose.py`'s alternation, multiplicities,
+    lazy connectivity cuts and virtual end node, with integer ψ per clone capped by what is left.
+  - The walk is subtracted and the search repeats until nothing is left.
+  - Cycles are ecDNA; paths, which end only at telomeres, are chromosomes.
+- **Heaviest (`--mc-heaviest`):**
+  - `copies` (default): AA's rule. The most copies first, then CoRAL's length-weighted copy number
+    (plus the long-read bonus over RCK molecule groups), then fewer traversals.
+  - `length`: CoRAL 3.1.1's greedy weight alone.
+- **Outputs:** `decompositions.tsv` with `kind`, `order`, `psi_<clone>`, `proportion_<clone>` and
+  `proportion_bulk`; paths have status `chromosomal`, which `evaluate.read_inferred` skips.
+  `evaluate.psi_scores` writes `evaluation_psi.tsv`.
+- **Tests:** `tests/ecdna/test_greedy.py`, 4 tests. The full suite is 267 tests; only the 7 old
+  failures remain, which were already there at `32f2244`.
+- **Runs** (60 s limit, 2 threads, about 1 s each; DIAGs rebuilt in the scratchpad):
 
-**To build** (`rck/ecdna/`, for example a new `greedy.py` driven from `multiclone.py`):
-1. **Input:** every clone's RCK solution, c_{k,s,h} and N_{k,a,φ} on the DIAG, as the remaining
-   copy number R_k(e).
-2. **One iteration:** find one walk σ on the haplotype-labelled DIAG, with integer copies
-   ψ_{σ,k} ≥ 0 per clone and ψ_{σ,k} m_σ(e) ≤ R_k(e).
-   - The walk is either closed (a cycle) or has both ends at RCK telomere positions (a path; also
-     at `--mc-linear-ends` extremities when that option is on).
-   - Its multiplicities m_σ(e) are integers up to `--max-multiplicity`.
-   - Objective: maximise Σ_k ψ_{σ,k} Σ_s m_σ(s) L_s, plus CoRAL's long-read term. Break ties
-     towards fewer segment traversals, using the step penalty as a tie-break.
-3. **Subtract and repeat.** Stop when R_k = 0 for every clone, or at `--max-species` walks; RCK's
-   karyotype is exact, so it can be used up exactly. Keep CoRAL's 10% stop as an option.
-4. **Reuse `decompose.py`:** alternation, multiplicities, lazy connectivity cuts, linear ends
-   through one virtual end node, and long-read constraints. Use one walk slot and the objective
-   above. Check whether the ψ × m products need the exact linearisation already in `decompose.py`.
-   `refit.py` is not used.
-5. **Outputs:** `decompositions.tsv`, one row per walk in extraction order:
-   - `kind` (`cycle`/`path`) and the walk itself;
-   - `psi_<clone>`;
-   - `proportion_<clone>` = ψ_{σ,k} / Σ over cycles of ψ_{·,k};
-   - `proportion_bulk` = Σ_k u_k ψ_{σ,k}, normalised over cycles. This is the only use of
-     `clone_proportions.tsv` outside the optional junction term.
+| case | rule | walks | mean composite | ψ exact |
+|---|---|---|---|---|
+| demo5 | copies | cycle ψ 20, then 4 paths | 1.000 | 1/1 |
+| demo5 | length | the same | 1.000 | 1/1 |
+| demo7 (truth ψ 26/13, 14/7) | copies | cycle 14/7 (inner merged with part of the outer), cycle 12/6, 2 paths | 0.747 | 2/4 |
+| demo7 | length | cycle 13/6, a 175-edge looping path, a path, cycle 0/1 | 0.256 | 0/4 |
+| demo7, labelling held to `junction_hap` (scratch probe, not in the repo) | copies | cycle 26/13, cycle 14/7, 2 paths | 1.000 | 4/4 |
+| demo7, the same | length | as above | 0.256 | 0/4 |
 
-   Cycles with at least `--min-ecdna-copies` are ecDNA calls.
-6. **`rck/ecdna/evaluate.py` and `docs/pipeline/evaluation.md`:** score the cycles' ψ and proportions
-   against the `ecdna_psi` rows of `truth/proportions.tsv` (`CLONE`, `PSI`).
-7. **Tests** (tiny synthetic DIAGs, `tests/ecdna/test_multiclone.py` has a writer):
-   - the single-cycle DIAG gives a cycle with ψ = e per clone, then one telomere-to-telomere path
-     per haplotype;
-   - two clones and two species with different ψ per clone recover ψ exactly;
-   - a tie between "a path looping twice + a cycle of e − 1" and "a single-pass path + a cycle of
-     e" is broken towards the latter.
-8. **demo5** (single run, short time limit): the expected first walk is the 20-copy cycle on the
-   amplified haplotype; it weighs about 20 × 1.9 Mb, against at most about 1 × 6 Mb for any path.
-9. **Docs:** `docs/ecDNA.md` §11 (the decomposition, and its deviations from CoRAL's greedy model)
-   and the CHANGELOG.
+- **Conclusion on the rule.** CoRAL's greedy weight does not give better results here; AA's copy
+  rule does. CoRAL's weight lets a long low-copy chromosome path through the DIAG's 1 Mb flanks
+  outweigh a short ecDNA, and that path loops through the amplicon.
+- **demo7 DIAG** (no Gurobi, 23 s): `subgraph_construct.py --sim-dir runs/demo7_nestedcycles_ecdna
+  --union --observed-seeds-only --strong-sv-support 20 --jump-sv-support 20
+  --rck-junction-reads-per-copy 6.5 --no-plot --clone-profiles truth`. It has 49 segments,
+  10 novel and 19 imputed adjacencies, 3 molecule groups and 2 clones.
 
-**Known risk (plan risk 4):** greedy is not minimal. A merged walk over nested species on one
-haplotype could outweigh the inner species. Check it in step 5 on demo7 and a nested bench case;
-CoRAL-style post-processing is the fallback.
+## 3a. Decision needed: use `junction_hap` in RCK's labelling? (plan risk 5)
 
-**Stop and report after step 4.**
+- **What happens.** RCK never reads the DIAG's `junction_hap`, so a novel adjacency's labelling,
+  together with the fragment flips, is free at the same objective.
+- **demo7.** RCK labelled the inner species' junctions sim00005–8 AB/BA, while the truth
+  (`truth/adjacency_clone.tsv`) and `junction_hap` both say AA. The karyotype then has no inner
+  cycle on one haplotype, and the decomposition merges the inner species into the outer one.
+  Holding the labellings fixes it exactly.
+- **Options:**
+  1. **Hard:** for `junction_hap` A or B, allow only AA or BB (`mixed` and `imputed` stay free).
+     This is the scratch probe. It is one more deviation row: a labelling constraint from
+     long-read or SNP evidence, like RCK's own labelling groups.
+  2. **Soft:** a small cost per adjacency copy on a labelling against `junction_hap`. It is
+     safer if `junction_hap` can be wrong.
+  3. **Leave RCK as is** and accept the merged walks. Nested species on one haplotype will then
+     often be merged.
+
+  Recommendation: option 2 with a cost that only breaks ties (like the bulk route's
+  `--soft-junction-hap`), so that RCK's own objective still decides whenever it can.
+- **Then step 5:** one or two nested bench cases (for example s103, and s402, which the bulk route
+  fails), single runs with short time limits.
+
+**Stop and report after step 4.** (Done 2026-11-13.)
 
 ## 4. Step 5: small end-to-end runs
 
-- Build the DIAG for demo7 and one or two bench cases (no Gurobi), then run
-  `rck-ecdna --model multiclone` with a short time limit:
-  - demo5 (done in step 2, plain RCK), demo7, one nested bench case (for example s103, which
-    the bulk route solves) and one the bulk route fails (for example s402).
+- demo5 and demo7 were run in step 4 (section 3). Still open: build the DIAG for one or two bench
+  cases (no Gurobi), then run `rck-ecdna --model multiclone` with a short time limit, for example
+  s103 (which the bulk route solves) and s402 (which it fails).
   - The demo5 subgraph command is in amplicon-allele-analysis `subgraph_construct.md`
     section 5.6.
 - demo3 and demo5–8 have `truth/rck/rck.scnt.tsv`. For demo4 (3 tumor clones, 2 tumor samples),

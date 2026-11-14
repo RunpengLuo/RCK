@@ -1394,8 +1394,7 @@ only data term is per-clone allele-specific segment copy numbers from an upstrea
 on the simulator, the truth as a stand-in), and it infers per-clone integer karyotypes. Which
 copies form ecDNA circles and which form linear chromosomes is decided afterwards, by decomposing
 the karyotypes heaviest walk first, as AmpliconArchitect [Deshpande et al. 2019](pipeline/references.md#deshpande2019)
-and CoRAL [Zhu et al. 2024](pipeline/references.md#zhu2024) do (§11.2; plan 4.3, step 4, not yet
-implemented).
+and CoRAL [Zhu et al. 2024](pipeline/references.md#zhu2024) do (§11.2, §11.3).
 
 **Input: the annotated DIAG.** `--rck-input <subgraph>/rck_input/` is written by
 amplicon-allele-analysis `subgraph_construct.py --clone-profiles`
@@ -1424,9 +1423,8 @@ alignment checks and run defaults (`--run-nas-fp 0.1`, `--run-group-m-default-fp
 - `rck.scnt.tsv` and `rck.acnt.tsv`, as `rck_run.py` writes them;
 - `summary.json`: `model: multiclone`, status, objective, flipped fragments, and the novel
   adjacencies used per clone;
-- `gurobi_multiclone.log`.
-- Step 4 will add `decompositions.tsv`: the walks, cycle or path, with per-clone copies
-  $\psi_{\sigma,k}$.
+- `gurobi_multiclone.log`, `gurobi_greedy.log`;
+- `decompositions.tsv` and, with `--truth-dir`, the evaluation (§11.3).
 
 ```bash
 rck-ecdna --model multiclone --rck-input subgraphs/demo5/amplicon_0/rck_input \
@@ -1477,6 +1475,99 @@ heaviest first:
 - linear walks may end only at RCK's telomere positions and are chromosomal.
 
 The commits with the layer version are `8e6fb74` and `d3b0448`; `ea99498` removed it.
+
+### 11.3 Decomposition: heaviest walk first (`rck/ecdna/greedy.py`)
+
+*Step 4 (2026-11-13).* The decomposition takes every clone's RCK karyotype and splits it into
+walks shared by the clones, heaviest first. This is AmpliconArchitect's rule
+[Deshpande et al. 2019](pipeline/references.md#deshpande2019), run with the one-walk MILP of
+CoRAL's greedy mode [Zhu et al. 2024](pipeline/references.md#zhu2024)
+(`coral/cycle_decomposition.py::maximize_weights_greedy`, CoRAL 3.1.1).
+
+**Input.** RCK's solution for every clone $k$, as copy numbers on phased edges:
+- segment haplotypes, $c_{k,s,h}$;
+- adjacency labellings, $N_{k,a,\varphi}$;
+- *linear ends*: the copy-number excess at an extremity, which RCK allows only at telomere
+  positions (and at `--mc-linear-ends` extremities). These use the phased-edge vocabulary of
+  §5.
+
+The remaining copy number $R_k(e)$ starts at these values.
+
+**One round** solves one MILP for a single walk $\sigma$:
+- integer multiplicities $m_e \le$ `--max-multiplicity` (binary expansion);
+- alternation and balance at every phased extremity;
+- connectivity through lazy cuts;
+- no ends (a **cycle**) or exactly two (a **path**, through one virtual end node, as in §5.1);
+- integer copies $\psi_k \ge 0$ per clone, with $\psi_k m_e \le R_k(e)$ on every edge (products
+  linearised exactly).
+
+**Which walk is heaviest** (`--mc-heaviest`):
+- `copies` (default), AmpliconArchitect's rule. First maximise $\sum_k \psi_k$. With that fixed,
+  maximise CoRAL's length-weighted copy number $\sum_k \psi_k \sum_{s} m_s \ell_s$, plus CoRAL's
+  long-read bonus. Ties then go to the walk with fewer edge traversals (a tie-break below one bp
+  per traversal).
+- `length`, CoRAL's rule: the second objective alone.
+
+The walk is subtracted from every clone, and the next round starts. The loop stops in any of
+these cases:
+- nothing is left (RCK's karyotype is an exact balanced integer flow, so this is the normal end);
+- the remaining length-weighted copy number is at most `--mc-stop-fraction` of the total
+  (CoRAL's `p_total_weight`; off by default);
+- `--mc-max-walks` walks were taken.
+
+**Calls.**
+- Cycles are ecDNA candidates. A cycle lighter than `--min-species-weight-frac` of the heaviest
+  cycle is `low_weight`, and the amplicon call uses the cycles only (`--min-ecdna-copies`), as in
+  §5.10.
+- Paths are chromosomes (`status` `chromosomal`). The evaluation skips them.
+- A cycle's `weight` is its bulk copies per cell, $\sum_k u_k \psi_k$.
+
+**Why `copies` is the default.** The DIAG has 1 Mb flank segments, because it needs them as
+chromosome anchors (plan 3.2). CoRAL's graphs hold only the amplified intervals. With CoRAL's
+length weight, a chromosome path through both flanks can therefore outweigh a short ecDNA.
+- It is then extracted first, and it loops through the amplicon up to `--max-multiplicity`
+  times (an HSR-like walk), taking copies from the cycle.
+- On the synthetic DIAG (100 kb flanks, a 20 kb ecDNA of 5 copies), `length` takes such a path
+  first, while `copies` takes the 5-copy cycle (`test_greedy.py`).
+- On demo7, `length` scores a mean composite of 0.256 and 0/4 exact ψ, against 0.747 and 2/4
+  for `copies`.
+- With the labelling below held to the truth, `copies` is exact on demo7 (composite 1.0, 4/4 ψ),
+  while `length` stays at 0.256.
+
+| | CoRAL greedy (`maximize_weights_greedy`) | `rck/ecdna/greedy.py` |
+|---|---|---|
+| input | one breakpoint graph with fractional copy numbers | every clone's integer RCK karyotype |
+| heaviest | length-weighted copy number + long-read bonus | `copies`: most copies first, then CoRAL's weight; `length`: CoRAL's weight |
+| weights | one fractional weight | integer $\psi_k$ per clone, shared walk |
+| ends | source edges | RCK's telomere positions (and `--mc-linear-ends`) |
+| multiplicity | free | at most `--max-multiplicity` |
+| long reads | ordered subpaths | RCK molecule groups (`rck.adjgroups.tsv`): satisfied when the walk uses all their novel adjacencies; bonus $\max(\alpha R / n_{\text{unsatisfied}}, 1)$, $\alpha$ = `--mc-read-alpha` (0.01) |
+| stop | remaining $\le$ 10 %, or weight below resolution | nothing left (or `--mc-stop-fraction`, `--mc-max-walks`) |
+| ties | solver | fewer edge traversals |
+
+**Outputs.**
+- `decompositions.tsv` has the bulk route's columns (Appendix D), one species per walk in
+  extraction order, named `ec1, ec2, …` for cycles and `path1, …` for paths, plus:
+  - `kind` (`cycle`/`path`) and `order`;
+  - `psi_<clone>`;
+  - `proportion_<clone>`: $\psi_{\sigma,k}$ over the clone's cycles;
+  - `proportion_bulk`: $\sum_k u_k \psi_{\sigma,k}$ over the cycles.
+- `summary.json` has a `decomposition` block.
+- With `--truth-dir`: `evaluation.*` (structure, cycles only) and `evaluation_psi.tsv`, which
+  scores ψ and the proportions against the `ecdna_psi` rows (`docs/pipeline/evaluation.md`).
+
+**Results (2026-11-13; 60 s limit, 2 threads, about 1 s each).**
+- demo5: the 20-copy cycle first, then one telomere-to-telomere path per haplotype and region.
+  Composite 1.0, and ψ is exact.
+- demo7 (2 clones, nested species with ψ 26/13 and 14/7): composite 0.747, 2/4 exact ψ.
+  - The inner species (14/7) comes out merged with a pass round part of the outer one, and the
+    outer species keeps 12/6 of its 26/13 copies.
+  - The cause is RCK's labelling, not the greedy. RCK never reads `junction_hap`, so it labelled
+    the inner species' junctions sim00005–8 AB/BA, while the truth (and `junction_hap`) say AA.
+    It reaches objective 0 either way.
+  - The karyotype therefore has no inner cycle on one haplotype.
+  - Using `junction_hap` would be a new deviation from RCK, not made
+    (`multiclone_NEXT_STEPS.md`).
 
 ---
 
@@ -1569,6 +1660,7 @@ and `--rck-depth-per-copy` overrides) is documented with stage 2.
 | `--rck-input` | `--model multiclone`: the annotated DIAG folder `<subgraph>/rck_input/` (§11) |
 | `--mc-nas-fp`, `--mc-group-m-fp`, `--mc-segment-length-attr` | `--model multiclone`: RCK's `--run-nas-fp` (0.1), `--run-group-m-default-fp` (0.1), `--run-segment-length-attr` (`length_10`) |
 | `--mc-imputed-penalty`, `--mc-novel-penalty`, `--mc-junction-weight`, `--mc-linear-ends`, `--mc-linear-end-penalty` | `--model multiclone`: the ecDNA additions of §11.1, all off by default |
+| `--mc-heaviest`, `--mc-max-walks`, `--mc-read-alpha`, `--mc-stop-fraction`, `--mc-no-decompose` | `--model multiclone`: the heaviest-first decomposition (§11.3): `copies` (default) or `length`; at most 50 walks; CoRAL's α 0.01; stop share 0 (use everything up); skip it. `--max-multiplicity`, `--min-ecdna-copies`, `--min-species-weight-frac` and `--max-orderings` apply as in the bulk route |
 | `--inputs` | `auto` (subgraph files when `scale.json` exists), `subgraph`, or `windows` |
 | `--obs-dir` | sets `--windows-dir OBS/windows`, `--extremities OBS/extremity.tsv`, `--paths OBS/path.tsv` |
 | `--windows-dir` | UGP windows: `window.tsv.gz`, `window.depth.npz`, `sample_ids.tsv`, optional `snp.tsv.gz` + `snp.[AB]allele.npz` |
@@ -1727,4 +1819,5 @@ enables its second test, which estimates the scales from the windows.
 | `test_demo4.py` | yes (full licence) | both demo4 subgraphs: evaluation never errors, each subgraph scored against its own species, per-sample truth weights (`RCK_ECDNA_DEMO4_OBS` enables estimated scales) |
 | `test_demo7.py` | yes (full licence) | `--block-flip unoriented` on the rebuilt demo7 union subgraph (`RCK_ECDNA_DEMO7_SUBGRAPH`): chr4:185 and chr4:186 flipped, chr4:171, chr4:172 and chr4:187 fixed, no imputed edge |
 | `test_multiclone.py` | yes (small) | `--model multiclone` (§11) on tiny synthetic DIAGs: the default model equals `OptModelMultiClone` (variables, constraints, objective, solution); 1 clone and 2 clones (one labelling and one flip shared by the clones); a flipped phase block; no novel adjacencies (feasible); each off-by-default addition; the CLI outputs and `--model` checks |
+| `test_greedy.py` | yes (small) | the heaviest-first decomposition (§11.3): one cycle in two clones (ψ per clone, then one telomere-to-telomere path per haplotype), two species with different ψ per clone, `copies` vs `length` (the looping path), `decompositions.tsv` columns and the evaluation reader skipping paths |
 | `test_demo3.py` | yes (full licence) | `amplicon_0` against the demo3 truth, rank 1: cycle order matches, haplotype Jaccard ≥ 0.95, junction recall ≥ 0.9, copy-number error ≤ 30%; the same with long-read paths (≥ 90% of read support explained) |

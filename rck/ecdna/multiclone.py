@@ -3,15 +3,16 @@
 Reads the annotated DIAG folder that amplicon-allele-analysis ``subgraph_construct.py
 --clone-profiles`` writes (``<subgraph>/rck_input/``, RCK's native formats), builds
 :class:`rck.core.ilp_gurobi_ecdna.OptModelMultiCloneEcDNA` on it and writes RCK's native per-clone
-``rck.scnt.tsv`` / ``rck.acnt.tsv`` with the layer split, plus ``summary.json``.
+``rck.scnt.tsv`` / ``rck.acnt.tsv`` exactly as ``rck_run.py`` writes them, plus ``summary.json``.
 
 The inputs are read the way ``rck/rck_run.py --no-pre`` reads them, with RCK's own readers
 (``read_segments_from_file``, ``extract_scnt_from_segments``, ``extract_scnb_from_segments``,
 ``read_scnb_from_file``, ``read_adjacencies_from_file``, ``read_positions_from_file``,
 ``read_adjacency_groups_from_file``, ``get_segments_for_fragments_ids_dict``,
 ``get_ref_adjacencies_from_segments``, ``projected_groups``) and the same alignment checks, so
-the model sees exactly what plain RCK sees. The joint decomposition of the ecDNA layers
-(plan step 4) is not here yet.
+the model sees exactly what plain RCK sees. The decomposition of every clone's karyotype into
+cycles (ecDNA) and telomere-to-telomere paths (chromosomes), heaviest first (plan 4.3, step 4),
+is not here yet.
 """
 
 from __future__ import annotations
@@ -36,7 +37,6 @@ log = logging.getLogger("rck.ecdna")
 SCNT, ADJ, ADJ_IMPUTED, FRAGMENTS, TELOMERES, ADJGROUPS, SCNB, PROPORTIONS = (
     "rck.scnt.tsv", "rck.adj.tsv", "rck.adj.imputed.tsv", "rck.fragments.tsv", "rck.telomeres.tsv", "rck.adjgroups.tsv",
     "rck.scnb.tsv", "clone_proportions.tsv")
-LAYER = "layer"
 
 
 @dataclass
@@ -161,7 +161,7 @@ def load_rck_input(rck_dir: str, read_imputed: bool = False) -> MultiCloneInput:
 
 
 def linear_end_candidates(inp: MultiCloneInput, mode: str, min_copies: float = 2.0, frac: float = 0.25) -> list:
-    """Extremities where the chromosome layer may end at a cost (``--mc-linear-ends``): ``all``
+    """Extra extremities where copies may end at a cost (``--mc-linear-ends``): ``all``
     segment extremities, or ``boundaries``, those whose total copy number (any clone) steps by at
     least max(min_copies, frac x the larger) to the reference neighbour. RCK's telomeres are
     already free ends and are skipped by the model."""
@@ -249,36 +249,18 @@ def solve(inp: MultiCloneInput, params: MultiCloneParams, theta: Optional[float]
 
 
 def write_outputs(outdir: str, inp: MultiCloneInput, model, extra_summary: Optional[dict] = None) -> Dict[str, str]:
-    """RCK's native per-clone ``rck.scnt.tsv`` and ``rck.acnt.tsv`` (totals in ``cn``, as plain RCK
-    writes them) with a ``layer`` field ``{'chr': {clone: ...}, 'ec': {clone: ...}}`` in the same
-    shape as ``cn``; ``summary.json`` with ``model: multiclone``."""
-    from rck.core.ilp_gurobi_ecdna import CHR, EC
-
+    """RCK's native per-clone ``rck.scnt.tsv`` and ``rck.acnt.tsv``, written as ``rck_run.py``
+    writes them, and ``summary.json`` with ``model: multiclone``."""
     os.makedirs(outdir, exist_ok=True)
     scnt = model.get_scnt_from_model()
     acnt = model.get_acnt_from_model()
-    layer_scnt = {layer: model.get_layer_scnt_from_model(layer) for layer in (CHR, EC)}
-    layer_acnt = {layer: model.get_layer_acnt_from_model(layer) for layer in (CHR, EC)}
-
-    segments = inp.segments
-    remove_cn_data_from_segments(segments=segments)
-    remove_cnb_data_from_segments(segments=segments)
-    for s in segments:
-        sid = s.stable_id_non_hap
-        s.extra[LAYER] = {layer: {cid: {h.value: layer_scnt[layer][cid].get_cn(sid=sid, haplotype=h, default=0) for h in (Haplotype.A, Haplotype.B)}
-                                  for cid in inp.clone_ids} for layer in (CHR, EC)}
+    remove_cn_data_from_segments(segments=inp.segments)
+    remove_cnb_data_from_segments(segments=inp.segments)
     scnt_path = os.path.join(outdir, "rck.scnt.tsv")
-    write_scnt_to_file(file_name=scnt_path, segments=segments, scnt=scnt)
-
-    adjacencies = inp.adjacencies
-    remove_cn_data_from_adjacencies(adjacencies=adjacencies)
-    for a in adjacencies:
-        aid = a.stable_id_non_phased
-        a.extra[LAYER] = {layer: {cid: {str(ph): layer_acnt[layer][cid].get_cn(aid=aid, phasing=ph, default=0)
-                                        for ph in (Phasing.AA, Phasing.AB, Phasing.BA, Phasing.BB)}
-                                  for cid in inp.clone_ids} for layer in (CHR, EC)}
+    write_scnt_to_file(file_name=scnt_path, segments=inp.segments, scnt=scnt)
+    remove_cn_data_from_adjacencies(adjacencies=inp.adjacencies)
     acnt_path = os.path.join(outdir, "rck.acnt.tsv")
-    write_acnt_to_file(file_name=acnt_path, acnt=acnt, adjacencies=adjacencies, output_reference=True)
+    write_acnt_to_file(file_name=acnt_path, acnt=acnt, adjacencies=inp.adjacencies, output_reference=True)
 
     gm = model.gm
     flips = {str(fid): model.variables["fragment_flipping"][fid].X > 0.5 for fid in model.fragments_ids}
@@ -297,8 +279,7 @@ def write_outputs(outdir: str, inp: MultiCloneInput, model, extra_summary: Optio
         "telomeres": len(inp.telomeres),
         "fragments": len(model.fragments_ids),
         "fragments_flipped": sorted(fid for fid, kept in flips.items() if not kept),
-        "layer_copy_bp": layer_copy_bp(inp, layer_scnt),
-        "novel_used": novel_usage(inp, acnt, layer_acnt),
+        "novel_used": novel_usage(inp, acnt),
         "linear_ends": {"{c}:{v}:{h}".format(c=c, v=v, h=h.value): n for (c, v, h), n in model.get_linear_ends_from_model().items()},
     }
     if extra_summary:
@@ -309,17 +290,7 @@ def write_outputs(outdir: str, inp: MultiCloneInput, model, extra_summary: Optio
     return {"scnt": scnt_path, "acnt": acnt_path, "summary": summary_path}
 
 
-def layer_copy_bp(inp: MultiCloneInput, layer_scnt) -> Dict[str, Dict[str, int]]:
-    """Copy number x segment length per layer and clone (both haplotypes)."""
-    result = {}
-    for layer, per_clone in layer_scnt.items():
-        result[layer] = {cid: int(sum(per_clone[cid].get_cn(sid=s.stable_id_non_hap, haplotype=h, default=0) * s.length
-                                      for s in inp.segments for h in (Haplotype.A, Haplotype.B)))
-                         for cid in inp.clone_ids}
-    return result
-
-
-def novel_usage(inp: MultiCloneInput, acnt, layer_acnt) -> List[dict]:
+def novel_usage(inp: MultiCloneInput, acnt) -> List[dict]:
     rows = []
     imputed = set(inp.imputed_aids)
     for a in inp.input_adjacencies:
@@ -328,10 +299,7 @@ def novel_usage(inp: MultiCloneInput, acnt, layer_acnt) -> List[dict]:
             for ph in (Phasing.AA, Phasing.AB, Phasing.BA, Phasing.BB):
                 cn = acnt[cid].get_cn(aid=aid, phasing=ph, default=0)
                 if cn:
-                    rows.append({"aid": a.extra.get(EXTERNAL_NA_ID, aid), "clone": cid, "phasing": str(ph), "cn": cn,
-                                 "chr": layer_acnt["chr"][cid].get_cn(aid=aid, phasing=ph, default=0),
-                                 "ec": layer_acnt["ec"][cid].get_cn(aid=aid, phasing=ph, default=0),
-                                 "imputed": aid in imputed})
+                    rows.append({"aid": a.extra.get(EXTERNAL_NA_ID, aid), "clone": cid, "phasing": str(ph), "cn": cn, "imputed": aid in imputed})
     return rows
 
 
@@ -375,8 +343,8 @@ def run_multiclone(args) -> Dict[str, object]:
                                                "params": {k: v for k, v in vars(params).items() if k not in ("log_file", "log_to_console")}})
         with open(outputs["summary"]) as handle:
             summary = json.load(handle)
-        log.info("multiclone: status %s, objective %.4f; copy x bp chr %s, ec %s", summary["status"], summary["objective"],
-                 summary["layer_copy_bp"]["chr"], summary["layer_copy_bp"]["ec"])
+        log.info("multiclone: status %s, objective %.4f, %d fragments flipped", summary["status"], summary["objective"],
+                 len(summary["fragments_flipped"]))
     finally:
         close_model(model.gm)
     return {"input": inp, "outputs": outputs, "summary": summary}

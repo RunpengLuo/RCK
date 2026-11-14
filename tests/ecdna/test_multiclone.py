@@ -93,55 +93,50 @@ class MultiCloneTest(unittest.TestCase):
         return inp, model
 
     @staticmethod
-    def cn(model, layer, clone, interval):
+    def cn(model, clone, interval):
         from rck.core.structures import Haplotype
 
-        if layer is None:
-            scnt = model.get_scnt_from_model()
-        else:
-            scnt = model.get_layer_scnt_from_model(layer)
+        scnt = model.get_scnt_from_model()
         return tuple(scnt[clone].get_cn(sid=sid(interval), haplotype=h) for h in (Haplotype.A, Haplotype.B))
 
-    def assert_layer_invariants(self, inp, model):
-        """Totals = chr + ec; the ecDNA layer is balanced at every extremity (a circulation); the
-        chromosome layer is balanced except at telomeres."""
-        from rck.core.ilp_gurobi_ecdna import CHR, EC
+    def test_defaults_build_rcks_model(self):
+        """With the additions off, the model is RCK's OptModelMultiClone: same variables, constraints,
+        objective and solution."""
+        from rck.core.ilp_gurobi import DEFAULT_GROUP_M_FP, DEFAULT_GROUP_N_FP, SEGMENT_LENGTH_ATTRIBUTE, OptModelMultiClone
+        from rck.ecdna.multiclone import MultiCloneParams, load_rck_input
 
-        for clone in inp.clone_ids:
-            for s in inp.segments:
-                interval = (s.start_coordinate, s.end_coordinate)
-                total, chr_, ec = (self.cn(model, layer, clone, interval) for layer in (None, CHR, EC))
-                self.assertEqual(total, tuple(c + e for c, e in zip(chr_, ec)))
-            for layer, telomeres_free in ((EC, False), (CHR, True)):
-                for node in model.iag.nodes(data=False):
-                    for h in ("A", "B"):
-                        from rck.core.structures import Haplotype
-
-                        value = model.get_lin_expr_for_node_haplotype_layer(clone, node, Haplotype(h), layer).getValue()
-                        if telomeres_free and node in model.hapl_telomeres:
-                            self.assertGreaterEqual(value, -1e-6)
-                        else:
-                            self.assertAlmostEqual(value, 0.0, places=6, msg="{l} {c} {v} {h}".format(l=layer, c=clone, v=node, h=h))
+        inp, model = self.solve({"clone1": 3, "clone2": 8})
+        p = MultiCloneParams()
+        base = OptModelMultiClone(hapl_segments=inp.segments, hapl_adjacencies=inp.adjacencies, scnt=inp.scnt, hapl_telomeres=inp.telomeres,
+                                  hapl_segments_to_fragments=inp.segments_to_fragments, hapl_adjacencies_groups=inp.adjacency_groups,
+                                  scnb=inp.scnb, hapl_nov_adjacencies_fp=p.nas_fp,
+                                  extra={DEFAULT_GROUP_M_FP: p.group_m_fp, DEFAULT_GROUP_N_FP: p.group_n_fp, SEGMENT_LENGTH_ATTRIBUTE: p.segment_length_attr})
+        base.gm.Params.OutputFlag = 0
+        base.gm.Params.Threads = 1
+        base.build_gurobi_model()
+        base.solve_model()
+        self.addCleanup(base.gm.dispose)
+        for attr in ("NumVars", "NumConstrs", "NumGenConstrs", "NumIntVars"):
+            self.assertEqual(getattr(model.gm, attr), getattr(base.gm, attr), attr)
+        self.assertEqual(sorted(c.ConstrName for c in model.gm.getConstrs()), sorted(c.ConstrName for c in base.gm.getConstrs()))
+        self.assertAlmostEqual(model.gm.ObjVal, base.gm.ObjVal)
+        self.assertEqual(model.gm.getObjective().size(), base.gm.getObjective().size())
 
     def test_single_clone_single_cycle(self):
-        from rck.core.ilp_gurobi_ecdna import CHR
-
         inp, model = self.solve({"clone1": 5})
         self.assertAlmostEqual(model.gm.ObjVal, 0.0)
-        self.assertEqual(sorted(self.cn(model, None, "clone1", S1)), [1, 6])
-        self.assertEqual(self.cn(model, None, "clone1", S2), self.cn(model, None, "clone1", S1))
+        self.assertEqual(sorted(self.cn(model, "clone1", S1)), [1, 6])
+        self.assertEqual(self.cn(model, "clone1", S2), self.cn(model, "clone1", S1))
         for flank in (F1, F2):
-            self.assertEqual(self.cn(model, CHR, "clone1", flank), (1, 1))
-        self.assert_layer_invariants(inp, model)
+            self.assertEqual(self.cn(model, "clone1", flank), (1, 1))
 
     def test_two_clones_per_clone_copies(self):
         inp, model = self.solve({"clone1": 3, "clone2": 8})
         self.assertAlmostEqual(model.gm.ObjVal, 0.0)
-        c1, c2 = self.cn(model, None, "clone1", S1), self.cn(model, None, "clone2", S1)
+        c1, c2 = self.cn(model, "clone1", S1), self.cn(model, "clone2", S1)
         self.assertEqual(sorted(c1), [1, 4])
         self.assertEqual(sorted(c2), [1, 9])
         self.assertEqual(c1.index(4), c2.index(9))  # the fragment flip is shared by the clones
-        self.assert_layer_invariants(inp, model)
         acnt = model.get_acnt_from_model()
         junction = [a for a in inp.adjacencies if a.extra.get("aid") == "j1"][0]
         from rck.core.structures import Phasing
@@ -158,63 +153,18 @@ class MultiCloneTest(unittest.TestCase):
 
         inp, model = self.solve({"clone1": 5}, swap_s2=True)
         self.assertAlmostEqual(model.gm.ObjVal, 0.0)
-        a1, a2 = self.cn(model, None, "clone1", S1), self.cn(model, None, "clone1", S2)
+        a1, a2 = self.cn(model, "clone1", S1), self.cn(model, "clone1", S2)
         self.assertEqual(a1, a2)  # amplified on one haplotype across both blocks
         self.assertEqual(sorted(a1), [1, 6])
         flips = {fid: round(v.X) for fid, v in model.variables[FRAGMENT_ALLELE].items()}
         b1, b2 = flips[inp.segments_to_fragments[sid(S1)]], flips[inp.segments_to_fragments[sid(S2)]]
         self.assertNotEqual(b1, b2)  # exactly one of the two blocks is flipped against the input frame
 
-    # ---------------------------------------------------------------- risk 1 (plan section 5)
-    def _probe(self, model, objective, sense):
-        import gurobipy as g
-
-        gm = model.gm
-        if not getattr(model, "_probe_fixed", False):
-            gm.addLConstr(gm.getObjective(), g.GRB.LESS_EQUAL, gm.ObjVal + 1e-6)
-            model._probe_fixed = True
-        gm.setObjective(objective, sense)
-        gm.optimize()
-        self.assertEqual(gm.Status, g.GRB.OPTIMAL)
-        return gm.ObjVal
-
-    def test_risk1_linear_paths_pinned_by_flanks(self):
-        """Among all optimal solutions, chromosome-layer copies leaving through the telomeres never
-        exceed the flanks' copy number: the extra copies cannot run telomere to telomere."""
-        import gurobipy as g
-        from rck.core.ilp_gurobi_ecdna import CHR
-        from rck.core.structures import Haplotype
-
-        inp, model = self.solve({"clone1": 5})
-        excess = g.quicksum(model.get_lin_expr_for_node_haplotype_layer("clone1", node, h, CHR)
-                            for node in set(model.hapl_telomeres) if node in model.iag.graph for h in (Haplotype.A, Haplotype.B))
-        self.assertLessEqual(self._probe(model, excess, g.GRB.MAXIMIZE), 4 + 1e-6)  # 2 telomeres x 2 haplotypes x 1 copy
-
-    @unittest.expectedFailure
-    def test_risk1_ecdna_layer_identified(self):
-        """KNOWN FAILURE (2026-11-13): the optimum does not determine the layer split. The ecDNA
-        copies can sit in the chromosome layer as a closed cycle (a circulation is balanced in
-        either layer), so the ecDNA layer ranges from 0 to all e copies at the same objective.
-        Expected to pass once a rule separates the layers (docs/multiclone_NEXT_STEPS.md)."""
-        import gurobipy as g
-        from rck.core.ilp_gurobi_ecdna import EC
-
-        inp, model = self.solve({"clone1": 5})
-        ec = model.layer_total(EC, sids=[sid(S1)])
-        low = self._probe(model, ec, g.GRB.MINIMIZE)
-        high = self._probe(model, ec, g.GRB.MAXIMIZE)
-        self.assertAlmostEqual(low, high)
-
-    def test_risk1_ecdna_layer_range(self):
-        """The current range, pinned so a change in it is noticed: 0 .. e copies on S1."""
-        import gurobipy as g
-        from rck.core.ilp_gurobi_ecdna import EC
-
-        inp, model = self.solve({"clone1": 5})
-        weight = getattr(inp.segments[1], "length_10")
-        ec = model.layer_total(EC, sids=[sid(S1)])
-        self.assertAlmostEqual(self._probe(model, ec, g.GRB.MINIMIZE), 0.0)
-        self.assertAlmostEqual(self._probe(model, ec, g.GRB.MAXIMIZE), 5 * weight)
+    def test_no_novel_adjacencies_is_feasible(self):
+        """RCK's 1 - fp rule would read 0 >= 0.9 here (infeasible); the subclass skips it."""
+        inp, model = self.solve({"clone1": 0}, junction=False)
+        self.assertAlmostEqual(model.gm.ObjVal, 0.0)
+        self.assertEqual(self.cn(model, "clone1", S1), (1, 1))
 
     # ------------------------------------------------------------- ecDNA additions (off by default)
     def test_imputed_adjacencies_off_by_default(self):
@@ -226,7 +176,7 @@ class MultiCloneTest(unittest.TestCase):
         inp, model = self.solve({"clone1": 5}, MultiCloneParams(threads=1, time_limit=30, imputed_penalty=2.0), imputed_junction=True)
         self.assertEqual(len(inp.imputed_aids), 1)
         self.assertAlmostEqual(model.gm.ObjVal, 2.0)
-        self.assertEqual(sorted(self.cn(model, None, "clone1", S1)), [1, 6])
+        self.assertEqual(sorted(self.cn(model, "clone1", S1)), [1, 6])
 
     def test_novel_penalty(self):
         from rck.ecdna.multiclone import MultiCloneParams
@@ -252,7 +202,7 @@ class MultiCloneTest(unittest.TestCase):
         params = MultiCloneParams(threads=1, time_limit=30, linear_ends="boundaries", linear_end_penalty=0.25)
         inp, model = self.solve({"clone1": 5}, params, junction=False)
         self.assertAlmostEqual(model.gm.ObjVal, 0.25 * 5 * 2)  # 5 copies, a start and an end each
-        self.assertEqual(sorted(self.cn(model, None, "clone1", S1)), [1, 6])
+        self.assertEqual(sorted(self.cn(model, "clone1", S1)), [1, 6])
 
 
 @requires_gurobi
@@ -263,9 +213,7 @@ class MultiCloneCliTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_route_writes_native_outputs_with_layers(self):
-        import ast
-
+    def test_route_writes_native_outputs(self):
         from rck.ecdna_run import main
         from rck.core.io import read_segments_from_file
 
@@ -279,15 +227,10 @@ class MultiCloneCliTest(unittest.TestCase):
         self.assertAlmostEqual(summary["objective"], 0.0)
         segments = {s.stable_id_non_hap: s for s in read_segments_from_file(os.path.join(out, "rck.scnt.tsv"))}
         s1 = segments[sid(S1)]
-        layer = s1.extra["layer"] if isinstance(s1.extra["layer"], dict) else ast.literal_eval(s1.extra["layer"])
+        self.assertNotIn("layer", s1.extra)
         for clone, e in (("clone1", 2), ("clone2", 6)):
-            total = s1.extra["cn"][clone]
-            self.assertEqual(sorted(layer), ["chr", "ec"])
-            self.assertEqual({h: layer["chr"][clone][h] + layer["ec"][clone][h] for h in ("A", "B")},
-                             {h.value if hasattr(h, "value") else h: v for h, v in total.items()})
-            self.assertEqual(sorted(total.values()), [1, 1 + e])
-        with open(os.path.join(out, "rck.acnt.tsv")) as h:
-            self.assertIn("layer=", h.read())
+            self.assertEqual(sorted(s1.extra["cn"][clone].values()), [1, 1 + e])
+        self.assertTrue(os.path.exists(os.path.join(out, "rck.acnt.tsv")))
 
     def test_model_flags(self):
         from rck.ecdna_run import build_parser

@@ -38,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     io = parser.add_argument_group("input / output")
     io.add_argument("--model", choices=["bulk", "multiclone"], default="bulk",
                     help="bulk: the two-layer circular flow on bulk depth (OptModelCircular, --subgraph-dir). multiclone: RCK's "
-                         "OptModelMultiClone with a chromosome and an ecDNA layer per clone, on the annotated DIAG (--rck-input); "
+                         "OptModelMultiClone per clone on the annotated DIAG (--rck-input), cycles and paths from the decomposition; "
                          "see docs/ecDNA.md, multi-clone model")
     io.add_argument("--subgraph-dir", default=None,
                     help="Directory with nodes.tsv / edges.tsv of one amplicon. When it also has scale.json (written by "
@@ -186,7 +186,7 @@ def build_parser() -> argparse.ArgumentParser:
                     help="ecDNA addition, off by default: weight of the junction read term |#NOV/theta - sum_k u_k N_k| (theta from "
                          "--junction-reads-per-copy or the subgraph's scale.json, u_k from clone_proportions.tsv)")
     mc.add_argument("--mc-linear-ends", choices=["none", "boundaries", "all"], default="none",
-                    help="ecDNA addition, off by default: extra extremities where the chromosome layer may end, at "
+                    help="ecDNA addition, off by default: extra extremities where copies may end (like telomeres), at "
                          "--mc-linear-end-penalty per copy (boundaries: copy-number steps, see --boundary-min-copies)")
     mc.add_argument("--mc-linear-end-penalty", type=float, default=0.25)
 

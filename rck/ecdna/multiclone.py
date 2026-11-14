@@ -325,6 +325,56 @@ def theta_for(rck_dir: str, override: Optional[float]) -> Optional[float]:
     return None
 
 
+def greedy_params_from_args(args):
+    from rck.ecdna.greedy import GreedyParams
+
+    return GreedyParams(heaviest=args.mc_heaviest, max_walks=args.mc_max_walks, max_multiplicity=args.max_multiplicity, read_alpha=args.mc_read_alpha,
+                        stop_fraction=args.mc_stop_fraction, min_ecdna_copies=args.min_ecdna_copies,
+                        min_species_weight_frac=args.min_species_weight_frac, max_orderings=args.max_orderings,
+                        time_limit=args.time_limit, threads=args.threads,
+                        log_file=os.path.join(args.outdir, "gurobi_greedy.log"), log_to_console=args.verbose)
+
+
+def decompose_karyotypes(inp: MultiCloneInput, scnt, acnt, gparams, name: str = "amplicon"):
+    """Step 4: heaviest-first decomposition of every clone's karyotype (``rck.ecdna.greedy``)."""
+    from rck.ecdna.greedy import as_decomposition, clone_flows, diag_graph, heaviest_first, molecule_groups
+
+    graph, aid_of = diag_graph(inp, name=name)
+    flows = clone_flows(inp, graph, aid_of, scnt, acnt)
+    result = heaviest_first(graph, flows, gparams, groups=molecule_groups(inp, aid_of))
+    decomposition = as_decomposition(result, inp.clone_proportions, gparams)
+    return result, decomposition
+
+
+def write_decompositions(outdir: str, inp: MultiCloneInput, result, decomposition) -> str:
+    from rck.ecdna.greedy import decomposition_frame
+
+    frame = decomposition_frame(result, decomposition, inp.clone_ids, inp.clone_proportions)
+    path = os.path.join(outdir, "decompositions.tsv")
+    frame.to_csv(path, sep="\t", index=False)
+    return path
+
+
+def evaluate_multiclone(args, inp: MultiCloneInput, graph, decompositions_tsv: str) -> Dict[str, object]:
+    """Structure scores (``evaluate.evaluate``, cycles only) and per-clone psi (``evaluate.psi_scores``)."""
+    from rck.ecdna.evaluate import evaluate, load_truth, log_summary, psi_scores, write_evaluation, write_truth_table
+
+    truth = load_truth(args.truth_dir, args.truth_cycles, args.truth_sample or args.sample)
+    write_truth_table(os.path.join(args.outdir, "truth_cycles.tsv"), truth)
+    regions = None if args.all_truth_species else graph.regions()
+    frame, evaluation = evaluate(decompositions_tsv, truth, tol=args.eval_tol_bp, regions=regions, min_truth_fraction=args.min_truth_fraction)
+    if args.truth_dir:
+        table, psi = psi_scores(decompositions_tsv, frame, args.truth_dir, inp.clone_proportions)
+        table.to_csv(os.path.join(args.outdir, "evaluation_psi.tsv"), sep="\t", index=False)
+        evaluation["psi"] = psi
+    write_evaluation(args.outdir, frame, evaluation)
+    log_summary(evaluation)
+    if "psi" in evaluation:
+        log.info("psi: %d of %d (species, clone) pairs exact, mean |error| %s", evaluation["psi"]["psi_exact"], evaluation["psi"]["n_pairs"],
+                 evaluation["psi"]["psi_mean_abs_err"])
+    return evaluation
+
+
 def run_multiclone(args) -> Dict[str, object]:
     from rck.ecdna.gurobi_env import close_model
 
@@ -338,13 +388,47 @@ def run_multiclone(args) -> Dict[str, object]:
              len(set(inp.segments_to_fragments.values())), ",".join(inp.clone_ids), params.threads)
     model = solve(inp, params, theta)
     try:
-        outputs = write_outputs(args.outdir, inp, model,
-                                extra_summary={"runtime_s": round(time.time() - started, 2), "junction_reads_per_copy": theta,
-                                               "params": {k: v for k, v in vars(params).items() if k not in ("log_file", "log_to_console")}})
-        with open(outputs["summary"]) as handle:
-            summary = json.load(handle)
-        log.info("multiclone: status %s, objective %.4f, %d fragments flipped", summary["status"], summary["objective"],
-                 len(summary["fragments_flipped"]))
+        scnt, acnt = model.get_scnt_from_model(), model.get_acnt_from_model()
+        rck_seconds = round(time.time() - started, 2)
+        outputs = write_outputs(args.outdir, inp, model, extra_summary={"junction_reads_per_copy": theta,
+                                                                        "params": {k: v for k, v in vars(params).items() if k not in ("log_file", "log_to_console")}})
     finally:
         close_model(model.gm)
-    return {"input": inp, "outputs": outputs, "summary": summary}
+    with open(outputs["summary"]) as handle:
+        summary = json.load(handle)
+    log.info("multiclone: status %s, objective %.4f, %d fragments flipped", summary["status"], summary["objective"], len(summary["fragments_flipped"]))
+    summary["runtime_rck_s"] = rck_seconds
+
+    result = decomposition = evaluation = None
+    if not getattr(args, "mc_no_decompose", False):
+        gparams = greedy_params_from_args(args)
+        name = args.name or os.path.basename(os.path.dirname(os.path.abspath(args.rck_input))) or "amplicon"
+        result, decomposition = decompose_karyotypes(inp, scnt, acnt, gparams, name=name)
+        outputs["decompositions"] = write_decompositions(args.outdir, inp, result, decomposition)
+        cycles = [w for w in result.walks if w.kind == "cycle"]
+        summary["decomposition"] = {
+            "method": "heaviest_first_" + gparams.heaviest, "stopped": result.stopped, "walks": len(result.walks), "cycles": len(cycles),
+            "paths": len(result.walks) - len(cycles), "amplicon_call": decomposition.call,
+            "circular_fraction": decomposition.circular_fraction, "total_weight": result.total_weight,
+            "remaining_weight": result.remaining_weight,
+            "cycles_psi": [{"order": w.order, "psi": w.psi, "bulk": w.species.weight, "length_bp": w.species.length_bp,
+                            "status": w.species.status} for w in cycles],
+            "params": {k: v for k, v in vars(gparams).items() if k not in ("log_file", "log_to_console")},
+        }
+        log.info("decomposition: %d walks (%d cycles), %s, call %s; cycles: %s", len(result.walks), len(cycles), result.stopped,
+                 decomposition.call, "; ".join("psi {p} bulk {b:.2f}".format(p=w.psi, b=w.species.weight) for w in cycles) or "none")
+        if args.truth_dir or args.truth_cycles:
+            try:
+                evaluation = evaluate_multiclone(args, inp, result.graph, outputs["decompositions"])
+                summary["evaluation"] = {k: evaluation.get(k) for k in ("mean_composite", "n_truth_species")}
+                if "psi" in evaluation:
+                    summary["evaluation"]["psi_exact"] = evaluation["psi"]["psi_exact"]
+                    summary["evaluation"]["psi_pairs"] = evaluation["psi"]["n_pairs"]
+                    summary["evaluation"]["psi_mean_abs_err"] = evaluation["psi"]["psi_mean_abs_err"]
+            except Exception as error:  # noqa: BLE001 - report, do not lose the reconstruction
+                log.error("evaluation failed: %s", error)
+                summary["evaluation"] = {"error": str(error)}
+    summary["runtime_s"] = round(time.time() - started, 2)
+    with open(outputs["summary"], "w") as handle:
+        json.dump(summary, handle, indent=2, sort_keys=True, default=str)
+    return {"input": inp, "outputs": outputs, "summary": summary, "greedy": result, "decomposition": decomposition, "evaluation": evaluation}

@@ -189,6 +189,16 @@ def build_parser() -> argparse.ArgumentParser:
                     help="ecDNA addition, off by default: extra extremities where copies may end (like telomeres), at "
                          "--mc-linear-end-penalty per copy (boundaries: copy-number steps, see --boundary-min-copies)")
     mc.add_argument("--mc-linear-end-penalty", type=float, default=0.25)
+    mc.add_argument("--mc-no-decompose", action="store_true", help="Stop after RCK's karyotypes (no heaviest-first decomposition)")
+    mc.add_argument("--mc-heaviest", choices=["copies", "length"], default="copies",
+                    help="Heaviest-first rule: copies = AmpliconArchitect's (most copies first, then CoRAL's length-weighted "
+                         "copy number); length = CoRAL's greedy weight alone")
+    mc.add_argument("--mc-max-walks", type=int, default=50, help="Heaviest-first decomposition: at most this many walks (cycles and paths)")
+    mc.add_argument("--mc-read-alpha", type=float, default=0.01,
+                    help="CoRAL's alpha: bonus for a walk that explains a molecule group not yet explained (0 = off)")
+    mc.add_argument("--mc-stop-fraction", type=float, default=0.0,
+                    help="Stop when the remaining length-weighted copy number is at most this share of the total (CoRAL: 0.1); "
+                         "0 = use the karyotypes up")
 
     gu = parser.add_argument_group("Gurobi")
     gu.add_argument("--threads", type=int, default=None, help="Default: SLURM_CPUS_PER_TASK, else the CPUs this process may use")

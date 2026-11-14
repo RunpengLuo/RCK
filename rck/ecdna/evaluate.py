@@ -256,6 +256,8 @@ def read_inferred(decompositions_tsv: str, include_low_weight: bool = False) -> 
         if "status" in group:
             low = int(group.loc[group["status"] == "low_weight", "species"].nunique())
         result[int(rank)] = {"objective": float(group["objective"].iloc[0]), "cycles": [], "n_low_weight": low}
+    if "status" in frame:  # multi-clone route: telomere-to-telomere paths are chromosomes, not species
+        frame = frame[frame["status"] != "chromosomal"]
     if "status" in frame and not include_low_weight:
         frame = frame[frame["status"] != "low_weight"]
     for (rank, species), group in frame.groupby(["decomposition_rank", "species"], sort=True):
@@ -861,6 +863,66 @@ def recovery_matrix(frame: pd.DataFrame, species_info: Sequence[Dict[str, object
     matrix = pd.DataFrame(rows, columns=RECOVERY_COLUMNS)
     matrix["best_rank"] = matrix["best_rank"].astype("Int64")
     return matrix
+
+
+def psi_scores(decompositions_tsv: str, frame: pd.DataFrame, truth_dir: str, clone_proportions: Dict[str, float]) -> Tuple[pd.DataFrame, Dict[str, object]]:
+    """Per-clone copies of the multi-clone route against the truth (``ecdna_psi`` rows of
+    ``truth/proportions.tsv``: ``ID``, ``CLONE``, ``PSI``).
+
+    Each in-scope truth species is paired with the inferred cycle :func:`evaluate` matched to it at
+    rank 1 (``frame``). Rows: truth species x clone, with truth and inferred psi, their absolute
+    error, and the proportions per clone (psi over the clone's species) and in bulk
+    (sum_k u_k psi_k over the species; u_k from ``clone_proportions``). Proportions are taken over
+    the truth species in scope and over the inferred cycles respectively.
+    """
+    props = _read_csv_opt(os.path.join(truth_dir, "truth", "proportions.tsv"))
+    if props is None or "KIND" not in props:
+        raise ValueError("no ecdna_psi rows: {d}/truth/proportions.tsv".format(d=truth_dir))
+    truth_psi = props[props["KIND"] == "ecdna_psi"][["ID", "CLONE", "PSI"]].copy()
+    truth_psi["ID"] = truth_psi["ID"].astype(str)
+    inferred = pd.read_csv(decompositions_tsv, sep="\t")
+    inferred = inferred[(inferred["decomposition_rank"] == inferred["decomposition_rank"].min()) & (inferred["ordering_rank"] == 1)]
+    clones = sorted(c[len("psi_"):] for c in inferred.columns if c.startswith("psi_"))
+    top = frame[frame["decomposition_rank"] == frame["decomposition_rank"].min()] if len(frame) else frame
+    matched = {str(r["truth"]): (None if pd.isna(r["inferred"]) else str(r["inferred"])) for r in top.to_dict("records")}
+    scope = sorted(matched)
+    cycles = inferred[inferred.get("kind", pd.Series(["cycle"] * len(inferred), index=inferred.index)) == "cycle"]
+    rows = []
+    for k in sorted(set(clones) | set(truth_psi["CLONE"].astype(str))):
+        t_k = truth_psi[(truth_psi["CLONE"].astype(str) == k) & (truth_psi["ID"].isin(scope))]
+        t_total = float(t_k["PSI"].sum())
+        i_total = float(cycles["psi_" + k].sum()) if ("psi_" + k) in cycles else 0.0
+        for name in scope:
+            t = t_k[t_k["ID"] == name]
+            t_val = float(t["PSI"].iloc[0]) if len(t) else 0.0
+            inf = matched.get(name)
+            row_inf = inferred[inferred["species"] == inf] if inf is not None else inferred.iloc[0:0]
+            i_val = float(row_inf["psi_" + k].iloc[0]) if (len(row_inf) and ("psi_" + k) in row_inf) else 0.0
+            rows.append({"truth": name, "clone": k, "inferred": inf, "truth_psi": t_val, "inferred_psi": i_val,
+                         "abs_err": abs(i_val - t_val), "truth_proportion": t_val / t_total if t_total else None,
+                         "inferred_proportion": i_val / i_total if i_total else None})
+    table = pd.DataFrame(rows, columns=["truth", "clone", "inferred", "truth_psi", "inferred_psi", "abs_err", "truth_proportion", "inferred_proportion"])
+    bulk = []
+    for name in scope:
+        def bulk_of(column, who):
+            sub = table[table["truth"] == name]
+            return sum(clone_proportions.get(r["clone"], 0.0) * r[column] for r in sub.to_dict("records"))
+        bulk.append({"truth": name, "truth_bulk": bulk_of("truth_psi", name), "inferred_bulk": bulk_of("inferred_psi", name)})
+    t_bulk = sum(b["truth_bulk"] for b in bulk)
+    i_bulk = sum(clone_proportions.get(k, 0.0) * float(cycles["psi_" + k].sum()) for k in clones if ("psi_" + k) in cycles)
+    for b in bulk:
+        b["truth_proportion_bulk"] = b["truth_bulk"] / t_bulk if t_bulk else None
+        b["inferred_proportion_bulk"] = b["inferred_bulk"] / i_bulk if i_bulk else None
+    summary = {
+        "n_pairs": int(len(table)),
+        "psi_exact": int((table["abs_err"] == 0).sum()) if len(table) else 0,
+        "psi_mean_abs_err": float(table["abs_err"].mean()) if len(table) else None,
+        "proportion_mean_abs_err": float((table["inferred_proportion"].astype(float) - table["truth_proportion"].astype(float)).abs().mean())
+        if len(table) and table["inferred_proportion"].notna().any() and table["truth_proportion"].notna().any() else None,
+        "bulk": bulk,
+        "rows": _json_records(table),
+    }
+    return table, summary
 
 
 def regions_from_summary(outdir: str) -> Optional[List[Region]]:

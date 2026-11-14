@@ -31,7 +31,8 @@ outputs (decompositions.tsv, AA-format cycles, ...) → evaluation (docs/pipelin
 Code lives in `rck/ecdna/`. The entry points are `rck/ecdna_run.py` (`rck-ecdna`),
 `rck/ecdna/evaluate.py` (`rck-ecdna-eval`), `rck/ecdna/plot.py` (`rck-ecdna-plot`) and
 `rck/ecdna/rerank.py` (`rck-ecdna-rerank`). RCK's own karyotype model (`rck`, `rck/core/*`) is
-unchanged apart from the patches and two fixes in §8.
+unchanged apart from the patches and fixes in §8; the multi-clone route (§11) adds a subclass of it
+in a new file, `rck/core/ilp_gurobi_ecdna.py`.
 
 Terms follow RCK [Aganezov & Raphael 2020](pipeline/references.md#aganezov2020): *segment*, *extremity*, *reference adjacency*, *novel
 adjacency*, *haplotype labelling* (AA, AB, BA, BB), *segment* and *adjacency copy number*. The code's
@@ -51,6 +52,7 @@ the appendices.
 8. [Changes to original RCK](#8-changes-to-original-rck-patches-and-fixes)
 9. [Evaluation](#9-evaluation)
 10. [Known limitations](#10-known-limitations)
+11. [Multi-clone model (`--model multiclone`)](#11-multi-clone-model---model-multiclone)
 - Appendices: [A install](#appendix-a-install), [B run](#appendix-b-how-to-run),
   [C inputs and options](#appendix-c-inputs-and-options), [D outputs](#appendix-d-outputs),
   [E figures](#appendix-e-figures), [F ionic](#appendix-f-running-on-princeton-ionic),
@@ -1280,6 +1282,16 @@ solution byte for byte on the same input:
   near-exact optimality. It is now set only from the new `--run-g-mip-gap-abs` (default: Gurobi's
   own).
 
+**`yubi_CNP_ionic` (2026-11-13), (c) fixes to original RCK.**
+
+- `60ca24d`: after `b26bb96`, `rck_run.py` still failed on any `--scnb` file:
+  `SegmentCopyNumberBoundaries.update()` iterates its argument as a dict, but was given the
+  `SegmentCopyNumberBoundaries` object (`TypeError`). It now passes the object's records. Checked on
+  the demo5 DIAG with the bounds only in `--scnb`: they are applied, and the solution is unchanged.
+- `18dd969`: `rck/utils/adj/convert.py` imported PyVCF at module level, so `rck_run.py`, which
+  never reads a VCF, failed in an environment without it (the ionic gurobi env). The import now
+  happens inside the two VCF readers; the VCF converters still need PyVCF.
+
 **Packaging, part of (c).** `setup.py` adds the `rck.ecdna` package and the `rck-ecdna`,
 `rck-ecdna-eval`, `rck-ecdna-plot` and `rck-ecdna-rerank` console scripts. `README.md` links this
 document.
@@ -1370,6 +1382,96 @@ Passing `--truth-dir` (and optionally `--truth-sample`, `--eval-tol-bp`, `--min-
 
 ---
 
+## 11. Multi-clone model (`--model multiclone`)
+
+*Added on `yubi_CNP_ionic` (2026-11-13), step 3 of [`multiclone_plan.md`](multiclone_plan.md);
+status and next steps in [`multiclone_NEXT_STEPS.md`](multiclone_NEXT_STEPS.md). Off unless
+`--model multiclone` is given; the bulk route (§2–§7) is unchanged.*
+
+The bulk route reinvents parts of RCK because a subgraph is one bulk sample. The multi-clone route
+instead stays as close as possible to RCK's own model [Aganezov & Raphael 2020](pipeline/references.md#aganezov2020):
+its only data term is per-clone allele-specific segment copy numbers from an upstream caller
+(HATCHet; on the simulator, the truth as a stand-in), and it infers per-clone integer karyotypes.
+The one change ecDNA needs is that each clone's karyotype is split into a **chromosome layer** and
+an **ecDNA layer**.
+
+**Input: the annotated DIAG.** `--rck-input <subgraph>/rck_input/`, written by amplicon-allele-analysis
+`subgraph_construct.py --clone-profiles` ([its §5.6](https://github.com/RunpengLuo/amplicon-allele-analysis/blob/yubi_CNP/simulations/subgraph_construct.md)),
+in RCK's native formats: `rck.scnt.tsv` (per-clone copy numbers in the observed phase frame, bounds
+as `cnb=`), `rck.adj.tsv` (observed novel adjacencies), `rck.fragments.tsv` (one fragment per phase
+block), `rck.telomeres.tsv` (outer flank ends), `rck.adjgroups.tsv` (molecule groups from long
+reads), `rck.scnb.tsv`, and two files RCK does not read: `rck.adj.imputed.tsv` and
+`clone_proportions.tsv`. `rck/ecdna/multiclone.py` reads them exactly as `rck/rck_run.py --no-pre`
+does, with RCK's readers and alignment checks, and with `rck_run`'s defaults (`--run-nas-fp 0.1`,
+`--run-group-m-default-fp 0.1`, `--run-segment-length-attr length_10`).
+
+**Model** (`rck/core/ilp_gurobi_ecdna.py::OptModelMultiCloneEcDNA`, a subclass of
+`rck/core/ilp_gurobi.py::OptModelMultiClone`). For clone $k$, segment $s$, haplotype $h$, adjacency
+$a$ and labelling $\varphi$:
+
+$$c_{k,s,h} = x^{\mathrm{chr}}_{k,s,h} + x^{\mathrm{ec}}_{k,s,h}, \qquad N_{k,a,\varphi} = y^{\mathrm{chr}}_{k,a,\varphi} + y^{\mathrm{ec}}_{k,a,\varphi},$$
+
+all integers $\ge 0$. RCK's $c$ and $N$ (`SEGMENT_COPY_NUMBER`, `PROD`/`PY`) remain the totals, so
+every other RCK method (bounds, big-M, labelling, 1 − fp, adjacency groups, deltas, objective,
+fragment flips, getters) reads them unchanged. Balance (`get_lin_expr_for_node_haplotype`) is
+written once per layer: the chromosome layer keeps RCK's rule (excess $\ge 0$ at telomere
+positions, $= 0$ elsewhere); the ecDNA layer is $= 0$ at every extremity, so it is a circulation.
+
+**Outputs** (`--outdir`): `rck.scnt.tsv` and `rck.acnt.tsv` in RCK's native format, with the totals
+in `cn` (what plain RCK writes) and a `layer` field of the same shape,
+`layer={'chr': {clone: {...}}, 'ec': {clone: {...}}}`; `summary.json` (`model: multiclone`, status,
+objective, flipped fragments, copy × bp per layer and clone, the novel adjacencies used per layer);
+`gurobi_multiclone.log`. The joint decomposition of the ecDNA layers into species with per-clone
+copies $\psi_{\sigma,k}$ is plan step 4 and not implemented yet.
+
+```bash
+rck-ecdna --model multiclone --rck-input subgraphs/demo5/amplicon_0/rck_input \
+    --outdir rck_mc_demo5 --time-limit 60 --threads 2
+```
+
+### 11.1 Deviations from `OptModelMultiClone`
+
+| | RCK `OptModelMultiClone` | `OptModelMultiCloneEcDNA` | Default | Why |
+|---|---|---|---|---|
+| copy-number variables | $c_{k,s,h}$, $N_{k,a,\varphi}$ | the same, each = chromosome layer + ecDNA layer (one equality each) | always | ecDNA copies must close into cycles; chromosomal copies need not (plan decision 2) |
+| balance (`define_constraints_on_nodes`) | on the totals; excess at telomeres | per layer: chromosome = RCK's rule, ecDNA = strict at every extremity; the total balance follows and is not written | always | the ecDNA layer is a circulation |
+| 1 − fp presence rule | over all novel adjacencies; $0 \ge 1-\mathrm{fp}$ (infeasible) when there are none | over observed novel adjacencies only; skipped when there are none | always | imputed candidates are not SV calls; the empty case is an RCK edge case (an amplicon whose junctions are all imputed, e.g. demo5 `amplicon_2`) |
+| imputed adjacencies | n/a | `rck.adj.imputed.tsv` joins the graph; cost `--mc-imputed-penalty` per adjacency used (any labelling, any clone) | off | recovers a circularising junction the SV caller missed (plan 4.2) |
+| novel adjacency cost | none | `--mc-novel-penalty` per observed novel adjacency used | 0 (off) | kept as an option (plan decision 3) |
+| junction read term | none (RCK has no read data term) | `--mc-junction-weight` $\cdot\,|v_a - \sum_k u_k \sum_\varphi N_{k,a,\varphi}| / \sqrt{\max(v_a,1)}$, $v_a$ = `#NOV`/θ (θ: `--junction-reads-per-copy`, else `scale.json` next to the DIAG; $u_k$: `clone_proportions.tsv`); observed novel adjacencies only (the DIAG has no read count per reference adjacency) | 0 (off) | the bulk route's `--alpha-novel` term, per clone (plan 4.2); its units are copies, while RCK's objective is copies × `length_10`, so at equal weight it acts as a tie-break |
+| extra chromosome-layer ends | only at telomere positions, free | also at `--mc-linear-ends boundaries` (total copy-number steps of at least max(`--boundary-min-copies`, `--boundary-frac` × larger) in any clone) or `all` extremities, at `--mc-linear-end-penalty` per copy | `none` (off) | explains an amplicon without a closing junction as linear (HSR-like) instead of charging the deltas (plan 4.2) |
+| solver settings | `--run-g-mip-gap 0.015`, `--run-g-threads 4` | `--mip-gap 1e-4`, `--threads` | — | the `rck-ecdna` Gurobi options; not a model change |
+
+Unchanged from RCK: the objective $\sum_k \sum_s L_s(\delta_{k,s,A} + \delta_{k,s,B})$ on the totals; the
+fragment flips; the bounds (`--scnb` now readable, see §8); the reference labelling (AA/BB); one
+labelling per novel adjacency shared by all clones and both layers; the reciprocal-location rules;
+the molecule, general and labelling groups. Clone proportions $u_k$ never enter the model unless
+the junction term is on.
+
+### 11.2 Risk 1: the layer split is not identified (open)
+
+[Plan §5](multiclone_plan.md) risk 1 asked whether extra copies would run linearly from telomere to
+telomere in the chromosome layer instead of closing in the ecDNA layer. `tests/ecdna/test_multiclone.py`
+probes every optimal solution (objective fixed at its optimum, then the layer quantity minimised and
+maximised):
+
+- **Linear leakage is pinned by the flanks.** The chromosome layer's excess at the telomeres never
+  exceeds the flank copy number (`test_risk1_linear_paths_pinned_by_flanks`). The flanks do their
+  job.
+- **But a circulation balances in either layer**, and nothing in RCK's objective sees the layers.
+  So the ecDNA copies can sit in the chromosome layer as a closed cycle at the same objective: on the
+  synthetic DIAG the ecDNA layer ranges from 0 to all $e$ copies (`test_risk1_ecdna_layer_range`;
+  `test_risk1_ecdna_layer_identified` is an expected failure until this is resolved).
+- **demo5** (2026-11-13): the totals equal plain RCK's exactly, but Gurobi's solution puts all
+  20 ecDNA copies in the chromosome layer and leaves the ecDNA layer empty. At the same objective
+  the ecDNA layer can also hold all 20, and at the maximum it also takes one normal chromosomal
+  copy into a circle.
+
+A per-telomere tie-break (plan 4.2) would not change this, since a chromosome-layer cycle uses no
+telomere. No tie-break has been added; the options are listed in `multiclone_NEXT_STEPS.md`.
+
+---
+
 ## Appendix A. Install
 
 `rck-ecdna` needs Python 3.8 or newer, `numpy`, `pandas`, `networkx`, `scipy` (the refit) and
@@ -1454,7 +1556,11 @@ and `--rck-depth-per-copy` overrides) is documented with stage 2.
 
 | Option | Content |
 |---|---|
-| `--subgraph-dir` | `nodes.tsv`, `edges.tsv` (and optionally `phase_blocks.tsv`, `segment_blocks.tsv`) of one amplicon; with `scale.json` etc. it is the only input needed |
+| `--model` | `bulk` (default; this document §2–§7) or `multiclone` (§11) |
+| `--subgraph-dir` | `nodes.tsv`, `edges.tsv` (and optionally `phase_blocks.tsv`, `segment_blocks.tsv`) of one amplicon; with `scale.json` etc. it is the only input needed. Required with `--model bulk` |
+| `--rck-input` | `--model multiclone`: the annotated DIAG folder `<subgraph>/rck_input/` (§11) |
+| `--mc-nas-fp`, `--mc-group-m-fp`, `--mc-segment-length-attr` | `--model multiclone`: RCK's `--run-nas-fp` (0.1), `--run-group-m-default-fp` (0.1), `--run-segment-length-attr` (`length_10`) |
+| `--mc-imputed-penalty`, `--mc-novel-penalty`, `--mc-junction-weight`, `--mc-linear-ends`, `--mc-linear-end-penalty` | `--model multiclone`: the ecDNA additions of §11.1, all off by default |
 | `--inputs` | `auto` (subgraph files when `scale.json` exists), `subgraph`, or `windows` |
 | `--obs-dir` | sets `--windows-dir OBS/windows`, `--extremities OBS/extremity.tsv`, `--paths OBS/path.tsv` |
 | `--windows-dir` | UGP windows: `window.tsv.gz`, `window.depth.npz`, `sample_ids.tsv`, optional `snp.tsv.gz` + `snp.[AB]allele.npz` |
@@ -1612,4 +1718,5 @@ enables its second test, which estimates the scales from the windows.
 | `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
 | `test_demo4.py` | yes (full licence) | both demo4 subgraphs: evaluation never errors, each subgraph scored against its own species, per-sample truth weights (`RCK_ECDNA_DEMO4_OBS` enables estimated scales) |
 | `test_demo7.py` | yes (full licence) | `--block-flip unoriented` on the rebuilt demo7 union subgraph (`RCK_ECDNA_DEMO7_SUBGRAPH`): chr4:185 and chr4:186 flipped, chr4:171, chr4:172 and chr4:187 fixed, no imputed edge |
+| `test_multiclone.py` | yes (small) | `--model multiclone` (§11) on tiny synthetic DIAGs: 1 clone and 2 clones (layer sums, ecDNA layer balanced everywhere, flanks 1/1 in the chromosome layer, one labelling shared by the clones), a flipped phase block, each off-by-default addition, the CLI outputs (`layer` field, `summary.json`), and risk 1 (linear ends pinned by the flanks; the layer split not identified, an expected failure) |
 | `test_demo3.py` | yes (full licence) | `amplicon_0` against the demo3 truth, rank 1: cycle order matches, haplotype Jaccard ≥ 0.95, junction recall ≥ 0.9, copy-number error ≤ 30%; the same with long-read paths (≥ 90% of read support explained) |

@@ -10,25 +10,74 @@ This file covers the `yubi_dev` branch relative to `rck/version-fix`.
 Branch `yubi_CNP_ionic`, made locally on the ionic cluster from `origin/yubi_CNP` @ `a58f167`,
 for the multi-clone plan ([`docs/multiclone_plan.md`](docs/multiclone_plan.md)). Steps 1–2 of
 the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and reasons in its
-`CHANGELOG.md`). No RCK code has changed yet.
+`CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
+[`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
 ### Added
 
+- **`rck/core/ilp_gurobi_ecdna.py::OptModelMultiCloneEcDNA`** (plan 4.1), a minimal subclass of
+  `OptModelMultiClone`.
+  - Every clone's segment and phased adjacency copy number is split into a chromosome layer and an
+    ecDNA layer. RCK's own variables stay the totals (one equality per pair).
+    - *Why keep the totals:* every RCK method not about balance (bounds, big-M, labelling,
+      1 − fp, groups, deltas, objective, fragment flips, getters) then runs unchanged.
+  - `define_constraints_on_nodes` is replaced by balance per layer. The chromosome layer keeps
+    RCK's telomere rule, and the ecDNA layer is strictly balanced (a circulation).
+  - Optional additions, all off by default (plan 4.2):
+    - imputed adjacencies with a cost, left out of the 1 − fp rule;
+    - a cost per novel adjacency used;
+    - a per-clone junction read term (θ, u_k);
+    - penalised extra chromosome-layer ends.
+  - Each deviation is a row of the table in `docs/ecDNA.md` §11.1.
+- **`rck-ecdna --model {bulk,multiclone}`** (default `bulk`), with `--rck-input <dir>` and an
+  `--mc-*` option group (plan 4.4). The new `rck/ecdna/multiclone.py`:
+  - reads the annotated DIAG as `rck_run.py --no-pre` does, with RCK's readers, alignment checks
+    and run defaults;
+    - *Why:* so the route sees exactly what plain RCK sees;
+  - writes RCK's native `rck.scnt.tsv` / `rck.acnt.tsv` (totals in `cn`) with a
+    `layer={'chr': ..., 'ec': ...}` field, plus `summary.json` (`model: multiclone`).
+  - `--subgraph-dir` is now checked in `main()` (needed for `bulk` only) instead of by argparse.
+- **`tests/ecdna/test_multiclone.py`**: 12 tests on tiny synthetic DIAGs, Gurobi, under 1 s in
+  total. They cover:
+  - 1 and 2 clones;
+  - a flipped phase block;
+  - each addition;
+  - the CLI;
+  - risk 1 (see "Found").
 - [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md): status of the plan, the
-  decisions taken in step 1 that need confirming, RCK issues found in step 2, and the detailed
-  next steps (3: `OptModelMultiCloneEcDNA`; 4: joint decomposition; 5: small runs; 6: the
-  benchmark, only with approval).
+  decisions of step 1 (accepted 2026-11-13), the RCK issues found, and the next steps.
+- **`docs/ecDNA.md` §11:** the multi-clone model, its deviation table (§11.1) and the risk-1
+  result (§11.2). §8 has the two RCK fixes below; Appendices C and G have the options and tests.
 
-### Found (not fixed)
+### Fixed
 
-- `rck_run.py:224` fails on `--scnb`: `SegmentCopyNumberBoundaries.update()` is given an object
-  but iterates its argument as a dict. The DIAG passes the bounds through `--scnt` (`cnb=`)
-  instead.
-- `rck_run.py` imports PyVCF (`vcf`, via `rck/utils/adj/convert.py`), which the gurobi env
-  lacks. The run never calls it; an empty stub module works around it.
-- The unmodified `rck_run.py --no-pre` loads and solves the demo5 DIAG from
+- **`rck_run.py` `--scnb`** (`60ca24d`): `SegmentCopyNumberBoundaries.update()` was given the
+  object instead of its records and raised `TypeError` on any `--scnb` file. The log line next to
+  it also printed the object instead of the path.
+- **PyVCF is imported lazily** in `rck/utils/adj/convert.py` (`18dd969`), so `rck_run.py` runs in
+  the gurobi env without it. No stub is needed any more.
+
+### Found
+
+- **Risk 1 (plan §5): the chromosome/ecDNA split is not identified.**
+  - The flanks do pin linear telomere-to-telomere copies to the flank copy number.
+  - But a circulation balances in either layer, and RCK's objective does not see the layers. So
+    the ecDNA copies may sit in the chromosome layer as a closed cycle at the same objective.
+  - On demo5, the totals equal plain RCK's exactly (18/18 segment and 20/20 adjacency rows, same
+    fragment flips). But Gurobi's solution has all 20 ecDNA copies in the chromosome layer.
+  - At the same objective, the ecDNA layer can hold anywhere from 0 to all 20 copies.
+  - A per-telomere tie-break would not help. No tie-break has been added; the options are in
+    `docs/multiclone_NEXT_STEPS.md`.
+- **RCK's 1 − fp rule is infeasible without novel adjacencies** (0 ≥ 1 − fp). The subclass skips
+  it then; plain RCK still fails on such an input (demo5 `amplicon_2`: 0 observed, 18 imputed).
+- **Step 2:** the unmodified `rck_run.py --no-pre` loads and solves the demo5 DIAG from
   amplicon-allele-analysis: optimal in 2 s, objective 0, every `--post-check-all` check passes,
   and the fragment flips recover the true phase.
+- **Validation:**
+  - The bulk route on demo5 matches the previous commit file for file, except log timestamps and
+    `runtime_s`.
+  - Full suite: 264 tests, 3 skipped, 1 expected failure. The 7 failures in the old
+    `tests/test_graph.py` and `tests/test_structures.py` are already present at `32f2244`.
 
 ## [Unreleased]
 

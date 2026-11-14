@@ -1,9 +1,0 @@
-name	options	status	n_significant	n_truth	weights	steps	residual	composites	mean_composite	best_pool_composite	best_pool_rank	best_pool_significant	picked	pool_size	inexact	decided_by	paths_loaded	reads_explained	runtime_s
-nest_samehap_3to1_s301_sigma0	(defaults)	done	1	2	12.2	13	0.0	ecdna1=0.984,ecdna2=0.000	0.4919	0.9918	1	2	False	65	0	species_penalty	16	1.0	16.26
-ctrl_dup_s703_sigma0	(defaults)	done	1	1	17.87	11	0.0	ecdna1=0.988	0.9885	0.9885	1	1	True	46	0	species_penalty	11	1.0	2.21
-nest_cross_1to1_s505_sigma0	(defaults)	done	2	2	15.66,12.38	43	0.0	ecdna1=0.987,ecdna2=0.980	0.9836	0.9936	13	3	False	76	0	species_penalty	15	1.0	1363.12
-nest_cross_1to1_s502_sigma0	(defaults)	done	2	2	14.02,8.25	28	0.0	ecdna1=1.000,ecdna2=0.944	0.9719	0.9736	10	2	True	58	0	species_penalty	18	1.0	20.78
-nest_samehap_6to1_s801_sigma0	(defaults)	done	2	2	35.3,6.17	28	0.0	ecdna1=0.994,ecdna2=0.997	0.9953	0.9953	1	2	True	68	0	species_penalty	12	1.0	99.12
-nest_samehap_6to1_s803_sigma0	(defaults)	done	1	2	36.23	14	0.0	ecdna1=0.993,ecdna2=0.000	0.4964	0.9594	2	2	False	54	0	species_penalty	9		13.97
-nest_samehap_6to1_s804_sigma0	(defaults)	done	1	2	37.99	18	0.0	ecdna1=0.986,ecdna2=0.000	0.493	0.9888	1	2	False	61	0	species_penalty	13	1.0	16.7
-nest_cross_1to1_s508_sigma0	(defaults)	done	2	2	14.24,11.38	38	0.0	ecdna1=0.994,ecdna2=0.989	0.9914	0.9964	3	2	False	55	0	species_penalty	11		22.15

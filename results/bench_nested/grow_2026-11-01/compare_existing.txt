@@ -1,3 +1,0 @@
-existing cases: 22 | rows: 132 | differing rows: 0
-all existing rows identical
-new cases: ['ctrl_dup_s706', 'ctrl_dup_s708', 'ctrl_dup_s709', 'ctrl_dup_s710', 'nest_cross_1to1_s506', 'nest_cross_1to1_s507', 'nest_cross_1to1_s508', 'nest_cross_1to1_s509', 'nest_samehap_3to1_s305', 'nest_samehap_3to1_s306', 'nest_samehap_3to1_s307', 'nest_samehap_3to1_s308', 'nest_samehap_6to1_s801', 'nest_samehap_6to1_s802', 'nest_samehap_6to1_s803', 'nest_samehap_6to1_s804', 'nest_samehap_6to1_s805', 'nest_samehap_6to1_s806']

@@ -1,7 +1,7 @@
 # Multi-clone RCK-ecDNA: status and next steps (branch `yubi_CNP_ionic`)
 
 *Written 2026-11-13; updated the same day after step 3, the plan revision (no layers;
-heaviest-first decomposition) and step 4. The plan is [`multiclone_plan.md`](multiclone_plan.md); this file says where
+heaviest-first decomposition), step 4, and the junction-read labelling groups. The plan is [`multiclone_plan.md`](multiclone_plan.md); this file says where
 it stands and what comes next. Changes and their reasons are in the `[yubi_CNP_ionic]` sections of
 the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELOG.md` (step 3).*
 
@@ -20,7 +20,9 @@ the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELO
   and `36d7ff8` (docs); RCK `60ca24d` (`--scnb` fix), `18dd969` (lazy PyVCF), `8e6fb74` (model,
   first version with layers), `d3b0448` (route, outputs, tests), `a496a12` (docs), `ea99498`
   (layers removed: the model is RCK's own), `690d089` (docs), `fc22a34` (step 4: heaviest-first
-  decomposition, ψ evaluation) and the docs commit after it.
+  decomposition, ψ evaluation), `8faaace` (docs), `140e938` (within-block phasing score) and the
+  docs commit after it; amplicon-allele-analysis `8c89156` (`--diag-labeling-groups`) and
+  `c6f24cc` (docs).
 - `~/RCK` and `~/amplicon-allele-analysis` stay on `yubi_dev`. In `~/RCK`, `yubi_dev` is 3 commits
   ahead of GitHub (23b5ecf, 97db161, cfbc8ca), none of them pushed. They are not on
   `yubi_CNP_ionic`.
@@ -30,7 +32,7 @@ the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELO
 | 1. amplicon-allele-analysis: clone profiles, refinement, flanks, DIAG writer, tests | **done** (not pushed) |
 | 2. the DIAG with the unmodified `rck` on demo5 | **done**: optimal, objective 0, all post-checks pass |
 | 3. RCK: `OptModelMultiCloneEcDNA`, CLI route, outputs, tests | **done**, simplified after risk 1: RCK's own model plus off-by-default additions (section 2) |
-| 4. RCK: heaviest-first decomposition of the clones' karyotypes (cycles = ecDNA, telomere-to-telomere paths = chromosomes), evaluation against `ecdna_psi` | **done** (section 3); a decision on `junction_hap` (section 3a) is open |
+| 4. RCK: heaviest-first decomposition of the clones' karyotypes (cycles = ecDNA, telomere-to-telomere paths = chromosomes), evaluation against `ecdna_psi` | **done** (section 3); `junction_hap` passed as RCK labelling groups within phase blocks (section 3a) |
 | 5. small end-to-end runs (demo5, demo7, one or two bench cases) | demo5 and demo7 done in step 4; bench cases open |
 | 6. full benchmark | only with Yubi's explicit approval |
 
@@ -142,27 +144,36 @@ Described in `docs/ecDNA.md` §11.3 (with a table of deviations from CoRAL's gre
   --rck-junction-reads-per-copy 6.5 --no-plot --clone-profiles truth`. It has 49 segments,
   10 novel and 19 imputed adjacencies, 3 molecule groups and 2 clones.
 
-## 3a. Decision needed: use `junction_hap` in RCK's labelling? (plan risk 5)
+## 3a. Junction read labels as RCK labelling groups (done 2026-11-13, Yubi's decision)
 
-- **What happens.** RCK never reads the DIAG's `junction_hap`, so a novel adjacency's labelling,
-  together with the fragment flips, is free at the same objective.
-- **demo7.** RCK labelled the inner species' junctions sim00005–8 AB/BA, while the truth
-  (`truth/adjacency_clone.tsv`) and `junction_hap` both say AA. The karyotype then has no inner
-  cycle on one haplotype, and the decomposition merges the inner species into the outer one.
-  Holding the labellings fixes it exactly.
-- **Options:**
-  1. **Hard:** for `junction_hap` A or B, allow only AA or BB (`mixed` and `imputed` stay free).
-     This is the scratch probe. It is one more deviation row: a labelling constraint from
-     long-read or SNP evidence, like RCK's own labelling groups.
-  2. **Soft:** a small cost per adjacency copy on a labelling against `junction_hap`. It is
-     safer if `junction_hap` can be wrong.
-  3. **Leave RCK as is** and accept the merged walks. Nested species on one haplotype will then
-     often be merged.
+- **The problem.** RCK fixes a junction's labelling only where allele-specific copy numbers force
+  it. Between phase blocks that only novel adjacencies connect, which is typical for ecDNA, flips
+  and labellings are free at the same objective. On demo7, the inner species' junctions came out
+  AB/BA (truth AA), and the species merged.
+- **The fix, input-side.** amplicon-allele-analysis `subgraph_construct.py --diag-labeling-groups
+  block` (`rck_diag.py::labeling_groups`; its `subgraph_construct.md` §5.6):
+  - one RCK labelling group (`agt=L`) per phase block and `junction_hap` label;
+  - never across blocks;
+  - groups that RCK's refinement would merge across blocks or labels are dropped.
 
-  Recommendation: option 2 with a cost that only breaks ties (like the bulk route's
-  `--soft-junction-hap`), so that RCK's own objective still decides whenever it can.
-- **Then step 5:** one or two nested bench cases (for example s103, and s402, which the bulk route
-  fails), single runs with short time limits.
+  RCK's model is unchanged (`docs/ecDNA.md` §11.4).
+- **Evaluation:** `*_blockwise` scores, with one A/B swap per phase block shared by all species
+  (`docs/pipeline/evaluation.md` §3.10; `rck-ecdna-eval --phase-blocks`). The multi-clone route
+  passes the DIAG's fragments automatically.
+- **Runs** (DIAGs rebuilt in the scratchpad, 60 s limit, 2 threads, under 1 s each):
+
+| case | groups | cycles ψ | ψ exact | composite | within blocks |
+|---|---|---|---|---|---|
+| demo5 | none / 1 | 20 | 1/1 | 1.000 | 1.000 |
+| demo7 | none | 14/7 (merged), 12/6 | 2/4 | 0.747 | 0.747 |
+| demo7 | 1 (chr4:171, A, 8 ends) | 26/13, 14/7 | 4/4 | 0.693 | 1.000 |
+
+- **Still open:** phase *between* blocks is undetermined by the data (hence the within-block
+  score). Junction ends alone in their block stay free.
+- **Next: step 5.** One or two nested bench cases (for example s103, and s402, which the bulk route
+  fails), with `--clone-profiles truth --diag-labeling-groups block`, as single runs with short
+  time limits. Check that `junction_hap` purity holds on the bench, and compare with and without
+  the groups.
 
 **Stop and report after step 4.** (Done 2026-11-13.)
 

@@ -69,6 +69,22 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
     `docs/pipeline/evaluation.md` §3.9.
   - Results: demo5 composite 1.0 with ψ exact; demo7 0.747 with 2/4 ψ exact.
 
+- **Within-phase-block phasing scores** (`rck/ecdna/evaluate.py`, `140e938`;
+  `docs/pipeline/evaluation.md` §3.10).
+  - With phase blocks (the DIAG's fragments; `rck-ecdna-eval --phase-blocks`), `evaluate()` chooses
+    one A/B swap per block, shared by all species, and adds `phasing_accuracy_blockwise`,
+    `phased_junction_f1_blockwise`, `order_match_blockwise`, `composite_blockwise`,
+    `inferred_blockwise` and `mean_composite_blockwise`.
+  - *Why:* a phase block's A/B is arbitrary, and no data ties blocks together, so the absolute
+    scores also count an arbitrary per-block choice. A phase error between species in one block
+    still counts.
+  - Without blocks nothing changes: the bulk route's evaluation is byte-identical on demo5.
+  - Tests: 6 in `test_evaluate.py`. Also a `test_multiclone.py` test that a DIAG labelling group
+    (`agt=L`) becomes RCK's labelling constraint.
+- **Junction read labels as RCK labelling groups** (input-side; amplicon-allele-analysis
+  `--diag-labeling-groups block`; `docs/ecDNA.md` §11.4). RCK's model is unchanged.
+  - demo7: ψ exact 4/4 (before 2/4), 1.0 within phase blocks.
+
 ### Changed
 
 - **The chromosome/ecDNA layer split was removed** (`ea99498`; the plan is revised: decision 2,
@@ -97,12 +113,13 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 
 ### Found
 
-- **RCK's junction labelling is free (step 4).** RCK does not read `junction_hap`.
+- **RCK's junction labelling is free (step 4; resolved with labelling groups, above).** RCK does not read `junction_hap`.
   - On demo7 it labelled the inner species' junctions AB/BA, while the truth says AA, at the same
     objective.
   - The decomposition then merges the inner species into the outer one.
   - Holding the labelling to `junction_hap` (scratch probe) gives an exact result.
-  - Not changed: it would be a new deviation (`docs/multiclone_NEXT_STEPS.md` section 3a).
+  - Resolved input-side with labelling groups within phase blocks (`docs/multiclone_NEXT_STEPS.md`
+    section 3a), with no change to RCK's model.
 - **RCK's 1 − fp rule is infeasible without novel adjacencies** (0 ≥ 1 − fp). The subclass skips
   it then; plain RCK still fails on such an input (demo5 `amplicon_2`: 0 observed, 18 imputed).
 - **Step 2:** the unmodified `rck_run.py --no-pre` loads and solves the demo5 DIAG from
@@ -110,7 +127,7 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
   and the fragment flips recover the true phase.
 - **Validation:**
   - The bulk route on demo5 matches `18dd969` file for file, except log timestamps and `runtime_s`.
-  - Full suite: 267 tests, 3 skipped. The 7 failures in the old `tests/test_graph.py` and
+  - Full suite: 272 tests, 3 skipped. The 7 failures in the old `tests/test_graph.py` and
     `tests/test_structures.py` are already present at `32f2244`.
 
 ## [Unreleased]

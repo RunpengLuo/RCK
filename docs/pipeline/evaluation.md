@@ -489,6 +489,45 @@ rank 1 (none: ψ = 0).
 - `bulk`: Σ_k u_k ψ_k per species, truth and inferred, and their shares over the species, with
   u_k from the DIAG's `clone_proportions.tsv`.
 
+
+### 3.10 Phasing within phase blocks (`*_blockwise`)
+
+> **Provenance:** (c) new, RCK `yubi_CNP_ionic` (2026-11-13). **Code:** `rck/ecdna/evaluate.py::block_swaps`,
+> `::relabel`, `::score_blockwise`, `::score_decomposition` (`blocks=`). Used by `rck-ecdna --model multiclone
+> --truth-dir` (blocks from the DIAG's `rck.fragments.tsv`) and by `rck-ecdna-eval --phase-blocks`.
+
+**Why.** The haplotype-sensitive scores (phasing accuracy §3.2, phased junctions §3.3, order match
+§3.4) compare A/B with the truth's across the whole chromosome.
+- A phase block's observed A/B is arbitrary, and without phase information between blocks no
+  method can tie neighbouring blocks together.
+- The multi-clone route (`docs/ecDNA.md` §11.4) therefore reconstructs haplotypes correctly only
+  *within* each phase block, and the absolute scores also count its arbitrary per-block A/B
+  choice.
+
+**Definition.**
+1. Pair truth and inferred species one-to-one by haplotype-free Jaccard.
+2. For every phase block, swap A/B in all inferred species when the swapped haplotypes overlap the
+   truth's more (in bases, summed over the pairs). The swap is **one per block, shared by every
+   species**, so a phase error *between* two species in one block still counts.
+3. Relabel the inferred walks, and pair them with the truth again by haplotype Jaccard (§3.6).
+4. Score `phasing_accuracy_blockwise`, `phased_junction_f1_blockwise` and
+   `order_match_blockwise` on the relabelled pair.
+5. `composite_blockwise` is §3.7's composite with these in place of phasing accuracy and order
+   match. `mean_composite_blockwise` is its mean over the in-scope truth species.
+   `inferred_blockwise` names the paired species when step 3 pairs differently from §3.6, and the
+   haplotype-free terms then come from that pair.
+6. A truth species left unpaired scores 0.
+
+**Outputs.**
+- Without phase blocks, nothing changes: no new columns, and the bulk route's evaluation is
+  byte-identical.
+- With them, `evaluation.tsv` and `recovery_matrix.tsv` gain the `*_blockwise` columns, and
+  `evaluation.json` gains `mean_composite_blockwise` and `phase_blocks`.
+
+**Example.** demo7 with the DIAG labelling groups has absolute composites 0.716 and 0.670 (phasing
+accuracy 0.58 and 0.35), and 1.0 within blocks for both species. Without the groups, both scores
+are 0.892 and 0.601: the inner species' error there is structural, so the block swaps do not
+remove it.
 ---
 
 ## 4. The method-agnostic scorer `aa_eval`
@@ -1612,6 +1651,7 @@ at the end of the run. Options:
 | `--min-truth-fraction` | 0.5 | scope threshold $\phi$ |
 | `--all-truth-species` | off | score every truth species |
 | `--outdir` | the directory of `--decompositions` | |
+| `--phase-blocks` | off | RCK fragments file (`rck_input/rck.fragments.tsv`): also score phasing within phase blocks (§3.10) |
 
 The method-agnostic scorer:
 
@@ -1754,7 +1794,7 @@ The pooled files of §6.3 add `n_cases`, `headline_pooling`, `micro_<rate>`, `ma
 
 | Test (RCK `tests/ecdna/`) | Covers | Gurobi |
 |---|---|---|
-| `test_evaluate.py` | truth reading, several-phasing assignment, species metrics | no |
+| `test_evaluate.py` | truth reading, several-phasing assignment, species metrics, within-block phasing (§3.10) | no |
 | `test_recovery.py` | recovery matrix, composite, `best_*` | no |
 | `test_aa_eval.py` | AA parsing, graph metrics incl. `error_free_merged` and `merge_benign_splits`, CoRAL metrics (code and supplement), modes, sample metrics | no |
 | `test_aa_partition.py` | M1 and M2 (§4.7): a merge, a split, a nested pair sharing a novel adjacency (blind and phased), a background SV left unused (graph universe) and one routed into a walk, 10 kb against 100 bp, one-to-one matching, a linear walk, undefined rates, micro and macro pooling, the AA-file path end to end | no |

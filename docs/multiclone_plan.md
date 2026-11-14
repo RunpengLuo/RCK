@@ -248,7 +248,11 @@ walk weight drops below a resolution. The multi-clone version:
    - RCK does not read `junction_hap`. A novel adjacency's labelling (AA/AB/BA/BB) together with the fragment flips can change at the same objective.
    - On demo7, RCK labelled the inner species' junctions sim00005–8 AB/BA. The truth and `junction_hap` both say AA.
    - The karyotype then has no single-haplotype inner cycle, and the decomposition merges it into the outer species.
-   - Holding labellings to `junction_hap` (A → AA, B → BB; `mixed` free) recovers demo7 exactly. It would be a new deviation from RCK (hard, or as a soft cost), and needs Yubi's decision.
+   - *Resolved 2026-11-13 (Yubi's decision), without changing RCK's model:*
+     - amplicon-allele-analysis `--diag-labeling-groups block` writes RCK labelling groups (`agt=L`), one per phase block and junction read label. RCK's own input for such evidence, enforced by its unmodified `define_constraints_for_adjacency_groups_labeling`.
+     - Groups never span phase blocks, because read haplotags are comparable only within one; this keeps decision 1.
+     - demo7 then gives ψ exact 4/4. Phase *between* blocks stays undetermined, so phasing is scored within blocks (`docs/pipeline/evaluation.md` §3.10): 1.0.
+     - Details in `docs/ecDNA.md` §11.4.
 
 ## 6. Order of work
 

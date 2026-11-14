@@ -1404,7 +1404,8 @@ in RCK's native formats:
 - `rck.adj.tsv`: observed novel adjacencies;
 - `rck.fragments.tsv`: one fragment per phase block;
 - `rck.telomeres.tsv`: the outer flank ends;
-- `rck.adjgroups.tsv`: molecule groups from long reads;
+- `rck.adjgroups.tsv`: molecule groups from long reads and, with `--diag-labeling-groups block`,
+  labelling groups from junction reads (§11.4);
 - `rck.scnb.tsv`: the bounds again, for `--scnb`;
 - two files RCK does not read: `rck.adj.imputed.tsv` and `clone_proportions.tsv`.
 
@@ -1566,8 +1567,81 @@ length weight, a chromosome path through both flanks can therefore outweigh a sh
     the inner species' junctions sim00005–8 AB/BA, while the truth (and `junction_hap`) say AA.
     It reaches objective 0 either way.
   - The karyotype therefore has no inner cycle on one haplotype.
-  - Using `junction_hap` would be a new deviation from RCK, not made
-    (`multiclone_NEXT_STEPS.md`).
+  - Fixed by passing the junction read labels as RCK labelling groups within phase blocks
+    (§11.4): demo7 then gives ψ exact 4/4 and 1.0 within phase blocks.
+
+### 11.4 Haplotype labelling from junction reads, within phase blocks (DIAG labelling groups)
+
+*Added 2026-11-13. Input-side only: RCK's model is unchanged.*
+
+**What RCK infers, and what it leaves open.** RCK's haplotype-specific reconstruction infers each
+novel adjacency's labelling (AA/AB/BA/BB) from the allele-specific segment copy numbers.
+- Every fragment (here, a phase block) has a free A/B flip $b_f$, because the input caller's
+  allele labels are arbitrary per fragment.
+- A labelling is therefore fixed only where the copy numbers and balance force it.
+- When a novel adjacency joins two fragments that nothing else ties together, several
+  combinations of flips and labellings explain the copy numbers equally well. This is common for
+  ecDNA, whose junctions join distant amplified pieces in different phase blocks.
+
+**Why this matters for ecDNA but not for RCK's own goal.**
+- RCK reports a copy-number karyotype graph and never claims to resolve molecules, so for its
+  purpose these alternatives are equivalent.
+- RCK-ecDNA decomposes the karyotype into molecules (§11.3). When species overlap (nested
+  ecDNA), the alternatives route copies differently and give different species.
+- On demo7, RCK labelled the inner species' junctions sim00005–8 AB/BA, while the truth (and the
+  junction reads) say AA, at the same objective, 0. The decomposition then merged the inner species
+  into the outer one: ψ exact for 2 of 4 (species, clone) pairs.
+
+This is a limit of the information in allele-specific copy numbers, not a defect in RCK's
+algorithm.
+
+**RCK's own remedy: labelling groups.** RCK accepts adjacency groups of type `L` (`agt=L`, with
+`agl` naming the end of each listed adjacency) and enforces them in
+`OptModelMultiClone.define_constraints_for_adjacency_groups_labeling`: all listed ends lie on one
+shared haplotype, in every clone, without fixing which. Plain RCK's default preprocessing infers
+such groups itself for short-range adjacencies (`infer_short_nas_labeling_groups`), which the DIAG
+turns off by needing `--no-pre`.
+
+amplicon-allele-analysis `subgraph_construct.py --diag-labeling-groups block` (its §5.6) supplies
+them from the junction read labels (`junction_hap`):
+- **one group per phase block and label (A or B)**, over the ends of the observed novel
+  adjacencies with that label;
+- **never across blocks**, because read haplotags are comparable only within a phase block;
+- groups that RCK's refinement (`refined_labeling_groups`) would merge across blocks or labels are
+  dropped.
+
+The multi-clone route reads them like any adjacency group: RCK's readers, `projected_groups`,
+`refined_labeling_groups`, unchanged.
+
+**Deviation status.** None in the model, so there is no new row in §11.1. It is an input
+RCK already defines. On the DIAG side it is one more annotation, off by default, documented there.
+
+**Results** (2026-11-13; 60 s limit, 2 threads, under 1 s each; within-block scores from
+`docs/pipeline/evaluation.md` §3.10):
+
+| case | labelling groups | cycles ψ (clone1, clone2) | ψ exact | composite | composite within blocks |
+|---|---|---|---|---|---|
+| demo5 | none | 20 | 1/1 | 1.000 | 1.000 |
+| demo5 | 1 (chr17:5, A, 3 ends) | 20 | 1/1 | 1.000 | 1.000 |
+| demo7 (truth 26/13, 14/7) | none | 14/7 (merged walk), 12/6 | 2/4 | 0.747 | 0.747 |
+| demo7 | 1 (chr4:171, A, 8 ends of 6 junctions) | **26/13, 14/7** | **4/4** | 0.693 | **1.000** |
+
+With the groups, demo7's two species are separate cycles with exact per-clone copies, all
+junctions, and the right order within every phase block.
+- The absolute composite drops (phasing accuracy 0.58 and 0.35) because RCK still chooses the A/B
+  of each phase block freely, so the species' haplotype labels differ from the truth's *between*
+  blocks.
+- Nothing in the data can fix that phase between blocks, so the within-block score is the fair
+  measure of the haplotype reconstruction.
+- Without the groups, the within-block score equals the absolute one, 0.747: the merge is a real
+  structural error, not a frame choice.
+
+**Limits.**
+- A group says only "same haplotype". That the A ends and the B ends of a block lie on opposite
+  haplotypes is not passed on.
+- The constraint is hard, so a wrong `junction_hap` would force a wrong labelling.
+- Junction ends alone in their block, like the far ends of sim00006–8 on demo7, are left free.
+
 
 ---
 
@@ -1806,7 +1880,7 @@ enables its second test, which estimates the scales from the windows.
 | `test_subgraph_io.py` | no | synthetic chains; phantom contraction and edge relocation; parallel imputed merging; junction labellings; the `amplicon_0` fixture (18 segments; 20 reference, 14 novel and 12 imputed adjacencies; 4 terminals; crossings AB/BA) |
 | `test_scale.py` | no | depth mode from balanced blocks (rejecting LOH and CN 3 blocks); allele split; flank background; override and fallback; ratio mode cancelling shared bias; θ from extremities; sample selection |
 | `test_walk.py` | no | alternating Hierholzer; canonical form under rotation and reversal; a tandem-duplicated segment; a hub with three loops (2 orderings); balance checks; path parsing and ranking; linear walks from end to end |
-| `test_evaluate.py` | no | per-pair scores, truth reading and scoping ([evaluation](pipeline/evaluation.md)) |
+| `test_evaluate.py` | no | per-pair scores, truth reading and scoping, within-phase-block phasing ([evaluation](pipeline/evaluation.md)) |
 | `test_ilp_circular.py` | yes (small) | single circle (10 copies on A plus a 1+1 background); haplotype crossings; imputed closing edge used when cheap, linear flow when expensive, no flow with `--linear-ends none`; linear ends only at boundaries and flanks; a linear amplicon; `--enforce-is` |
 | `test_decompose.py` | yes (small) | repeated segment (one species, multiplicity 2); two species sharing a segment, with every optimal answer reported; disconnected circles; pool and no-good alternatives; orderings; a linear species; a circle plus a linear piece (called ecDNA); end-to-end runs for a circle (`ecDNA`) and an amplicon with no closing junction (`linear`, and `none` with `--linear-ends none`); read constraints (merging a read and its reverse, dropping single-junction, weak and off-flow reads); a read through a>x>b choosing the merged circle (reward and `--path-fraction`); a read never adding a species, and the order post-check; noise tolerance (weights and ranking key without Gurobi; a 2-copy dip on one loop) |
 | `test_refit.py` | LP: no; CLI: yes (small) | a fractional weight (10.4); an unsupported leftover dropped; a supported one kept; the `--refit-min-copies` threshold; the last species never dropped; observation rows use the flow background; `--no-refit` |
@@ -1818,6 +1892,6 @@ enables its second test, which estimates the scales from the windows.
 | `test_gurobi_env.py` | no | thread default (explicit, `SLURM_CPUS_PER_TASK`, CPU affinity); gurobipy logger kept off the console |
 | `test_demo4.py` | yes (full licence) | both demo4 subgraphs: evaluation never errors, each subgraph scored against its own species, per-sample truth weights (`RCK_ECDNA_DEMO4_OBS` enables estimated scales) |
 | `test_demo7.py` | yes (full licence) | `--block-flip unoriented` on the rebuilt demo7 union subgraph (`RCK_ECDNA_DEMO7_SUBGRAPH`): chr4:185 and chr4:186 flipped, chr4:171, chr4:172 and chr4:187 fixed, no imputed edge |
-| `test_multiclone.py` | yes (small) | `--model multiclone` (§11) on tiny synthetic DIAGs: the default model equals `OptModelMultiClone` (variables, constraints, objective, solution); 1 clone and 2 clones (one labelling and one flip shared by the clones); a flipped phase block; no novel adjacencies (feasible); each off-by-default addition; the CLI outputs and `--model` checks |
+| `test_multiclone.py` | yes (small) | `--model multiclone` (§11) on tiny synthetic DIAGs: the default model equals `OptModelMultiClone` (variables, constraints, objective, solution); 1 clone and 2 clones (one labelling and one flip shared by the clones); a flipped phase block; no novel adjacencies (feasible); each off-by-default addition; a DIAG labelling group (`agt=L`) becoming RCK's labelling constraint; the CLI outputs and `--model` checks |
 | `test_greedy.py` | yes (small) | the heaviest-first decomposition (§11.3): one cycle in two clones (ψ per clone, then one telomere-to-telomere path per haplotype), two species with different ψ per clone, `copies` vs `length` (the looping path), `decompositions.tsv` columns and the evaluation reader skipping paths |
 | `test_demo3.py` | yes (full licence) | `amplicon_0` against the demo3 truth, rank 1: cycle order matches, haplotype Jaccard ≥ 0.95, junction recall ≥ 0.9, copy-number error ≤ 30%; the same with long-read paths (≥ 90% of read support explained) |

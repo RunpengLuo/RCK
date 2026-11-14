@@ -1603,9 +1603,12 @@ such groups itself for short-range adjacencies (`infer_short_nas_labeling_groups
 turns off by needing `--no-pre`.
 
 amplicon-allele-analysis `subgraph_construct.py --diag-labeling-groups block` (its §5.6) supplies
-them from the junction read labels (`junction_hap`):
-- **one group per phase block and label (A or B)**, over the ends of the observed novel
-  adjacencies with that label;
+them from **per-end** junction read labels (`junction_hap_obs_end1/2`): the phased reads at each
+junction end, in the observed phase frame of that end's block (simulator file
+`obs/adjacency_allele_ends.tsv`; on real data, a long-read haplotagger run per phase block):
+- **one group per phase block and label (A or B)**, over the junction ends with that label. A
+  junction that crosses haplotypes puts its two ends in different groups. The first version gave
+  one label per junction to both ends, which is wrong for such junctions;
 - **never across blocks**, because read haplotags are comparable only within a phase block;
 - groups that RCK's refinement (`refined_labeling_groups`) would merge across blocks or labels are
   dropped.
@@ -1622,24 +1625,32 @@ RCK already defines. On the DIAG side it is one more annotation, off by default,
 | case | labelling groups | cycles ψ (clone1, clone2) | ψ exact | composite | composite within blocks |
 |---|---|---|---|---|---|
 | demo5 | none | 20 | 1/1 | 1.000 | 1.000 |
-| demo5 | 1 (chr17:5, A, 3 ends) | 20 | 1/1 | 1.000 | 1.000 |
+| demo5 | 1 (per end; chr17:5) | 20 | 1/1 | 1.000 | 1.000 |
 | demo7 (truth 26/13, 14/7) | none | 14/7 (merged walk), 12/6 | 2/4 | 0.747 | 0.747 |
-| demo7 | 1 (chr4:171, A, 8 ends of 6 junctions) | **26/13, 14/7** | **4/4** | 0.693 | **1.000** |
+| demo7 | 1 (first version: one label per junction; chr4:171, 8 ends) | 26/13, 14/7 | 4/4 | 0.693 | 1.000 |
+| demo7 | **5 (per end: chr4:171 A and B, 172, 186, 187)** | **26/13, 14/7** | **4/4** | **1.000** | **1.000** |
 
 With the groups, demo7's two species are separate cycles with exact per-clone copies, all
-junctions, and the right order within every phase block.
-- The absolute composite drops (phasing accuracy 0.58 and 0.35) because RCK still chooses the A/B
-  of each phase block freely, so the species' haplotype labels differ from the truth's *between*
-  blocks.
-- Nothing in the data can fix that phase between blocks, so the within-block score is the fair
-  measure of the haplotype reconstruction.
+junctions, and the right order.
+- With the first, one-label version, the absolute composite was 0.693 (phasing accuracy 0.58 and
+  0.35): its single group left RCK free to choose the A/B of most blocks, so the species'
+  haplotypes differed from the truth's *between* blocks. The within-block score (1.0) showed that
+  this was the only error.
+- With per-end labels, demo7 has groups in five blocks. Joined by the junctions themselves and by
+  the copy numbers, they also fix the relative phase of those blocks, and the absolute score is
+  1.0 too. No phase between blocks is given to RCK: every label is in its own block's observed
+  frame.
 - Without the groups, the within-block score equals the absolute one, 0.747: the merge is a real
   structural error, not a frame choice.
+- **Label accuracy** (simulations, exact haplotags): on demo5, demo7 and 10 regenerated
+  bench_nested cases, 234 of 234 labelled junction ends are right, including the 58 ends of
+  crossing junctions.
 
 **Limits.**
 - A group says only "same haplotype". That the A ends and the B ends of a block lie on opposite
   haplotypes is not passed on.
-- The constraint is hard, so a wrong `junction_hap` would force a wrong labelling.
+- The constraint is hard, so a wrong per-end label would force a wrong labelling. Real haplotags
+  carry switch errors, which the simulator leaves out.
 - Junction ends alone in their block, like the far ends of sim00006–8 on demo7, are left free.
 
 

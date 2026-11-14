@@ -85,6 +85,14 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
   `--diag-labeling-groups block`; `docs/ecDNA.md` §11.4). RCK's model is unchanged.
   - demo7: ψ exact 4/4 (before 2/4), 1.0 within phase blocks.
 
+- **Per-end junction read labels** (input-side; amplicon-allele-analysis `54226ed`). The
+  labelling groups are now built from each junction end's own label, in the observed frame of its
+  block, so junctions that cross haplotypes are handled.
+  - demo7: 5 groups, composite 1.000 absolute and within blocks, ψ 4/4.
+  - Label accuracy on 12 simulated cases: 234/234 ends.
+  - `docs/ecDNA.md` §11.4 is updated, and `docs/multiclone_NEXT_STEPS.md` corrects the earlier
+    accuracy measurement, which used stale bench runs.
+
 ### Changed
 
 - **The chromosome/ecDNA layer split was removed** (`ea99498`; the plan is revised: decision 2,

@@ -22,7 +22,7 @@ the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELO
   (layers removed: the model is RCK's own), `690d089` (docs), `fc22a34` (step 4: heaviest-first
   decomposition, ψ evaluation), `8faaace` (docs), `140e938` (within-block phasing score) and the
   docs commit after it; amplicon-allele-analysis `8c89156` (`--diag-labeling-groups`) and
-  `c6f24cc` (docs).
+  `c6f24cc` (docs), `54226ed` (per-end labels) and `380b3fc` (docs).
 - `~/RCK` and `~/amplicon-allele-analysis` stay on `yubi_dev`. In `~/RCK`, `yubi_dev` is 3 commits
   ahead of GitHub (23b5ecf, 97db161, cfbc8ca), none of them pushed. They are not on
   `yubi_CNP_ionic`.
@@ -170,28 +170,25 @@ Described in `docs/ecDNA.md` §11.3 (with a table of deviations from CoRAL's gre
 
 - **Still open:** phase *between* blocks is undetermined by the data (hence the within-block
   score). Junction ends alone in their block stay free.
-- **Known issue, found 2026-11-13; fix before step 5.** `--diag-labeling-groups block` gives a
-  junction's single `junction_hap` label to *both* of its ends. That is wrong for a junction that
-  crosses haplotypes (truth AB/BA).
-  - Measured on 12 simulated cases (demo5, demo7, and the 10 bench_nested cases that have both a
-    tracked subgraph and a simulation run on disk; 117 ecDNA junctions; scratch script
-    `jhap_accuracy.py`):
-    - truth AA: label A 33, B 2, mixed 9;
-    - truth BB: B 36, A 1, mixed 8;
-    - truth crossing (AB/BA): mixed 12, A 10, B 6.
-  - Of the 88 junctions labelled A or B, 69 are right, 3 are on the opposite haplotype, and 16
-    actually cross haplotypes.
-  - As a hard RCK constraint, those 19 would force a wrong labelling, or make the model
-    infeasible, wherever they share a block with another grouped end. demo7's group (6 junctions,
-    all truth AA) is not affected.
-  - Keeping only labels that agree with the flank-BAF call at both ends (`expected_hap`) leaves 56:
-    51 right, 1 opposite, 4 crossing.
-  - Options:
-    - label each end separately (per-end read haplotags), which also expresses a crossing junction;
-    - and/or require `expected_hap` to agree;
-    - and/or skip junctions whose ends lie in different blocks.
-  - The simulator's read haplotags are exact, so on real data (phasing switch errors) the label
-    accuracy would be lower.
+- **Per-end labels (done 2026-11-13, replacing one label per junction).** The first version gave
+  a junction's single `junction_hap` to both ends, which is wrong for a junction that crosses
+  haplotypes.
+  - amplicon-allele-analysis `54226ed`/`380b3fc`: the simulator writes
+    `obs/adjacency_allele_ends.tsv` (phased reads per end, in the observed frame of the end's
+    block), and `--diag-labeling-groups block` builds the groups from per-end labels.
+  - **Correction.** The earlier measurement (16 of 88 A/B labels on crossing junctions, 3
+    opposite) used subgraphs built from bench runs of 2026-10-25, which predate the simulator's
+    2026-10-27 junction-read change (`618697f`). The bench runs in `/n/fs/yubi-iw/runs` are stale
+    in this respect: 6 of the 10 checked cases no longer regenerate their `obs/` (the pre-change
+    code gives the same as the new code, so this session's change is not the cause). On
+    regenerated runs, the old labels were all right, and crossing junctions were `mixed`, i.e.
+    left out.
+  - **Per-end accuracy:** 234 of 234 labelled ends right on demo5, demo7 and 10 regenerated bench
+    cases (58 ends of crossing junctions). Scratch scripts `end_accuracy.py`, `bench_case.sh`.
+  - **demo7 with per-end groups** (5 groups): ψ 4/4, composite 1.000 absolute and within blocks.
+    demo5 unchanged, 1.000.
+  - **Before the benchmark:** regenerate the bench simulations with the current simulator. The
+    runs on disk lack `adjacency_allele_ends.tsv`, and 6 of the 10 checked are stale.
 - **Next: step 5.** One or two nested bench cases (for example s103, and s402, which the bulk route
   fails), with `--clone-profiles truth --diag-labeling-groups block`, as single runs with short
   time limits. Check that `junction_hap` purity holds on the bench, and compare with and without

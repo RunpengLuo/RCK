@@ -13,6 +13,65 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Added (2026-11-14): bench_IW metrics and driver
+
+Status and how to resume: [`results/bench_IW/NEXT_STEPS.md`](results/bench_IW/NEXT_STEPS.md). The
+simulation side (24 runs, subgraphs, DIAGs) is in amplicon-allele-analysis `yubi_CNP_ionic`
+(its `CHANGELOG.md`, 2026-11-14).
+
+- **`rck/ecdna/bench_metrics.py`**: method-agnostic scores of one AA cycles answer. The
+  definitions were approved by Yubi on 2026-11-14.
+  - **Copy-number recall** = sum_x min(c, t) / sum_x t over every base.
+    - It counts ecDNA copies only, is haplotype-blind and bp-weighted, and uses strict cycles.
+    - t = sum_s PHI_s x traversals; c = sum of each cycle's bulk weight x traversals.
+    - *Why this definition:* it is the only one every method can be scored on. The multi-clone
+      route, CoRAL and CycleExtractor report no chromosomal background or segment table, so
+      `aa_eval`'s `segment_cn_*` cannot score them.
+  - **Precision** (over sum_x c) and **`cn_within_tol`** (the share of truth bases within
+    max(1, 10%)) are reported alongside; `_all` variants include low_weight cycles.
+  - **Proportions:**
+    - truth PHI_s / sum vs inferred weight / sum, with greedy blind-Jaccard matching
+      (`evaluate._match`, as M1 and the matrix);
+    - the total-variation distance (unmatched mass counts) and the matched MAE;
+    - for the strict set and with low_weight cycles. The difference is the mass the method
+      itself discarded.
+  - **Multi-clone weights** become sum_k u_k psi_k, with u from the DIAG's `clone_proportions.tsv`.
+    Its own `weight` is sum_k psi_k, which is not bulk copies.
+  - Tests: `tests/ecdna/test_bench_metrics.py` (9).
+- **`results/bench_IW/bench_iw.py`** (`list`, `run`, `status`, `score`, `collect`) and
+  **`bench_iw.sbatch`** (96 tasks, `%2`). The four methods:
+  - `rck_bulk`: pool run, re-ranked at lambda 0.2, `--block-flip unoriented`;
+  - `rck_mc`: `--model multiclone`, 60 s limit;
+  - `coral` and `ce`: CoRAL 3.1.1 and CycleExtractor 1.0.0, run through
+    `results/graph_route/graph_route.py`'s runners on the exported union subgraph.
+
+  Scoring is `aa_export`, then `aa_eval` (species matrix, M1/M2), then `bench_metrics`. `collect`
+  writes `bench_iw_table.tsv` and `bench_iw_pooled.tsv`.
+- **Pilot** (`simple_S1_s11001`, run locally):
+  - `rck_bulk` and `rck_mc` are exact (recall 1.0; proportion distance 0).
+  - CoRAL and CycleExtractor recall every copy, but add linear walks through non-ecDNA segments:
+    precision 0.32 and 0.16.
+  - Whether linear walks should count is left to Yubi after the full array (NEXT_STEPS).
+- **Array:** Slurm job 32267060 was submitted on 2026-11-14 and was still running when this was
+  written.
+
+### Removed (2026-11-14): bench result data
+
+- **What was deleted:** 875 tracked result files.
+  - the TSV, JSON, gz, txt and case-list outputs under `results/bench_nested` (with
+    `diag/rck_noise` runs, `grow_2026-11-01`, `rebuild_2026-10-31`), `results/graph_route` and
+    `results/step_sweep`;
+  - all of `results/plan2`;
+  - the top-level `bench_summary.txt` and `test_run.log`.
+- **What was kept, in place** (Yubi's choice):
+  - every `.py`, `.sbatch` and `.sh`, so the scripts still run;
+  - the `.md` notes, though some now describe data that is gone;
+  - `results/graph_route/envs/` and `fixtures/` (the CoRAL environment and the reference graphs
+    `coral_rewrite.py` is checked against).
+- The data remains on `yubi_dev` and in history. `tests/ecdna/test_aa_import.py` still passes; it
+  skips the bench_nested subgraphs, which are gone from amplicon-allele-analysis
+  `yubi_CNP_ionic` too.
+
 ### Added
 
 - **`rck/core/ilp_gurobi_ecdna.py::OptModelMultiCloneEcDNA`** (plan 4.1), a thin subclass of

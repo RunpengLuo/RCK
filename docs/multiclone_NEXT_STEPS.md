@@ -7,6 +7,16 @@ Changes and their reasons are in the `[yubi_CNP_ionic]` sections of both repos' 
 
 ## Resume here (next session)
 
+> **Update 2026-11-14: start from [`results/bench_IW/NEXT_STEPS.md`](../results/bench_IW/NEXT_STEPS.md).**
+> bench_IW replaces the bench_nested steps below. bench_nested's configs, subgraphs and RCK
+> results were removed from this branch (they remain on `yubi_dev`).
+> - Steps 1–2 are done for bench_IW: new simulations with `obs/adjacency_allele_ends.tsv`, and
+>   DIAGs built with `--clone-profiles truth --diag-labeling-groups block`.
+> - Steps 3–4 (multi-clone runs on bench cases) run as the `rck_mc` method of the bench_IW array
+>   (Slurm job 32267060, approved by Yubi), next to the bulk route, CoRAL and CycleExtractor.
+>
+> The text below is the 2026-11-13 state, kept for the record.
+
 **State.** Steps 1–4 are done and committed on `yubi_CNP_ionic` in both worktrees (none pushed;
 RCK last commit is the one that wrote this section, amplicon-allele-analysis `380b3fc`). The
 pipeline in one line:
@@ -89,8 +99,8 @@ Yubi's explicit approval (Gurobi WLS has 2 sessions). Commit locally; Yubi pushe
 | 2. the DIAG with the unmodified `rck` on demo5 | **done**: optimal, objective 0, all post-checks pass |
 | 3. RCK: `OptModelMultiCloneEcDNA`, CLI route, outputs, tests | **done**, simplified after risk 1: RCK's own model plus off-by-default additions (section 2) |
 | 4. RCK: heaviest-first decomposition of the clones' karyotypes (cycles = ecDNA, telomere-to-telomere paths = chromosomes), evaluation against `ecdna_psi` | **done** (section 3); `junction_hap` passed as RCK labelling groups within phase blocks (section 3a) |
-| 5. small end-to-end runs (demo5, demo7, one or two bench cases) | demo5 and demo7 done (exact); bench cases **next**, after regenerating the bench simulations ("Resume here") |
-| 6. full benchmark | only with Yubi's explicit approval |
+| 5. small end-to-end runs (demo5, demo7, one or two bench cases) | demo5 and demo7 done (exact); bench cases: superseded by bench_IW (2026-11-14) |
+| 6. full benchmark | bench_IW (24 cases, 4 methods), approved 2026-11-14; array 32267060 submitted; see `results/bench_IW/NEXT_STEPS.md` |
 
 ## 0. Decisions taken in step 1 (accepted by Yubi, 2026-11-13)
 

@@ -314,3 +314,85 @@ class TestSeveralPhasings(unittest.TestCase):
         junctions = species_junctions(adj_clone, adjs, options)["ecdna1"]
         self.assertEqual(junctions[frozenset(("chr1:99+", "chr1:1000-"))][1], ("AA", "BA"))
         self.assertEqual(junctions[frozenset(("chr1:5+", "chr1:9-"))][1], ("AB",))  # not in rck.acnt.tsv: PHASING
+
+
+class TestBlockwisePhasing(unittest.TestCase):
+    """Phasing scored within phase blocks (multi-clone route): one A/B swap per block, shared by
+    every species of a decomposition."""
+    BLOCKS = [("chr1", 0, 2999, "b1"), ("chr1", 3000, 9999, "b2"), ("chr2", 0, 9999, "b3")]
+
+    @staticmethod
+    def swapped(steps, block_of):
+        other = {"A": "B", "B": "A"}
+        return [CStep(s.chrom, s.start, s.end, other[s.hap] if block_of(s) else s.hap, s.strand) for s in steps]
+
+    def test_block_swap_is_forgiven(self):
+        from rck.ecdna.evaluate import score_decomposition
+
+        # b2 (the chr1:5000 step) swapped: absolute phasing is wrong there, within-block phasing is right
+        inferred = self.swapped(TRUTH, lambda s: s.chrom == "chr1" and s.start >= 3000)
+        s = score_decomposition([Cycle("t", 1.0, [TRUTH])], [Cycle("c", 1.0, [inferred])], tol=0, blocks=self.BLOCKS)[0]
+        self.assertAlmostEqual(s.phasing_accuracy, 2 / 3)
+        self.assertFalse(s.order_match)
+        self.assertEqual(s.phasing_accuracy_blockwise, 1.0)
+        self.assertTrue(s.order_match_blockwise)
+        self.assertEqual(s.phased_junction_f1_blockwise, 1.0)
+        self.assertEqual(s.composite_blockwise, 1.0)
+        self.assertLess(s.composite, 1.0)
+
+    def test_without_blocks_nothing_changes(self):
+        from rck.ecdna.evaluate import score_decomposition
+
+        s = score_decomposition([Cycle("t", 1.0, [TRUTH])], [Cycle("c", 1.0, [TRUTH])], tol=0)[0]
+        self.assertIsNone(s.phasing_accuracy_blockwise)
+        self.assertIsNone(s.composite_blockwise)
+
+    def test_relative_phase_error_between_species_is_not_forgiven(self):
+        """Two species in one block, truth both on A; the inferred puts the second on B. One swap per
+        block cannot make both right, so the within-block score keeps the error."""
+        from rck.ecdna.evaluate import score_decomposition
+
+        t1 = [CStep("chr2", 0, 999, "A", "+")]
+        t2 = [CStep("chr2", 5000, 5999, "A", "+")]
+        c2 = [CStep("chr2", 5000, 5999, "B", "+")]
+        scores = score_decomposition([Cycle("t1", 1.0, [t1]), Cycle("t2", 1.0, [t2])],
+                                     [Cycle("c1", 1.0, [t1]), Cycle("c2", 1.0, [c2])], tol=0, blocks=self.BLOCKS)
+        self.assertEqual(sorted(s.phasing_accuracy_blockwise for s in scores), [0.0, 1.0])
+
+    def test_evaluate_columns_only_with_blocks(self):
+        from rck.ecdna.evaluate import BLOCKWISE_COLUMNS, read_phase_blocks
+
+        def walk(steps):
+            return ",".join("{c}:{s}-{e}:{h}:{st}".format(c=x.chrom, s=x.start, e=x.end, h=x.hap, st=x.strand) for x in steps)
+
+        inferred = self.swapped(TRUTH, lambda s: s.chrom == "chr2")
+        rows = [{"decomposition_rank": 1, "objective": 1.0, "species": "ec1", "weight": 1, "ordering_rank": 1, "walk": walk(inferred)}]
+        with temp_dir() as tmp:
+            path = os.path.join(tmp, "decompositions.tsv")
+            pd.DataFrame(rows).to_csv(path, sep="\t", index=False)
+            frame, summary = evaluate(path, [Cycle("truth1", 1.0, [TRUTH])], tol=0)
+            self.assertFalse(set(BLOCKWISE_COLUMNS) & set(frame.columns))
+            self.assertNotIn("mean_composite_blockwise", summary)
+            frag = os.path.join(tmp, "rck.fragments.tsv")
+            pd.DataFrame([{"chr": c, "start": s, "end": e, "extra": "phase_block=" + n} for c, s, e, n in self.BLOCKS]).to_csv(
+                frag, sep="\t", index=False)
+            blocks = read_phase_blocks(frag)
+            self.assertEqual(blocks, self.BLOCKS)
+            frame, summary = evaluate(path, [Cycle("truth1", 1.0, [TRUTH])], tol=0, blocks=blocks)
+        self.assertTrue(set(BLOCKWISE_COLUMNS) <= set(frame.columns))
+        self.assertEqual(summary["mean_composite_blockwise"], 1.0)
+        self.assertLess(summary["mean_composite"], 1.0)
+
+    def test_species_entirely_in_a_swapped_block_is_paired_within_blocks(self):
+        """Haplotype-aware pairing misses an inferred species whose only block is swapped; the
+        within-block pairing finds it, and the absolute columns stay as they were."""
+        from rck.ecdna.evaluate import score_decomposition
+
+        t = [CStep("chr2", 0, 999, "A", "+")]
+        c = [CStep("chr2", 0, 999, "B", "+")]
+        s = score_decomposition([Cycle("t", 1.0, [t])], [Cycle("c", 1.0, [c])], tol=0, blocks=self.BLOCKS)[0]
+        self.assertIsNone(s.inferred)
+        self.assertEqual(s.composite, 0.0)
+        self.assertEqual(s.inferred_blockwise, "c")
+        self.assertEqual(s.phasing_accuracy_blockwise, 1.0)
+        self.assertEqual(s.jaccard_total, 0.0)  # absolute row untouched

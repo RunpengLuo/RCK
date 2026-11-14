@@ -166,6 +166,28 @@ class MultiCloneTest(unittest.TestCase):
         self.assertAlmostEqual(model.gm.ObjVal, 0.0)
         self.assertEqual(self.cn(model, "clone1", S1), (1, 1))
 
+    def test_diag_labelling_group_is_rcks_constraint(self):
+        """A labelling group from amplicon-allele-analysis --diag-labeling-groups block (agt=L) is
+        loaded through RCK's refinement and becomes RCK's own labelling constraint."""
+        from rck.core.structures import AdjacencyGroupType, Phasing
+        from rck.ecdna.multiclone import MultiCloneParams, load_rck_input, solve
+
+        path = write_diag(os.path.join(self.tmp, "rck_input"), {"clone1": 5})
+        with open(os.path.join(path, "rck.adjgroups.tsv"), "a") as h:
+            h.write("lab_b_A\tj1,j1\tagt=L;agl=0,1;phase_block=b;junction_hap=A\n")
+        inp = load_rck_input(path)
+        self.assertEqual([g.group_type for g in inp.adjacency_groups], [AdjacencyGroupType.LABELING])
+        model = solve(inp, MultiCloneParams(threads=1, time_limit=30))
+        self.addCleanup(model.gm.dispose)
+        names = [c.ConstrName for c in model.gm.getConstrs()]
+        self.assertTrue(any(n.startswith("labeling_group-") for n in names))
+        self.assertAlmostEqual(model.gm.ObjVal, 0.0)
+        acnt = model.get_acnt_from_model()
+        junction = [a for a in inp.adjacencies if a.extra.get("aid") == "j1"][0]
+        used = {ph for ph in (Phasing.AA, Phasing.AB, Phasing.BA, Phasing.BB)
+                if acnt["clone1"].get_cn(aid=junction.stable_id_non_phased, phasing=ph)}
+        self.assertTrue(used <= {Phasing.AA, Phasing.BB})  # both ends on one haplotype
+
     # ------------------------------------------------------------- ecDNA additions (off by default)
     def test_imputed_adjacencies_off_by_default(self):
         from rck.ecdna.multiclone import MultiCloneParams

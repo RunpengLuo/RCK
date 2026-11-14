@@ -357,18 +357,23 @@ def write_decompositions(outdir: str, inp: MultiCloneInput, result, decompositio
 
 def evaluate_multiclone(args, inp: MultiCloneInput, graph, decompositions_tsv: str) -> Dict[str, object]:
     """Structure scores (``evaluate.evaluate``, cycles only) and per-clone psi (``evaluate.psi_scores``)."""
-    from rck.ecdna.evaluate import evaluate, load_truth, log_summary, psi_scores, write_evaluation, write_truth_table
+    from rck.ecdna.evaluate import evaluate, load_truth, log_summary, psi_scores, read_phase_blocks, write_evaluation, write_truth_table
 
     truth = load_truth(args.truth_dir, args.truth_cycles, args.truth_sample or args.sample)
     write_truth_table(os.path.join(args.outdir, "truth_cycles.tsv"), truth)
     regions = None if args.all_truth_species else graph.regions()
-    frame, evaluation = evaluate(decompositions_tsv, truth, tol=args.eval_tol_bp, regions=regions, min_truth_fraction=args.min_truth_fraction)
+    blocks = read_phase_blocks(os.path.join(args.rck_input, FRAGMENTS)) if _path(args.rck_input, FRAGMENTS) else None
+    frame, evaluation = evaluate(decompositions_tsv, truth, tol=args.eval_tol_bp, regions=regions, min_truth_fraction=args.min_truth_fraction,
+                                 blocks=blocks)
     if args.truth_dir:
         table, psi = psi_scores(decompositions_tsv, frame, args.truth_dir, inp.clone_proportions)
         table.to_csv(os.path.join(args.outdir, "evaluation_psi.tsv"), sep="\t", index=False)
         evaluation["psi"] = psi
     write_evaluation(args.outdir, frame, evaluation)
     log_summary(evaluation)
+    if evaluation.get("mean_composite_blockwise") is not None:
+        log.info("mean composite %.3f; within phase blocks %.3f (%d blocks)", evaluation["mean_composite"] or 0.0,
+                 evaluation["mean_composite_blockwise"], evaluation["phase_blocks"])
     if "psi" in evaluation:
         log.info("psi: %d of %d (species, clone) pairs exact, mean |error| %s", evaluation["psi"]["psi_exact"], evaluation["psi"]["n_pairs"],
                  evaluation["psi"]["psi_mean_abs_err"])
@@ -420,7 +425,7 @@ def run_multiclone(args) -> Dict[str, object]:
         if args.truth_dir or args.truth_cycles:
             try:
                 evaluation = evaluate_multiclone(args, inp, result.graph, outputs["decompositions"])
-                summary["evaluation"] = {k: evaluation.get(k) for k in ("mean_composite", "n_truth_species")}
+                summary["evaluation"] = {k: evaluation.get(k) for k in ("mean_composite", "mean_composite_blockwise", "n_truth_species")}
                 if "psi" in evaluation:
                     summary["evaluation"]["psi_exact"] = evaluation["psi"]["psi_exact"]
                     summary["evaluation"]["psi_pairs"] = evaluation["psi"]["n_pairs"]

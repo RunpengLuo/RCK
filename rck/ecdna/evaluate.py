@@ -660,6 +660,12 @@ class PairScore:
     inferred_topology: Optional[str] = None
     topology_match: Optional[bool] = None
     composite: float = 0.0
+    # within-phase-block scores (only with phase blocks; see score_decomposition)
+    phasing_accuracy_blockwise: Optional[float] = None
+    phased_junction_f1_blockwise: Optional[float] = None
+    order_match_blockwise: Optional[bool] = None
+    composite_blockwise: Optional[float] = None
+    inferred_blockwise: Optional[str] = None  # set only when the within-block pairing differs from ``inferred``
 
 
 def _f1(recall: float, precision: float) -> float:
@@ -710,12 +716,89 @@ def score_pair(t: Cycle, c: Cycle, tol: int) -> PairScore:
     return s
 
 
-def score_decomposition(truth: Sequence[Cycle], inferred: Sequence[Cycle], tol: int) -> List[PairScore]:
-    """One-to-one greedy matching of truth species to inferred species by haplotype Jaccard."""
+Block = Tuple[str, int, int, str]  # chrom, start, end (inclusive), name
+
+
+def read_phase_blocks(path: str) -> List[Block]:
+    """Phase blocks from an RCK fragments file (``rck_input/rck.fragments.tsv``: chr, start, end,
+    extra with ``phase_block=``)."""
+    blocks = []
+    frame = pd.read_csv(path, sep="\t", dtype={"chr": str})
+    for r in frame.to_dict("records"):
+        extra = dict(kv.split("=", 1) for kv in str(r.get("extra", "")).split(";") if "=" in kv)
+        name = extra.get("phase_block", "{c}:{s}".format(c=r["chr"], s=r["start"]))
+        blocks.append((str(r["chr"]), int(r["start"]), int(r["end"]), str(name)))
+    return blocks
+
+
+def _clip(steps: Sequence[CStep], chrom: str, start: int, end: int) -> List[CStep]:
+    out = []
+    for x in steps:
+        if x.chrom == chrom and x.end >= start and x.start <= end:
+            out.append(CStep(x.chrom, max(x.start, start), min(x.end, end), x.hap, x.strand))
+    return out
+
+
+def _block_name(step: CStep, blocks: Sequence[Block]) -> Optional[str]:
+    mid = (step.start + step.end) // 2
+    for chrom, start, end, name in blocks:
+        if chrom == step.chrom and start <= mid <= end:
+            return name
+    return None
+
+
+def block_swaps(pairs: Sequence[Tuple[Cycle, Cycle]], blocks: Sequence[Block]) -> Dict[str, bool]:
+    """One A/B swap per phase block, shared by every matched (truth, inferred) pair of a
+    decomposition: swap when the swapped inferred haplotypes overlap the truth's more, in bases.
+    A block's observed A/B is arbitrary and cannot be tied to its neighbours' without phase
+    information across blocks, so only the phase within each block is scored."""
+    swaps = {}
+    for chrom, start, end, name in blocks:
+        same = swapped = 0
+        for t, c in pairs:
+            tc, cc = _clip(t.steps, chrom, start, end), _clip(c.steps, chrom, start, end)
+            if tc and cc:
+                same += _overlap_bp(tc, cc, True)[0]
+                swapped += _overlap_bp(tc, _swap_hap(cc), True)[0]
+        swaps[name] = swapped > same
+    return swaps
+
+
+def relabel(c: Cycle, blocks: Sequence[Block], swaps: Dict[str, bool]) -> Cycle:
+    """``c`` with A/B swapped on the steps of every swapped block (steps are DIAG segments, which
+    never cross a phase-block end)."""
+    other = {"A": "B", "B": "A"}
+    orderings = [[CStep(x.chrom, x.start, x.end, other.get(x.hap, x.hap) if swaps.get(_block_name(x, blocks)) else x.hap, x.strand)
+                  for x in steps] for steps in c.orderings]
+    return Cycle(name=c.name, weight=c.weight, orderings=orderings, circular=c.circular, weight_int=c.weight_int)
+
+
+def score_blockwise(s: PairScore, t: Cycle, c: Cycle, tol: int, base: Optional[PairScore] = None) -> None:
+    """Within-block versions of the haplotype-sensitive scores, on ``c`` already relabelled by
+    :func:`block_swaps`: phasing accuracy, phased junction F1, order match, and the composite with
+    those in place of the absolute ones. The other composite terms come from ``base`` (default
+    ``s``), the scores of the same pair."""
+    base = base or s
+    covered = _overlap_bp(t.steps, c.steps, False)[0]
+    s.phasing_accuracy_blockwise = _overlap_bp(t.steps, c.steps, True)[0] / covered if covered else 0.0
+    rec, prec = junction_scores(t.steps, c.steps, tol, True, t.circular, c.circular)
+    s.phased_junction_f1_blockwise = _f1(rec, prec)
+    s.order_match_blockwise = any(order_match(t.steps, steps, tol, t.circular, c.circular) for steps in c.orderings)
+    cn_accuracy = max(0.0, 1.0 - base.cn_rel_err) if base.cn_rel_err is not None else 0.0
+    terms = [base.jaccard_total, base.junction_f1, s.phasing_accuracy_blockwise, float(s.order_match_blockwise), cn_accuracy]
+    s.composite_blockwise = sum(terms) / len(terms)
+
+
+BLOCKWISE_COLUMNS = ["phasing_accuracy_blockwise", "phased_junction_f1_blockwise", "order_match_blockwise", "composite_blockwise",
+                     "inferred_blockwise"]
+
+
+def _match(truth: Sequence[Cycle], inferred: Sequence[Cycle], with_hap: bool) -> Dict[str, str]:
+    """One-to-one greedy matching, truth -> inferred name, by (haplotype) Jaccard."""
     pairs = []
     for t in truth:
         for c in inferred:
-            pairs.append((jaccard(t.steps, c.steps, True), t.name, c.name))
+            pairs.append((jaccard(t.steps, c.steps, with_hap), t.name, c.name))
     pairs.sort(reverse=True)
     used_t, used_c, chosen = set(), set(), {}
     for score, tn, cn in pairs:
@@ -724,6 +807,19 @@ def score_decomposition(truth: Sequence[Cycle], inferred: Sequence[Cycle], tol: 
         used_t.add(tn)
         used_c.add(cn)
         chosen[tn] = cn
+    return chosen
+
+
+def score_decomposition(truth: Sequence[Cycle], inferred: Sequence[Cycle], tol: int,
+                        blocks: Optional[Sequence[Block]] = None) -> List[PairScore]:
+    """One-to-one greedy matching of truth species to inferred species by haplotype Jaccard.
+
+    With ``blocks`` (phase blocks), also the within-block scores: species are first paired by
+    haplotype-free Jaccard to choose one A/B swap per block (:func:`block_swaps`), the inferred
+    walks are relabelled, and they are paired again by haplotype Jaccard for the ``*_blockwise``
+    scores. The absolute scores keep their own pairing. A truth species left unpaired after the
+    relabelling scores 0 within blocks."""
+    chosen = _match(truth, inferred, True)
     by_name = {c.name: c for c in inferred}
     result = []
     for t in truth:
@@ -731,6 +827,25 @@ def score_decomposition(truth: Sequence[Cycle], inferred: Sequence[Cycle], tol: 
             result.append(score_pair(t, by_name[chosen[t.name]], tol))
         else:
             result.append(PairScore(truth=t.name, inferred=None, truth_weight=t.weight))
+    if blocks:
+        truth_by_name = {t.name: t for t in truth}
+        provisional = _match(truth, inferred, False)
+        swaps = block_swaps([(truth_by_name[tn], by_name[cn]) for tn, cn in provisional.items()], blocks)
+        relabelled = [relabel(c, blocks, swaps) for c in inferred]
+        relabelled_by_name = {c.name: c for c in relabelled}
+        blockwise = _match(truth, relabelled, True)
+        for s in result:
+            cn = blockwise.get(s.truth)
+            if cn is None:
+                s.phasing_accuracy_blockwise, s.phased_junction_f1_blockwise = 0.0, 0.0
+                s.order_match_blockwise, s.composite_blockwise = False, 0.0
+                continue
+            t, c = truth_by_name[s.truth], relabelled_by_name[cn]
+            base = None
+            if s.inferred != cn:  # the within-block pairing differs: that pair's haplotype-free terms
+                base = score_pair(t, c, tol)
+                s.inferred_blockwise = cn
+            score_blockwise(s, t, c, tol, base=base)
     return result
 
 
@@ -759,7 +874,8 @@ def fraction_in_regions(steps: Sequence[CStep], regions: Sequence[Region], pad: 
 
 
 def evaluate(decompositions_tsv: str, truth: Sequence[Cycle], tol: int = 10_000, include_low_weight: bool = False,
-             regions: Optional[Sequence[Region]] = None, min_truth_fraction: float = 0.5) -> Tuple[pd.DataFrame, Dict[str, object]]:
+             regions: Optional[Sequence[Region]] = None, min_truth_fraction: float = 0.5,
+             blocks: Optional[Sequence[Block]] = None) -> Tuple[pd.DataFrame, Dict[str, object]]:
     """Score every decomposition against the truth species that belong to this subgraph.
 
     With ``regions`` (the subgraph's segment spans), only truth species with at least
@@ -782,7 +898,7 @@ def evaluate(decompositions_tsv: str, truth: Sequence[Cycle], tol: int = 10_000,
     best_order_rank, best_jaccard, best_jaccard_rank = None, -1.0, None
     for rank in sorted(inferred):
         cycles = inferred[rank]["cycles"]
-        scores = score_decomposition(scored, cycles, tol)
+        scores = score_decomposition(scored, cycles, tol, blocks=blocks)
         mean_j = sum(s.jaccard_hap for s in scores) / len(scores) if scores else 0.0
         if scores and all(s.order_match for s in scores) and best_order_rank is None:
             best_order_rank = rank
@@ -794,6 +910,8 @@ def evaluate(decompositions_tsv: str, truth: Sequence[Cycle], tol: int = 10_000,
                         "n_low_weight": inferred[rank]["n_low_weight"], "n_species_truth": len(scored)})
             rows.append(row)
     frame = pd.DataFrame(rows)
+    if not blocks:  # without phase blocks the output is exactly as before
+        frame = frame.drop(columns=[c for c in BLOCKWISE_COLUMNS if c in frame.columns])
     top = frame[frame["decomposition_rank"] == min(inferred)] if (len(frame) and inferred) else frame
     summary = {
         "n_decompositions": len(inferred),
@@ -807,9 +925,12 @@ def evaluate(decompositions_tsv: str, truth: Sequence[Cycle], tol: int = 10_000,
         "tol_bp": tol,
         "min_truth_fraction": min_truth_fraction if regions else None,
     }
-    matrix = recovery_matrix(frame, species_info, min(inferred) if inferred else None)
+    matrix = recovery_matrix(frame, species_info, min(inferred) if inferred else None, blockwise=bool(blocks))
     scored_rows = matrix[matrix["in_scope"]]
     summary["mean_composite"] = float(scored_rows["composite"].mean()) if len(scored_rows) else None
+    if blocks:
+        summary["mean_composite_blockwise"] = float(scored_rows["composite_blockwise"].astype(float).mean()) if len(scored_rows) else None
+        summary["phase_blocks"] = len(blocks)
     summary["recovery_matrix"] = _json_records(matrix)
     if not scored:
         summary["note"] = "no truth species has at least {f:.0%} of its bases in this subgraph".format(f=min_truth_fraction)
@@ -836,10 +957,12 @@ RECOVERY_COLUMNS = ["truth", "in_scope", "fraction_in_subgraph", "truth_length_b
 _RENAMED = {"jaccard_total": "segment_jaccard", "jaccard_hap": "haplotype_jaccard"}
 
 
-def recovery_matrix(frame: pd.DataFrame, species_info: Sequence[Dict[str, object]], top_rank: Optional[int]) -> pd.DataFrame:
+def recovery_matrix(frame: pd.DataFrame, species_info: Sequence[Dict[str, object]], top_rank: Optional[int],
+                    blockwise: bool = False) -> pd.DataFrame:
     """One row per truth species: its scores against the rank-1 (``top_rank``) decomposition, and the
     decomposition rank whose matched species scores the highest composite (an upper bound over the
     alternatives). Out-of-scope species are listed with ``in_scope`` False and no scores."""
+    columns = RECOVERY_COLUMNS + (BLOCKWISE_COLUMNS if blockwise else [])
     rows = []
     for info in species_info:
         row = {"truth": info["species"], "in_scope": bool(info["in_scope"]), "fraction_in_subgraph": info["fraction_in_subgraph"],
@@ -849,7 +972,7 @@ def recovery_matrix(frame: pd.DataFrame, species_info: Sequence[Dict[str, object
             top = mine[mine["decomposition_rank"] == top_rank] if len(mine) else mine
             if len(top):
                 record = top.iloc[0].to_dict()
-                for column in RECOVERY_COLUMNS:
+                for column in columns:
                     source = next((k for k, v in _RENAMED.items() if v == column), column)
                     if column not in row and source in record:
                         row[column] = record[source]
@@ -860,7 +983,7 @@ def recovery_matrix(frame: pd.DataFrame, species_info: Sequence[Dict[str, object
                 row.update({"best_rank": int(best["decomposition_rank"]), "best_inferred": best["inferred"],
                             "best_composite": float(best["composite"])})
         rows.append(row)
-    matrix = pd.DataFrame(rows, columns=RECOVERY_COLUMNS)
+    matrix = pd.DataFrame(rows, columns=columns)
     matrix["best_rank"] = matrix["best_rank"].astype("Int64")
     return matrix
 
@@ -942,7 +1065,8 @@ def write_evaluation(outdir: str, frame: pd.DataFrame, summary: Dict[str, object
     paths = {"table": os.path.join(outdir, "evaluation.tsv"), "summary": os.path.join(outdir, "evaluation.json"),
              "recovery_matrix": os.path.join(outdir, "recovery_matrix.tsv")}
     frame.to_csv(paths["table"], sep="\t", index=False)
-    matrix = pd.DataFrame(summary.get("recovery_matrix", []), columns=RECOVERY_COLUMNS)
+    columns = RECOVERY_COLUMNS + (BLOCKWISE_COLUMNS if "mean_composite_blockwise" in summary else [])
+    matrix = pd.DataFrame(summary.get("recovery_matrix", []), columns=columns)
     matrix["best_rank"] = matrix["best_rank"].astype("Int64")
     matrix.to_csv(paths["recovery_matrix"], sep="\t", index=False)
     with open(paths["summary"], "w") as handle:
@@ -970,6 +1094,9 @@ def main(argv=None) -> int:
                         help="Score only truth species with at least this share of their bases inside the subgraph")
     parser.add_argument("--all-truth-species", action="store_true", help="Score every truth species, inside the subgraph or not")
     parser.add_argument("--outdir", default=None, help="Default: the directory of --decompositions")
+    parser.add_argument("--phase-blocks", default=None,
+                        help="RCK fragments file (rck_input/rck.fragments.tsv): also score phasing within phase blocks "
+                             "(*_blockwise columns, mean_composite_blockwise)")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     truth = load_truth(args.truth_dir, args.truth_cycles, args.truth_sample)
@@ -978,7 +1105,8 @@ def main(argv=None) -> int:
     write_truth_table(os.path.join(outdir, "truth_cycles.tsv"), truth)
     regions = None if args.all_truth_species else regions_from_summary(os.path.dirname(os.path.abspath(args.decompositions)))
     frame, summary = evaluate(args.decompositions, truth, tol=args.tol_bp, include_low_weight=args.include_low_weight,
-                              regions=regions, min_truth_fraction=args.min_truth_fraction)
+                              regions=regions, min_truth_fraction=args.min_truth_fraction,
+                              blocks=read_phase_blocks(args.phase_blocks) if args.phase_blocks else None)
     write_evaluation(outdir, frame, summary)
     log_summary(summary)
     return 0

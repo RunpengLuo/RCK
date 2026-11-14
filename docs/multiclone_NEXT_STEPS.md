@@ -1,6 +1,7 @@
 # Multi-clone RCK-ecDNA: status and next steps (branch `yubi_CNP_ionic`)
 
-*Written 2026-11-13, updated the same day after step 3. The plan is [`multiclone_plan.md`](multiclone_plan.md); this file says where
+*Written 2026-11-13; updated the same day after step 3 and after the plan revision (no layers;
+heaviest-first decomposition). The plan is [`multiclone_plan.md`](multiclone_plan.md); this file says where
 it stands and what comes next. Changes and their reasons are in the `[yubi_CNP_ionic]` sections of
 the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELOG.md` (step 3).*
 
@@ -16,8 +17,9 @@ the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELO
   - amplicon-allele-analysis's could not be fetched.
   - Neither repo can be pushed from this host.
 - Commits on `yubi_CNP_ionic`, none pushed: amplicon-allele-analysis up to `2811efe` (steps 1–2)
-  and a docs follow-up; RCK `60ca24d` (`--scnb` fix), `18dd969` (lazy PyVCF), `8e6fb74` (model),
-  `d3b0448` (route, outputs, tests) and the docs commit after them.
+  and `36d7ff8` (docs); RCK `60ca24d` (`--scnb` fix), `18dd969` (lazy PyVCF), `8e6fb74` (model,
+  first version with layers), `d3b0448` (route, outputs, tests), `a496a12` (docs), `ea99498`
+  (layers removed: the model is RCK's own) and the docs commit after it.
 - `~/RCK` and `~/amplicon-allele-analysis` stay on `yubi_dev`. In `~/RCK`, `yubi_dev` is 3 commits
   ahead of GitHub (23b5ecf, 97db161, cfbc8ca), none of them pushed. They are not on
   `yubi_CNP_ionic`.
@@ -26,8 +28,8 @@ the amplicon-allele-analysis `CHANGELOG.md` (steps 1–2) and of RCK's `CHANGELO
 |---|---|
 | 1. amplicon-allele-analysis: clone profiles, refinement, flanks, DIAG writer, tests | **done** (not pushed) |
 | 2. the DIAG with the unmodified `rck` on demo5 | **done**: optimal, objective 0, all post-checks pass |
-| 3. RCK: `OptModelMultiCloneEcDNA`, CLI route, outputs, tests | **done**, but risk 1 is open: the layer split is not identified (section 2a); a decision is needed before step 4 |
-| 4. RCK: joint decomposition across clones, evaluation against `ecdna_psi` | open; waits for the section 2a decision |
+| 3. RCK: `OptModelMultiCloneEcDNA`, CLI route, outputs, tests | **done**, simplified after risk 1: RCK's own model plus off-by-default additions (section 2) |
+| 4. RCK: heaviest-first decomposition of the clones' karyotypes (cycles = ecDNA, telomere-to-telomere paths = chromosomes), evaluation against `ecdna_psi` | **next** (section 3) |
 | 5. small end-to-end runs (demo5, demo7, one or two bench cases) | open |
 | 6. full benchmark | only with Yubi's explicit approval |
 
@@ -70,135 +72,89 @@ These differ from, or go beyond, the plan:
   0 ≥ 1 − fp, which is infeasible (demo5 `amplicon_2` has 0 observed and 18 imputed). The subclass
   skips the rule in that case.
 
-## 2. Step 3: `OptModelMultiCloneEcDNA` (plan 4.1, 4.2, 4.4): done
+## 2. Step 3: done (plan 4.1, 4.2, 4.4)
 
-What was built is described in RCK `docs/ecDNA.md` §11, with the deviation table in §11.1, and in
-RCK's `CHANGELOG.md`. In short:
-- `rck/core/ilp_gurobi_ecdna.py`: RCK's c and N stay the totals and each is split into chr + ec
-  layer integers. Balance is written per layer (chr: RCK's telomere rule; ec: strict). The 1 − fp
-  rule counts observed adjacencies only. The four additions are off by default.
-- `rck/ecdna/multiclone.py` and `rck-ecdna --model multiclone --rck-input <dir> --mc-*`: the DIAG is
-  read as `rck_run --no-pre` reads it, and the outputs are native scnt/acnt with a `layer` field,
-  plus `summary.json`.
-- `tests/ecdna/test_multiclone.py`: 12 tests, under 1 s in total.
-- **demo5** (`--time-limit 60`, 2 threads, 0.1 s): the totals are identical to the step-2 plain-RCK
-  result (18/18 segment and 20/20 adjacency rows, same flips). With `--mc-imputed-penalty 2
-  --mc-junction-weight 0.5`, the imputed edges are not used and the junction residual is 0.385,
-  matching a hand calculation.
-- The bulk route on demo5 is byte-identical to before, except log timestamps and `runtime_s`.
+What was built is described in `docs/ecDNA.md` §11, with the deviation table in §11.1 and the
+reason for having no layers in §11.2, and in RCK's `CHANGELOG.md`.
+- **`rck/core/ilp_gurobi_ecdna.py::OptModelMultiCloneEcDNA`:** with its options off, it is RCK's
+  `OptModelMultiClone`: the same variables, constraints and objective (tested).
+  - The only exception: RCK's 1 − fp rule is skipped when there are no observed novel adjacencies,
+    where RCK is infeasible.
+  - The off-by-default additions are `--mc-imputed-penalty`, `--mc-novel-penalty`,
+    `--mc-junction-weight` and `--mc-linear-ends`.
+- **`rck/ecdna/multiclone.py` and `rck-ecdna --model multiclone --rck-input <dir>`:** the DIAG is
+  read as `rck_run --no-pre` reads it. The outputs are `rck.scnt.tsv` / `rck.acnt.tsv` as `rck_run`
+  writes them, plus `summary.json`.
+- **`tests/ecdna/test_multiclone.py`:** 11 tests, a few seconds in total.
+- **demo5** (`--time-limit 60`, 2 threads, 0.1 s): `rck.scnt.tsv` and `rck.acnt.tsv` are
+  byte-identical to the step-2 plain-RCK run. With `--mc-imputed-penalty 2 --mc-junction-weight 0.5`
+  (first version), the imputed edges were not used and the junction residual was 0.385, matching a
+  hand calculation.
+- **Bulk route** on demo5: identical to before, except log timestamps and `runtime_s`.
+- **Risk 1, and why there are no layers.**
+  - The first version split each clone into a chromosome layer and an ecDNA layer. The split was not
+    identified: a circulation balances in either layer, and on demo5 all 20 copies came out in the
+    chromosome layer.
+  - Original RCK has no way to separate them. Following AA and CoRAL, the separation moved to the
+    decomposition (Yubi's decision, 2026-11-13).
+  - The demo5 DIAG for checks is rebuilt with `subgraph_construct.py --sim-dir
+    runs/demo5_cycle1_ecdna --amplicons 0 --observed-seeds-only --strong-sv-support 20
+    --jump-sv-support 20 --rck-junction-reads-per-copy 6.5 --no-plot --clone-profiles truth` (no
+    Gurobi, about 2 min). The default arguments give a different subgraph.
 
-## 2a. Decision needed: the chromosome/ecDNA split is not identified (risk 1)
+## 3. Step 4: heaviest-first decomposition and evaluation (plan 4.3, 4.4)
 
-- **What the risk-1 test shows.** Linear telomere-to-telomere leakage is pinned by the flanks: the
-  chromosome layer's telomere excess never exceeds the flank copy number. But **a circulation is
-  balanced in either layer**, and RCK's objective sees only the totals. So the ecDNA copies can sit
-  in the chromosome layer as a closed cycle, at the same objective.
-  - On the synthetic DIAG, the ecDNA layer ranges from 0 to all e copies.
-  - On demo5, Gurobi's solution puts all 20 copies in the chromosome layer, and the ecDNA layer is
-    empty.
-  - At the same objective, demo5's ecDNA layer can also hold all 20, and at the maximum it also
-    pulls one normal chromosomal copy into a circle.
-  - `test_risk1_ecdna_layer_identified` is an `expectedFailure` until this is resolved.
-- **The plan's tie-break would not fix it.** A cost per telomere copy (plan 4.2) cannot help, because
-  a chromosome-layer cycle uses no telomere.
-- **No tie-break was added** (Yubi's instruction: stop and report first).
-- **Options** (copy numbers alone cannot tell ecDNA from an HSR or a tandem duplication, so each
-  option is a modelling assumption that must go in the deviation table):
-  1. **ε per chromosome-layer copy of a novel adjacency** (recommended). Junction copies go to the
-     ecDNA layer whenever they can close into a circulation. Copies that use only reference
-     adjacencies, i.e. normal chromosomes through the flanks, cost nothing in the chromosome layer.
-     - Scratch probe (2026-11-13, not in the repo; ε = 10⁻³ on top of RCK's objective):
-       - the split becomes unique (min = max of the ecDNA layer);
-       - demo5: exactly 20 ecDNA copies;
-       - synthetic 2-clone DIAG: exactly e in each clone;
-       - RCK's objective is unchanged (0).
-     - Cost: a chromosomal tandem duplication whose junction closes a cycle would also be called
-       ecDNA. The bulk route has the same bias.
-  2. **ε per chromosome-layer copy × length** (prefer the ecDNA layer everywhere). This is simpler,
-     but it is the maximum-ecDNA solution: on demo5 it also turns a normal chromosomal copy into a
-     circle.
-  3. **Cap the chromosome layer** at the flank copy number of its region, per clone and haplotype.
-     It is local and heuristic, and it would forbid real chromosomal gains between the flanks.
-  4. **An acyclic chromosome layer**, i.e. no cycle in the chromosome layer's support. This is
-     exact for "chromosomes are linear", but needs lazy connectivity cuts like `decompose.py`'s.
-     It caps the chromosome layer's copies at the number of telomere paths, which is close to
-     option 3.
-  5. **Leave the split free and report the range** (min/max ecDNA copies at the optimum, as the
-     test does), and let step 4 decompose the maximum-ecDNA layer. The decomposition would then
-     depend on that convention.
-- **Seen in the probe, separately:** RCK does not use `junction_hap`, so a junction's labelling
-  (AA vs AB) together with the fragment flips is free when both ends' blocks may flip. In the probe,
-  the ecDNA sat on A at 3.9 Mb and on B at 61.9 Mb, at the same objective as plain RCK's all-A
-  answer. This is RCK's own ambiguity. A soft or hard use of `junction_hap` would be another
-  deviation, not needed so far.
+Yubi's decision (2026-11-13): use AmpliconArchitect's heaviest-cycle-first rule.
+- **Source of the rule.** CoRAL 3.1.1 implements it as its greedy mode,
+  `coral/cycle_decomposition.py::maximize_weights_greedy` with `models/concrete.py::get_greedy_objective`
+  (installed in `/n/fs/yubi-iw/conda/envs/coral-3.1.1`). AA's own source is not on ionic.
+- **What CoRAL's greedy mode does.** It solves a one-walk MILP that maximises the walk's
+  length-weighted copy number, Σ_seq x_e · w · len_e, plus a bonus for unsatisfied long-read
+  subpaths. The walk's copies are capped by the remaining copy number on every edge. It subtracts
+  the walk and repeats, until less than 10% (`p_total_weight`) of the length-weighted copy number
+  is left or the weight drops below `resolution`. CoRAL can then post-process the greedy solution
+  with its full model.
 
-### Original step 3 plan (for reference)
+**To build** (`rck/ecdna/`, for example a new `greedy.py` driven from `multiclone.py`):
+1. **Input:** every clone's RCK solution, c_{k,s,h} and N_{k,a,φ} on the DIAG, as the remaining
+   copy number R_k(e).
+2. **One iteration:** find one walk σ on the haplotype-labelled DIAG, with integer copies
+   ψ_{σ,k} ≥ 0 per clone and ψ_{σ,k} m_σ(e) ≤ R_k(e).
+   - The walk is either closed (a cycle) or has both ends at RCK telomere positions (a path; also
+     at `--mc-linear-ends` extremities when that option is on).
+   - Its multiplicities m_σ(e) are integers up to `--max-multiplicity`.
+   - Objective: maximise Σ_k ψ_{σ,k} Σ_s m_σ(s) L_s, plus CoRAL's long-read term. Break ties
+     towards fewer segment traversals, using the step penalty as a tie-break.
+3. **Subtract and repeat.** Stop when R_k = 0 for every clone, or at `--max-species` walks; RCK's
+   karyotype is exact, so it can be used up exactly. Keep CoRAL's 10% stop as an option.
+4. **Reuse `decompose.py`:** alternation, multiplicities, lazy connectivity cuts, linear ends
+   through one virtual end node, and long-read constraints. Use one walk slot and the objective
+   above. Check whether the ψ × m products need the exact linearisation already in `decompose.py`.
+   `refit.py` is not used.
+5. **Outputs:** `decompositions.tsv`, one row per walk in extraction order:
+   - `kind` (`cycle`/`path`) and the walk itself;
+   - `psi_<clone>`;
+   - `proportion_<clone>` = ψ_{σ,k} / Σ over cycles of ψ_{·,k};
+   - `proportion_bulk` = Σ_k u_k ψ_{σ,k}, normalised over cycles. This is the only use of
+     `clone_proportions.tsv` outside the optional junction term.
 
-Code in `rck/core/` (for example `rck/core/ilp_gurobi_ecdna.py`), subclassing
-`rck/core/ilp_gurobi.py::OptModelMultiClone`.
-1. **Read `OptModelMultiClone` in full first.** Look at `define_variables` (l. 282),
-   `define_constraints_on_nodes` (l. 704), `get_lin_expr_for_node_haplotype` (l. 719),
-   `define_constraints_nov_adjacency_overall_presence` (l. 549),
-   `define_constraints_for_novel_labeling` (l. 557), `define_constraints_on_deltas` (l. 751),
-   `define_objective` (l. 782) and the getters.
-   - Write down which variables are indexed by (clone, segment, haplotype) and (clone,
-     adjacency, phasing). These get a layer index.
-2. **Variables.** Split each segment and adjacency copy-number variable into a chromosome-layer
-   and an ecDNA-layer variable. Keep the original variable as their sum, with one equality
-   constraint per pair, so every untouched RCK method still sees the total.
-3. **Balance.** Override `define_constraints_on_nodes`:
-   - the chromosome layer gets RCK's rule (excess allowed at telomere positions);
-   - the ecDNA layer gets strict equality at every node (a circulation).
-4. **Unchanged RCK code:** labelling (one labelling per novel adjacency, shared across clones
-   and layers), the 1 − fp presence rule, the deltas and objective on the total, the fragment
-   flips, the bounds and the molecule groups. List any method that turns out to need a change in
-   the deviation table (plan 4.4).
-5. **Off-by-default additions** (plan 4.2), each a flag and a row in the deviation table:
-   - the junction-read term (θ from `scale.json`, applied per clone with u_k);
-   - `--imputed-penalty` (reads `rck.adj.imputed.tsv`);
-   - `--linear-ends`.
-   - The telomere tie-break is added only if risk 1 shows up (point 8).
-6. **CLI.** `rck-ecdna --model {bulk,multiclone}` (default `bulk`) with `--rck-input <dir>`.
-   - The bulk route (`OptModelCircular`, current defaults) must stay byte-identical; check it
-     with an existing small test.
-   - Reuse the I/O of `rck_run.py` (`read_segments_from_file`, `extract_scnt_from_segments`,
-     `extract_scnb_from_segments`, ...) rather than new readers, so the route reads exactly what
-     plain RCK reads.
-7. **Outputs.**
-   - RCK's native per-clone `rck.scnt.tsv` and `rck.acnt.tsv`, each with a `layer` field
-     (`chr`/`ec`);
-   - `summary.json` with `model: multiclone`.
-   - `decompositions.tsv` comes in step 4.
-8. **Tests** (`tests/`, tiny synthetic DIAGs written with amplicon-allele-analysis
-   `rck_diag.py` conventions; Gurobi, seconds each):
-   - 1 clone, one single-cycle ecDNA plus flanks: the ecDNA layer is a circulation, the
-     chromosome layer is one copy per haplotype through the flanks, and the objective is 0;
-   - 2 clones with different ecDNA copies: per-clone layers;
-   - a flipped phase block: the fragment flip restores it, as plain RCK did on demo5;
-   - **risk 1:** whether extra copies leak into the chromosome layer as linear telomere-to-
-     telomere paths. If they do, add the tie-break (a small cost per telomere copy),
-     documented as a deviation, and stop and report first.
-9. **Then demo5** (single case, short `--time-limit`): compare with the plain-RCK result of
-   step 2 (total copy numbers should agree) and look at the layer split.
-10. **Docs:** a new section in `docs/ecDNA.md` on the multi-clone model, with a table of every
-    deviation from `OptModelMultiClone`; a CHANGELOG entry.
+   Cycles with at least `--min-ecdna-copies` are ecDNA calls.
+6. **`rck/ecdna/evaluate.py` and `docs/pipeline/evaluation.md`:** score the cycles' ψ and proportions
+   against the `ecdna_psi` rows of `truth/proportions.tsv` (`CLONE`, `PSI`).
+7. **Tests** (tiny synthetic DIAGs, `tests/ecdna/test_multiclone.py` has a writer):
+   - the single-cycle DIAG gives a cycle with ψ = e per clone, then one telomere-to-telomere path
+     per haplotype;
+   - two clones and two species with different ψ per clone recover ψ exactly;
+   - a tie between "a path looping twice + a cycle of e − 1" and "a single-pass path + a cycle of
+     e" is broken towards the latter.
+8. **demo5** (single run, short time limit): the expected first walk is the 20-copy cycle on the
+   amplified haplotype; it weighs about 20 × 1.9 Mb, against at most about 1 × 6 Mb for any path.
+9. **Docs:** `docs/ecDNA.md` §11 (the decomposition, and its deviations from CoRAL's greedy model)
+   and the CHANGELOG.
 
-**Stop and report after step 3.** (Done 2026-11-13; see section 2a.)
-
-## 3. Step 4: joint decomposition and evaluation (plan 4.3, 4.4)
-
-- **`rck/ecdna/decompose.py`:** decompose all clones' ecDNA layers together. Topologies are
-  shared, with integer copies ψ_{σ,k} per clone and Σ_σ ψ_{σ,k} m_σ(e) = x^ec_k(e) for every clone
-  k and edge e.
-  - Reuse `CycleDecomposer`'s cycle search, connectivity cuts, read constraints, step penalty
-    and ranking where possible. The new part is per-clone weights on one set of topologies.
-  - `refit.py` should drop out, since the weights are integers per clone.
-- **Outputs:** `decompositions.tsv` with `psi_<clone>`, `proportion_<clone>` =
-  ψ_{σ,k} / Σ_σ ψ_{σ,k}, and `proportion_bulk` = Σ_k u_k ψ_{σ,k}, normalised over species. This is
-  the only place `clone_proportions.tsv` is used.
-- **`rck/ecdna/evaluate.py` and `docs/pipeline/evaluation.md`:** score ψ and the proportions
-  against the `ecdna_psi` rows of `truth/proportions.tsv` (`CLONE`, `PSI`).
-- **Tests:** two clones and two species with different ψ per clone; recover ψ exactly.
+**Known risk (plan risk 4):** greedy is not minimal. A merged walk over nested species on one
+haplotype could outweigh the inner species. Check it in step 5 on demo7 and a nested bench case;
+CoRAL-style post-processing is the fallback.
 
 **Stop and report after step 4.**
 

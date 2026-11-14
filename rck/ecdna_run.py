@@ -36,9 +36,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="rck-ecdna", description="Allele-specific ecDNA reconstruction (circular RCK).",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     io = parser.add_argument_group("input / output")
-    io.add_argument("--subgraph-dir", required=True,
+    io.add_argument("--model", choices=["bulk", "multiclone"], default="bulk",
+                    help="bulk: the two-layer circular flow on bulk depth (OptModelCircular, --subgraph-dir). multiclone: RCK's "
+                         "OptModelMultiClone with a chromosome and an ecDNA layer per clone, on the annotated DIAG (--rck-input); "
+                         "see docs/ecDNA.md, multi-clone model")
+    io.add_argument("--subgraph-dir", default=None,
                     help="Directory with nodes.tsv / edges.tsv of one amplicon. When it also has scale.json (written by "
-                         "subgraph_construct.py) it is all RCK needs: see --inputs")
+                         "subgraph_construct.py) it is all RCK needs: see --inputs. Required with --model bulk")
+    io.add_argument("--rck-input", default=None,
+                    help="--model multiclone: the annotated DIAG folder (<subgraph>/rck_input/ from subgraph_construct.py "
+                         "--clone-profiles), in RCK's native formats")
     io.add_argument("--inputs", choices=["auto", "subgraph", "windows"], default="auto",
                     help="Where copy numbers come from. subgraph: scale.json, CN_* edge columns, cn_profile.tsv and paths.tsv "
                          "of the subgraph folder (no windows needed). windows: estimate from --windows-dir / --obs-dir. "
@@ -166,6 +173,23 @@ def build_parser() -> argparse.ArgumentParser:
                     help="cnplot checkout (amplicon-allele-analysis third_party/cnplot) when cnplot is not installed; "
                          "default $CNPLOT_PATH")
 
+    mc = parser.add_argument_group("multi-clone model (--model multiclone); RCK's defaults unless noted")
+    mc.add_argument("--mc-nas-fp", type=float, default=0.1, help="RCK --run-nas-fp: at least 1 - this of the observed novel adjacencies are used")
+    mc.add_argument("--mc-group-m-fp", type=float, default=0.1, help="RCK --run-group-m-default-fp (molecule groups)")
+    mc.add_argument("--mc-segment-length-attr", choices=["length", "length_10", "length_100", "length_1000"], default="length_10",
+                    help="RCK --run-segment-length-attr: segment weight in the objective")
+    mc.add_argument("--mc-imputed-penalty", type=float, default=None,
+                    help="ecDNA addition, off by default: read rck.adj.imputed.tsv and charge this per imputed adjacency used; "
+                         "imputed adjacencies do not count in the 1 - fp rule")
+    mc.add_argument("--mc-novel-penalty", type=float, default=0.0, help="ecDNA addition, off by default: cost per observed novel adjacency used")
+    mc.add_argument("--mc-junction-weight", type=float, default=0.0,
+                    help="ecDNA addition, off by default: weight of the junction read term |#NOV/theta - sum_k u_k N_k| (theta from "
+                         "--junction-reads-per-copy or the subgraph's scale.json, u_k from clone_proportions.tsv)")
+    mc.add_argument("--mc-linear-ends", choices=["none", "boundaries", "all"], default="none",
+                    help="ecDNA addition, off by default: extra extremities where the chromosome layer may end, at "
+                         "--mc-linear-end-penalty per copy (boundaries: copy-number steps, see --boundary-min-copies)")
+    mc.add_argument("--mc-linear-end-penalty", type=float, default=0.25)
+
     gu = parser.add_argument_group("Gurobi")
     gu.add_argument("--threads", type=int, default=None, help="Default: SLURM_CPUS_PER_TASK, else the CPUs this process may use")
     gu.add_argument("--time-limit", type=float, default=None, help="Seconds, per MILP")
@@ -199,6 +223,10 @@ def run(args) -> Dict[str, object]:
     started = time.time()
     args.threads = default_threads(args.threads)
     quiet_gurobi_logger(getattr(args, "verbose", False))
+    if getattr(args, "model", "bulk") == "multiclone":
+        from rck.ecdna.multiclone import run_multiclone
+
+        return run_multiclone(args)
     os.makedirs(args.outdir, exist_ok=True)
     inputs = _resolve_inputs(args)
     graph = read_subgraph(args.subgraph_dir, phantom_max_bp=args.phantom_max_bp, soft_junction_hap=args.soft_junction_hap, name=args.name)
@@ -345,7 +373,12 @@ def _plot(args, outputs) -> None:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.model == "bulk" and not args.subgraph_dir:
+        parser.error("--model bulk needs --subgraph-dir")
+    if args.model == "multiclone" and not args.rck_input:
+        parser.error("--model multiclone needs --rck-input (the subgraph's rck_input/ folder)")
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     quiet_gurobi_logger(args.verbose)
     run(args)

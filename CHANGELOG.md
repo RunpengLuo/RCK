@@ -13,6 +13,66 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Changed (2026-11-15): `docs/ecDNA.md` checked against the code; RCK's published notation
+
+Documentation only; no code changed. Every section was re-read against the code it describes.
+§1–§3 were checked against `subgraph_io.py`, `scale.py` and `phased.py`; §4 against
+`ilp_circular.py` and RCK's `OptModelMultiClone`; §5–§7 against `decompose.py`, `rerank.py`,
+`refit.py` and `walk.py`; §8–§11 and the appendices against `multiclone.py`, `greedy.py`,
+`ilp_gurobi_ecdna.py`, `rck_run.py` and `ecdna_run.py`.
+
+The notation now follows Aganezov & Raphael 2020 (Methods, read from PMC7545144; the Supplemental
+Methods were not available, so RCK's MILP is described from its code):
+- RCK's symbols:
+  - DIAG $D(R,\tilde A_N)$, segments $j$, $j^H$, $j^H_\sigma$, adjacencies $a$ with labelled versions
+    $a^\varphi$;
+  - copy numbers $\mu$: per layer $\mu^{ec}$, $\mu^{bg}$ (were $x$/$y$); per clone $\mu_i$,
+    $a_{i,j}$, $b_{i,j}$;
+  - input $\hat c$/$\check c$, fragments $f$, $L(j)$, $T(R)$, $\mathcal U$, $P=1-$`fp`.
+- Renamed where they clashed:
+  - observations $\hat c\to o$;
+  - flip $f_b\to\chi_b$;
+  - background prior $\beta\to\omega_{bg}$ and cap $\beta_{\max}\to U^{bg}$;
+  - costs $\pi\to\kappa$; species penalty $\rho\to\kappa_{sp}$;
+  - slot indicator $u_k\to z_k$, multiplicity $m_{ke}\to x_{ke}$;
+  - clone index $k\to i$, walk $\sigma\to q$, read path $p\to\upsilon$.
+- New symbols are defined in tables marked "RCK or new" / "CoRAL or new".
+
+About 135 factual corrections or additions; the most consequential:
+- **RCK does not enforce extremity exclusivity in its MILP.** It only adds the reciprocal-location
+  constraint, and `rck_run` checks labelling after solving. The old text said RCK has infinite
+  sites "on".
+- **RCK's default length weight is `length_10`** $=\lceil (L(j)-1)/10\rceil$, against the
+  paper's $L(j)$.
+- **γ/θ priority.** `--depth-per-copy` / `--junction-reads-per-copy` take priority over
+  `scale.json`.
+- **Piece share.** The share is over the summed piece length, not the segment length.
+- **Linear ends.** The ecDNA layer is not strictly circular by default.
+- **Imputed closure vs linear ends.** The imputed closure is cheaper only above 4 copies; they tie
+  at 4.
+- **Ambiguity variables.** The XOR terms are continuous, not binaries.
+- **Refit.** It applies the flow's depth bias, and its LP rows are written out as built.
+- **`low_weight` uses a strict `<`.** A weight-1 species beside a 10-copy one is *not* flagged;
+  the old example was wrong.
+- **CoRAL comparisons in §5** corrected against CoRAL 3.1.1's code.
+- **Greedy (multi-clone).** Its omitted constraints and the `no_walk` stop are added; its amplicon
+  call is `ecDNA`/`none` only.
+- **Appendix C** gains the four `--depth-bias-*` options, and **Appendix G** six test modules.
+
+Code behaviour flagged during the audit, documented as is and not changed:
+- `low_weight` threshold strictness: is the strict `<` intended?
+- With `--depth-per-copy` in subgraph mode, the flank prior stays on `scale.json`'s γ.
+- Merging parallel variants keeps only the first edge's `junction_hap`.
+- `--alternatives-mode nogood` returns nothing, with no warning, when `--path-fraction` is
+  infeasible.
+- The ambiguity report and `steps` are computed before the refit.
+- `pool_keeps` prunes on obj + λ·steps, ignoring the residual that is ranked first.
+- Read matching of orderings ignores haplotype.
+- In the multi-clone route, an unsatisfiable molecule group blocks `--mc-stop-fraction`, and
+  missing clone proportions silently count as 0.
+- RCK (`rck_run.py`) with no novel adjacencies is infeasible ($0\ge 1-$`fp`), and it overwrites
+  `--fragments` unless `--no-pre` is given.
+
 ### Added (2026-11-15): manuscript figures 2–6 and Table 1 (`results/bench_IW/make_figures.py`)
 
 - **`make_figures.py`** reads the collected bench_IW_intpsi TSVs. No runs are touched and no Gurobi

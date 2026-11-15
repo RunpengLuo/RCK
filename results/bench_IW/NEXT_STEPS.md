@@ -7,12 +7,33 @@ dated 2026-11-14, evening).*
 
 ## Resume here (next session)
 
-> **Latest (2026-11-14, 21:55): the bench_IW_intpsi methods arrays are submitted** (step 5).
-> Start with "Check the arrays" just below, then steps 6–7 further down. Everything up to here is
-> committed on `yubi_CNP_ionic` (RCK last commit: the one that wrote this note; amplicon-allele-analysis
-> `0dc2d69`). Nothing pushed.
+> **Latest (2026-11-15): bench_IW_intpsi is finished, scored, collected and written up** (steps 5–7).
+> All 96 runs done; results in `RESULTS_intpsi.md` and the three `bench_iw_intpsi_*.tsv` here.
+> Open items for Yubi are under "After step 7" at the end of the next-steps list. Everything is
+> committed on `yubi_CNP_ionic` (amplicon-allele-analysis unchanged at `0dc2d69`). Nothing pushed.
 
-### Check the arrays (do this first)
+### Check the arrays (done 2026-11-15)
+
+**Result of the check (2026-11-15, 13:00).**
+- All 96 tasks COMPLETED with exit code 0; `status`: 96 done. Wall time 21:55–00:04 (2.1 h).
+- No time-outs, out-of-memory kills or cancellations; peak MaxRSS 796 MB (coral task 9).
+- No CE crashes. CE used at most 4 Gurobi threads (117 solves at 4, 46 small ones at 1).
+- All 48 CoRAL / CE `run.json` have `graph_source: bulk+paths`, `path_constraints_dropped: 0` and
+  `baseline: decomposition-only`.
+- `rck_mc`: all 364 solves optimal, longest 4.2 s.
+- Stopped at their own time limit, still scored on the incumbent: `rck_bulk` decomposition on
+  hard_S4_s16003 (gap 79%; 85% on bench_IW) and CoRAL on simple_S4_s13002 (gap 9%).
+- **Different from expected:**
+  - Licence contention was heavy. 42 of 96 runs needed more than one attempt (up to 9; none
+    used all 15). Gurobi reported "5 active sessions for a baseline of 2", so something
+    outside these arrays also held sessions.
+  - `rck_mc` simple_S4_s13004 took 731 s of its 15 min limit, almost all waiting for the licence.
+  - Summed `elapsed_s` (licence waits included): `rck_bulk` 2.04 h, `coral` 1.98 h, `rck_mc`
+    1.57 h, `ce` 1.23 h (6.8 h, against about 4 h expected).
+- Nothing resubmitted.
+
+The original instructions, kept for reference:
+
 
 | array | method | Slurm job | tasks | time limit | depends on |
 |---|---|---|---|---|---|
@@ -234,7 +255,8 @@ What to look for, and what to do:
    - **Expected total:** about 2–2.5 h wall time, about 4 h compute.
    - CoRAL / CE timings on the bulk route's graph may differ from these.
    - CE crashed on two bench_IW graphs; report crashes as method failures, do not patch CE.
-6. **Score and collect (local, no Gurobi; after every array has finished):**
+6. **Done (2026-11-15): score and collect** (4 s; 144 rows, no `score_error.txt`, `strict_rule` and
+   `baseline` carried). Original instructions:
    `python bench_iw.py --set iw_intpsi score --jobs 8`, then `python bench_iw.py --set iw_intpsi collect`.
    - Writes `bench_iw_intpsi_table.tsv`, `bench_iw_intpsi_pooled.tsv` and
      `bench_iw_intpsi_proportions.tsv` here.
@@ -244,7 +266,8 @@ What to look for, and what to do:
    - The table has one row per (case, `method_variant`); the pooled table groups by
      `method_variant` and gives `n` and `n_scored`.
    - Commit the TSVs with a short results README.
-7. **Write up and report to Yubi:**
+7. **Done (2026-11-15): `RESULTS_intpsi.md`** (pooled tables per method variant, class and S; findings).
+   Original instructions:
    - a short `results/bench_IW/RESULTS_intpsi.md` with the pooled table per (method variant, class,
      S), committed with the TSVs;
    - lead with ecDNA copy-number recall / precision, proportions and the species matrix; give
@@ -252,6 +275,17 @@ What to look for, and what to do:
    - failures;
    - CoRAL / CE behaviour, both walk variants side by side;
    - `rck_mc`'s within-block vs absolute counts.
+
+**After step 7: open items for Yubi** (from `RESULTS_intpsi.md`; nothing started):
+- **`rck_mc` on hard_S4_s16003:** copy-number recall 0.71 with psi within 1 of the truth. This is
+  the case where the multi-clone model moved its given profiles on bench_IW too. Worth a look.
+- **`rck_mc` extra cycles:** 4 simple cases have exact copy numbers but split a clone's copies
+  over extra cycles (8 false species in all, proportion TV up to 0.40). Is this a decomposition
+  tie-break or something to penalise?
+- **Licence:** another holder used sessions during the arrays. For future arrays, consider a
+  longer `rck_mc` time limit or fewer concurrent arrays.
+- `elapsed_s` includes licence waits; the solvers' own runtimes are in each run's logs and
+  `summary.json`, if timings are to be reported.
 
 ## Earlier state (2026-11-14 afternoon, kept for the record)
 

@@ -13,6 +13,33 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Results (2026-11-15): bench_IW_intpsi arrays checked, scored, collected
+
+- **Arrays 32280369–32280372: all 96 runs completed.**
+  - No time-outs, out-of-memory kills or CE crashes; peak RSS 796 MB.
+  - CoRAL / CE all read `bulk+paths` with no path constraint dropped; CE used at most 4 threads.
+  - `rck_mc` solves were all optimal (longest 4.2 s).
+  - Stopped at their own time limit: `rck_bulk` decomposition on hard_S4_s16003 (gap 79%) and
+    CoRAL on simple_S4_s13002 (gap 9%).
+  - Heavy Gurobi licence contention: 42 of 96 runs retried, up to 9 times, and another holder was
+    active. `elapsed_s` therefore includes waits. Nothing resubmitted.
+- **Scored and collected** (`bench_iw.py --set iw_intpsi score --jobs 8`, `collect`): 144 rows, no
+  scoring errors.
+  - Results: `results/bench_IW/bench_iw_intpsi_{table,pooled,proportions}.tsv` and
+    `results/bench_IW/RESULTS_intpsi.md`.
+- **Headline** (ecDNA copy-number recall / precision, mean of 24 cases):
+
+  | method variant | recall | precision |
+  |---|---|---|
+  | `rck_mc` | 0.99 | 1.00 |
+  | `rck_bulk` | 0.96 | 0.98 |
+  | CoRAL, walks kept | 0.85 | 0.48 |
+  | CoRAL, walks dropped | 0.69 | 0.91 |
+  | CE, walks kept | 0.96 | 0.40 |
+  | CE, walks dropped | 0.95 | 0.42 |
+
+- **Open items for Yubi:** `results/bench_IW/NEXT_STEPS.md`, "After step 7".
+
 ### Submitted (2026-11-14, 21:55): bench_IW_intpsi methods arrays
 
 NEXT_STEPS step 5, with Yubi's go-ahead (`results/bench_IW/submit_intpsi.sh --submit`):

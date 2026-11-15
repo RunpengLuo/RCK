@@ -7,6 +7,59 @@ dated 2026-11-14, evening).*
 
 ## Resume here (next session)
 
+> **Latest (2026-11-14, 21:55): the bench_IW_intpsi methods arrays are submitted** (step 5).
+> Start with "Check the arrays" just below, then steps 6–7 further down. Everything up to here is
+> committed on `yubi_CNP_ionic` (RCK last commit: the one that wrote this note; amplicon-allele-analysis
+> `0dc2d69`). Nothing pushed.
+
+### Check the arrays (do this first)
+
+| array | method | Slurm job | tasks | time limit | depends on |
+|---|---|---|---|---|---|
+| A | `rck_bulk` | **32280369** | 0–23 %1 | 90 min | – |
+| B | `rck_mc` | **32280370** | 0–23 %1 | 15 min | – |
+| C | `coral` | **32280371** | 0–23 %1 | 90 min | `aftercorr:32280369` |
+| D | `ce` | **32280372** | 0–23 %1 | 60 min | `aftercorr:32280369` |
+
+- Task i = case i of `python bench_iw.py --set iw_intpsi list --method <m>`. Task 0
+  (simple_S1_s11001) and task 23 (hard_S4_s16006) were run locally in the pilot and exit at once
+  ("done already").
+- Submitted 21:55 with `./submit_intpsi.sh --submit` (`/n/fs/yubi-iw/runs/bench_IW_intpsi/logs/slurm/submitted.txt`).
+  Expected about 2–2.5 h of wall time.
+- Logs: `/n/fs/yubi-iw/runs/bench_IW_intpsi/logs/slurm/iwi-<method>_<jobid>_<task>.out`. Runs:
+  `/n/fs/yubi-iw/runs/bench_IW_intpsi/methods/<case>/<method>[/amplicon1]/run.json`.
+
+```bash
+cd ~/RCK-cnp/results/bench_IW
+export PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH
+squeue -u $USER                                            # anything left? (>= 60 s between calls)
+sacct -j 32280369,32280370,32280371,32280372 -X --format=JobID%20,JobName,State,ExitCode,Elapsed,MaxRSS \
+  | awk 'NR>2{print $2, $3}' | sort | uniq -c              # states per array
+sacct -j 32280369,32280370,32280371,32280372 --format=JobID%20,State,ExitCode,Elapsed,MaxRSS \
+  | grep -E 'FAILED|TIMEOUT|OUT_OF_ME|CANCELLED|PENDING'   # anything not COMPLETED
+python bench_iw.py --set iw_intpsi status                 # done / missing / failed per (case, method)
+grep -l 'licence' /n/fs/yubi-iw/runs/bench_IW_intpsi/logs/slurm/*.out | wc -l   # tasks that waited for the licence
+```
+
+What to look for, and what to do:
+- **All 96 `done` in `status`:** go to step 6 (score and collect).
+- **A failed `rck_bulk` task:** its case's CoRAL / CE tasks stay PENDING with reason
+  `DependencyNeverSatisfied`; cancel them (`scancel 32280371_<i> 32280372_<i>`).
+  - Diagnose from its `.out` and `<case>/rck_bulk/run.json` first.
+  - Then resubmit only the affected tasks with the same flags as `submit_intpsi.sh`, e.g.
+    `sbatch --array=<i>%1 ... --export=ALL,SET=iw_intpsi,METHOD=rck_bulk bench_iw_method.sbatch`,
+    and CoRAL / CE for that case with `--dependency=aftercorr:<new bulk job>`. Finished runs are
+    skipped. Ask Yubi before resubmitting more than a handful.
+- **Licence failures** (`attempt k failed (licence)` x 15 in the `.out`): resubmit those tasks;
+  nothing to fix.
+- **CE crashes** (`NameError` inside `CE.py`, as twice on bench_IW): a method failure. Record it, do
+  not patch CE, do not resubmit.
+- **TIMEOUT:** note which; do not raise limits without Yubi.
+- **`MaxRSS`:** all should be far below 2G (peak 754 MB on bench_IW).
+- Check that CE ran with 4 threads (`grep -h 'Thread count was' <case>/ce/amplicon1/ce.stdout`) and
+  that every CoRAL / CE `run.json` has `graph_source: bulk+paths` and
+  `input_graph_counts.path_constraints_dropped: 0`.
+
 **State (2026-11-14, evening).**
 - **bench_IW's methods array (32267060) is finished and checked.** It is not the benchmark's
   result: bench_IW has a mismatch between the multi-clone input and the scoring truth (below).
@@ -162,8 +215,9 @@ dated 2026-11-14, evening).*
        `rck_mc`'s species counts).
    - Times are far below the array limits (bulk 135 s on hard S=4).
 
-5. **Methods arrays (needs Yubi's go-ahead):** `./submit_intpsi.sh` prints the commands,
-   `./submit_intpsi.sh --submit` submits. Four 24-task arrays, one task per case, 4 CPUs and 2 G
+5. **Submitted 2026-11-14 21:55 (Yubi's go-ahead): jobs 32280369 (rck_bulk), 32280370 (rck_mc),
+   32280371 (coral), 32280372 (ce)**; see "Check the arrays" above. `./submit_intpsi.sh` prints
+   the commands, `./submit_intpsi.sh --submit` submits. Four 24-task arrays, one task per case, 4 CPUs and 2 G
    each (peak 754 MB on bench_IW):
 
    | array | method | depends on | time limit | wall time (array 32267060 timings) |
@@ -180,15 +234,21 @@ dated 2026-11-14, evening).*
    - **Expected total:** about 2–2.5 h wall time, about 4 h compute.
    - CoRAL / CE timings on the bulk route's graph may differ from these.
    - CE crashed on two bench_IW graphs; report crashes as method failures, do not patch CE.
-6. **Score and collect (local, no Gurobi):** `bench_iw.py --set iw_intpsi score --jobs 8`, then
-   `collect`.
+6. **Score and collect (local, no Gurobi; after every array has finished):**
+   `python bench_iw.py --set iw_intpsi score --jobs 8`, then `python bench_iw.py --set iw_intpsi collect`.
+   - Writes `bench_iw_intpsi_table.tsv`, `bench_iw_intpsi_pooled.tsv` and
+     `bench_iw_intpsi_proportions.tsv` here.
+   - Check for `score_error.txt` in any `score*/` folder (`collect` marks them `score_status=error`).
    - The pilot's 12 scored variants took 2 s, so all 144 rows (24 cases x 6 method variants)
      should take under a minute.
    - The table has one row per (case, `method_variant`); the pooled table groups by
      `method_variant` and gives `n` and `n_scored`.
    - Commit the TSVs with a short results README.
-7. **Report to Yubi:**
-   - the pooled table per (method variant, class, S);
+7. **Write up and report to Yubi:**
+   - a short `results/bench_IW/RESULTS_intpsi.md` with the pooled table per (method variant, class,
+     S), committed with the TSVs;
+   - lead with ecDNA copy-number recall / precision, proportions and the species matrix; give
+     `total_cn_ecdna_*` before the whole-subgraph `total_cn_*` (purity-dominated);
    - failures;
    - CoRAL / CE behaviour, both walk variants side by side;
    - `rck_mc`'s within-block vs absolute counts.

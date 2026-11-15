@@ -109,3 +109,62 @@ class AnswerFile(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTotalCopyNumber(unittest.TestCase):
+    """Total copy number (background + ecDNA) of the two RCK routes: total_cn_* and total_cn_ecdna_*."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = self.tmp.name
+        os.makedirs(os.path.join(root, "sim", "truth"))
+        # 0-based half-open: [100, 200) total 3, [200, 300) total 10 (5 + 5), [300, 400) total 2
+        pd.DataFrame({"SID": [1, 2, 3], "#CHR": ["chr1"] * 3, "START": [100, 200, 300], "END": [200, 300, 400],
+                      "CN_A": [1.5, 5.0, 1.0], "CN_B": [1.5, 5.0, 1.0]}).to_csv(
+            os.path.join(root, "sim", "truth", "segments.tsv"), sep="\t", index=False)
+        os.makedirs(os.path.join(root, "bulk"))
+        pd.DataFrame({"sid": ["s1", "s2"], "chrom": ["chr1", "chr1"], "start": [100, 200], "end": [199, 399],
+                      "inferred_total": [3, 8]}).to_csv(os.path.join(root, "bulk", "flow_segments.tsv"), sep="\t", index=False)
+        os.makedirs(os.path.join(root, "mc"))
+        with open(os.path.join(root, "mc", "rck.scnt.tsv"), "w") as handle:
+            handle.write("chr\tstart\tend\textra\n")
+            handle.write("chr1\t0\t99\tkind=flank;cn={'c1': {'A': 9, 'B': 9}, 'c2': {'A': 9, 'B': 9}}\n")
+            handle.write("chr1\t100\t199\tkind=subgraph;cn={'c1': {'A': 2, 'B': 1}, 'c2': {'A': 1, 'B': 1}}\n")
+            handle.write("chr1\t200\t299\tkind=subgraph;cn={'c1': {'A': 1, 'B': 12}, 'c2': {'A': 1, 'B': 6}}\n")
+        self.root = root
+        self.truth = [Cycle("e1", 5.0, [[CStep("chr1", 200, 299, "A", "+")]])]
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_truth_half_open_to_inclusive(self):
+        self.assertEqual(bm.truth_total_cn(os.path.join(self.root, "sim"))[0], ("chr1", 100, 199, 3.0))
+
+    def test_bulk_scores(self):
+        s = bm.total_cn_scores(bm.truth_total_cn(os.path.join(self.root, "sim")), bm.bulk_total_cn(os.path.join(self.root, "bulk")))
+        # bases 100-199: c 3 t 3; 200-299: c 8 t 10; 300-399: c 8 t 2
+        self.assertAlmostEqual(s["total_cn_recall"], (300 + 800 + 200) / (300 + 1000 + 200))
+        self.assertAlmostEqual(s["total_cn_precision"], (300 + 800 + 200) / (300 + 800 + 800))
+        self.assertAlmostEqual(s["total_cn_within_tol"], 100 / 300)  # |8-10| = 2 > max(1, 1); |8-2| > 1
+        self.assertAlmostEqual(s["total_cn_mae"], (0 + 200 + 600) / 300)
+        self.assertEqual((s["total_cn_bases"], s["total_cn_bases_no_truth"]), (300, 0))
+
+    def test_multiclone_weights_flank_and_normal(self):
+        rows = bm.multiclone_total_cn(os.path.join(self.root, "mc"), {"c1": 0.5, "c2": 0.3})
+        self.assertEqual(len(rows), 2)  # the flank row is left out
+        self.assertAlmostEqual(rows[0][3], 0.5 * 3 + 0.3 * 2 + 0.2 * 2)
+        self.assertAlmostEqual(rows[1][3], 0.5 * 13 + 0.3 * 7 + 0.2 * 2)
+        with self.assertRaises(KeyError):
+            bm.multiclone_total_cn(os.path.join(self.root, "mc"), {"c1": 0.5})
+
+    def test_ecdna_restricted(self):
+        out = bm.total_cn_all(bm.truth_total_cn(os.path.join(self.root, "sim")), bm.bulk_total_cn(os.path.join(self.root, "bulk")),
+                              self.truth)
+        self.assertEqual(out["total_cn_ecdna_bases"], 100)
+        self.assertAlmostEqual(out["total_cn_ecdna_recall"], 0.8)
+        self.assertAlmostEqual(out["total_cn_ecdna_precision"], 1.0)
+
+    def test_ecdna_bases_merged(self):
+        cyc = [Cycle("a", 1.0, [[CStep("chr1", 10, 19, "A", "+"), CStep("chr1", 20, 29, "A", "-")]]),
+               Cycle("b", 1.0, [[CStep("chr1", 25, 40, "A", "+"), CStep("chr2", 5, 6, "A", "+")]])]
+        self.assertEqual(sorted(bm.ecdna_bases(cyc)), [("chr1", 10, 40, 1.0), ("chr2", 5, 6, 1.0)])

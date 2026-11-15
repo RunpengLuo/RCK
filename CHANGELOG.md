@@ -13,6 +13,54 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Added (2026-11-14, night): total copy-number recall (RCK routes) and per-run fields
+
+NEXT_STEPS step 3. No method was run; checked on bench_IW's finished runs, read-only (scoring was
+tested on copies in scratch).
+
+- **Decision (Yubi):** report, for the two RCK routes, total copy-number recall (background plus
+  ecDNA) next to the headline ecDNA-only recall; give every row `segment_max_traversals`, species
+  sizes and the strict rule.
+- **`bench_metrics`: `total_cn_*`** (recall, precision, within-tolerance share, MAE, bases). They
+  are haplotype-blind and bp-weighted over D, the union subgraph's segments (the DIAG's flank
+  segments left out).
+  - **Truth** t = CN_A + CN_B of `truth/segments.tsv`: the tumour sample's cell-averaged copy
+    number, normal cells included.
+    - *Why this frame:* the subgraph's copy numbers, which both routes fit, are cell-averaged
+      (`rck_inputs.py`: mean depth / depth per copy).
+    - `truth/segments.tsv` is 0-based half-open; checked against the AA truth segments.
+  - **`rck_bulk`** c = `flow_segments.tsv` `inferred_total`.
+  - **`rck_mc`** c = sum_k u_k (A_k + B_k) over its output `rck.scnt.tsv`, plus the normal cells'
+    (1 - sum u) x 2.
+  - CoRAL and CE report no segment copy numbers and get no total score.
+- **Also `total_cn_ecdna_*`: the same over the bases a truth species traverses.**
+  - *Why:* on bench_IW, D is a median 22x larger than the ecDNA bases (ecDNA a median 4.6% of D).
+  - The truth is cell-averaged: with purity 0.8, a background where the tumour has 1 copy of A
+    and 0 of B reads 1.2. One whole-number bulk karyotype can only say 1 there.
+  - So `total_cn_*` over D mostly measures background and purity. On bench_IW, `rck_bulk` scores
+    0.84 on simple_S1_s11001 (0.97 over the ecDNA bases), with precision 1.0.
+- **What the multi-clone total measures.** The route gets the true clone profiles as RCK segment
+  copy numbers, which it may move within their bounds.
+  - On bench_IW it kept them on 99.98% of (base, clone) pairs. 203 changed cells were 1-bp
+    slivers; the 28 longer ones were all in hard_S4_s16003.
+  - There, about 322 kb per clone of a 78-copy region (clone1 A 48 / B 30) came out at 31
+    (A 30 / B 1). Its ecDNA recall is 0.71, and its total ecDNA-base recall 0.76.
+  - So its total recall mostly checks its input, frame and normal share, but it catches such
+    departures.
+  - (A first reading of these numbers, during this session, wrongly took every changed cell to
+    be 1 bp; corrected before anything was written.)
+- **`bench_iw.py`:**
+  - `score` adds `total_cn_*` and `total_cn_ecdna_*` for `rck_bulk` and `rck_mc`.
+  - `collect` gives every row `segment_max_traversals` and `footprint_bp` (`seeds.tsv`),
+    `species_size_bp` (comma list) with min / max (`truth/ecdna.tsv`), `strict_rule` (`Status`
+    for the RCK routes, `cn-frac:0.1` for CoRAL / CE) and `baseline` (decomposition-only for
+    CoRAL / CE in `iw_intpsi`).
+  - The case fields are left out of the pooled means.
+  - End to end on copies of two bench_IW cases (simple_S1_s11001, hard_S4_s16003): no score
+    errors; `rck_bulk` / `rck_mc` reproduce the pilot's ecDNA scores.
+- Tests: `tests/ecdna/test_bench_metrics.py` +5 (half-open truth, bulk and multi-clone totals with
+  flank and normal share, ecDNA restriction, merged ecDNA bases). Related suites pass (73).
+
 ### Added (2026-11-14, night): bench_IW_intpsi driver; graph route on the bulk route's graph
 
 NEXT_STEPS steps 1 and 2 (`results/bench_IW/NEXT_STEPS.md`). No method was run; all checks below

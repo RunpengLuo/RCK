@@ -94,16 +94,19 @@ dated 2026-11-14, evening).*
    - `bench_iw_method.sbatch` + `submit_intpsi.sh` (prints the four commands; `--submit` submits).
    - Offline check on bench_IW's 24 bulk runs: all 389 path constraints carried, none dropped;
      3,391 tokens point at the same coordinates.
-3. **Total copy-number recall for the RCK routes, and the per-run fields** (decisions 4–5; local,
-   about 1 h with tests).
-   - `bench_metrics`: total recall = sum_x min(c, t) / sum_x t over the subgraph's segments,
-     haplotype-blind, bp-weighted.
-     - t = tumour total copy number (background plus ecDNA, `truth/segments.tsv` CN_A + CN_B).
-     - `rck_bulk` c: fitted segment copy numbers (`flow_segments.tsv`).
-     - `rck_mc` c: sum_k u_k x the clone's inferred copy number (its `rck.scnt.tsv`).
-   - `collect` joins `segment_max_traversals` and species sizes (`truth/ecdna.tsv` SIZE) and
-     keeps `strict_rule`.
-   - Tests for each.
+3. **Done (2026-11-14 night): total copy-number recall for the RCK routes, per-run fields.**
+   Details: CHANGELOG, "total copy-number recall (RCK routes) and per-run fields".
+   - `total_cn_*` over the union subgraph's segments, and `total_cn_ecdna_*` over the truth ecDNA
+     bases.
+   - Truth frame: cell-averaged tumour sample, normal cells included. `rck_bulk` from
+     `flow_segments.tsv`; `rck_mc` = sum_k u_k (A_k + B_k) + normal share.
+   - **When reporting:** `total_cn_*` over the whole subgraph is mostly background and purity (one
+     whole-number bulk karyotype cannot match 1.2-type cell-averaged values). Lead with
+     `total_cn_ecdna_*`.
+   - The multi-clone total mostly reflects its given profiles, except where the model moves them
+     (hard_S4_s16003 on bench_IW).
+   - Table: `segment_max_traversals`, `footprint_bp`, `species_size_bp` (+ min / max),
+     `strict_rule`, `baseline`.
 4. **Pilot locally** on simple_S1_s11001 and one hard S=4 case: all four methods plus scoring. It
    uses 1–2 Gurobi sessions for a few minutes; no array may be running.
 5. **Methods arrays (needs Yubi's go-ahead):** `./submit_intpsi.sh` prints the commands,

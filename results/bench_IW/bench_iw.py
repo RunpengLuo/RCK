@@ -50,7 +50,13 @@ results/graph_route/score_h2h.normalise_cycles), then
                (aa_partition_metrics.tsv), strict and best-of species scores; graph = the exported
                inferred graph (coral, ce, rck_bulk); no truth mixture graph, so no graph-level metrics
   bench_metrics  ecDNA copy-number recall / precision (bulk copies; rck_mc weights are sum_k u_k psi_k
-               with u from the DIAG) and ecDNA proportions, strict and with low_weight cycles
+               with u from the DIAG) and ecDNA proportions, strict and with low_weight cycles; for
+               rck_bulk and rck_mc also total copy number (background + ecDNA, total_cn_*, and
+               total_cn_ecdna_* over the truth ecDNA bases; bench_metrics docstring)
+
+collect: one row per (case, method) with the case fields (segment_max_traversals, species sizes,
+footprint), strict_rule (Status or cn-frac:0.1, from bench_metrics), baseline (decomposition-only for
+coral / ce in iw_intpsi) and every score.
 
 Outputs under $BENCH_IW_OUT (default /n/fs/yubi-iw/runs/<set folder>/methods):
   <case>/graph/<case>_amplicon1_graph.txt   the exported union subgraph (coral and ce for iw; path
@@ -364,11 +370,17 @@ def score_one(task):
         argv += ["--alt-cycles"] + paths["alt_cycles"] if paths.get("alt_cycles") else []
         argv += ["--graph", paths["graph"]] if paths.get("graph") else []
         aa_eval.main(argv)
-        weights = None
+        weights = props = None
         if method == "rck_mc":
             props = bm.read_proportions(os.path.join(case["rck_input"], "clone_proportions.tsv"))
             weights = bm.multiclone_bulk_weights(run_dir(case, method), props)
-        summary, rows = bm.score(paths["cycles"], ev.load_truth(case["truth"]), weights)
+        truth = ev.load_truth(case["truth"])
+        summary, rows = bm.score(paths["cycles"], truth, weights)
+        if method == "rck_bulk":  # total copy number (background + ecDNA): the two RCK routes only
+            summary.update(bm.total_cn_all(bm.truth_total_cn(case["truth"]), bm.bulk_total_cn(run_dir(case, method)), truth))
+        elif method == "rck_mc":
+            summary.update(bm.total_cn_all(bm.truth_total_cn(case["truth"]),
+                                           bm.multiclone_total_cn(run_dir(case, method), props), truth))
         summary.update(case=case["name"], method=method)
         with open(os.path.join(folder, "bench_metrics.json"), "w") as handle:
             json.dump(summary, handle, indent=2)
@@ -410,11 +422,26 @@ def matrix_summary(matrix, haplotype):
             "{h}_exact_cycles".format(h=haplotype): int(best["exact"].fillna(0).astype(bool).sum())}
 
 
+def case_fields(case):
+    """Per-case fields Yubi asked every row to carry: segment_max_traversals (seeds.tsv, the seed
+    check's count over the truth walks) and the species sizes (truth/ecdna.tsv SIZE, bp)."""
+    seeds = pd.read_csv(SEEDS, sep="\t")
+    row = seeds[seeds["run"] == case["name"]].iloc[0]
+    ecdna = pd.read_csv(os.path.join(case["truth"], "truth", "ecdna.tsv"), sep="\t")
+    sizes = [int(x) for x in ecdna["SIZE"]]
+    return {"segment_max_traversals": int(row["segment_max_traversals"]),
+            "species_size_bp": ",".join(str(x) for x in sizes), "species_size_min_bp": min(sizes),
+            "species_size_max_bp": max(sizes), "footprint_bp": int(row["footprint_bp"])}
+
+
 def collect():
     rows, props = [], []
+    fields = {c["name"]: case_fields(c) for c in cases()}
     for case, method in runs():
         state, seconds = elapsed(case, method)
         row = {k: case[k] for k in ("name", "scenario", "class", "S", "replicate", "seed")}
+        row.update(fields[case["name"]])
+        row["baseline"] = "decomposition-only" if method in ("coral", "ce") and GRAPH_SOURCE != "subgraph" else ""
         row.update(method=method, run_status=state, elapsed_s=seconds)
         folder = os.path.join(run_dir(case, method), "score")
         metrics = os.path.join(folder, "bench_metrics.json")
@@ -443,12 +470,14 @@ def collect():
                 props.append(p)
         elif os.path.exists(os.path.join(folder, "score_error.txt")):
             row["score_status"] = "error"
+        row.setdefault("strict_rule", None)
         rows.append(row)
     table = pd.DataFrame(rows)
     table.to_csv(TABLE, sep="\t", index=False)
     if props:
         pd.concat(props, ignore_index=True).to_csv(PROPORTIONS, sep="\t", index=False)
-    numeric = [c for c in table.columns if c not in ("replicate", "seed", "S") and pd.api.types.is_numeric_dtype(table[c])]
+    case_cols = ("replicate", "seed", "S", "segment_max_traversals", "species_size_min_bp", "species_size_max_bp", "footprint_bp")
+    numeric = [c for c in table.columns if c not in case_cols and pd.api.types.is_numeric_dtype(table[c])]
     pooled = []
     for keys in (["method", "class", "S"], ["method", "class"], ["method"]):
         g = table.groupby(keys)[numeric].agg(["mean", "median"])

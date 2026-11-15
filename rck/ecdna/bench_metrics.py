@@ -32,6 +32,37 @@ cycles included); the difference shows the mass the method itself discarded. Cyc
 
 Writes OUT/bench_metrics.json and OUT/bench_proportions.tsv (one row per truth or inferred species
 and set).
+
+Total copy-number recall (the two RCK routes only; Yubi, 2026-11-14). Background plus ecDNA,
+haplotype-blind, base-pair weighted, over D = the bases of the union subgraph's segments (the DIAG's
+``kind=flank`` segments left out):
+
+    t(x) = CN_A + CN_B of truth/segments.tsv: the tumour sample's cell-averaged copy number, normal
+           cells included (the frame the subgraph's depth-derived copy numbers are in)
+    c(x) = rck_bulk: inferred_total of flow_segments.tsv (fitted background + ecDNA)
+           rck_mc:   sum_k u_k (A_k + B_k) over the clones of its output rck.scnt.tsv, plus the normal
+                     cells' (1 - sum_k u_k) x 2, with u from the DIAG's clone_proportions.tsv
+    total_cn_recall = sum_D min(c, t) / sum_D t;  total_cn_precision = sum_D min(c, t) / sum_D c;
+    total_cn_within_tol = share of D with |c - t| <= max(1, 0.1 t);  total_cn_mae = mean_D |c - t|
+    total_cn_ecdna_*: the same over the bases of D that a truth species traverses
+
+D is mostly background (tens of Mb around a few Mb of ecDNA), and t is cell-averaged: with purity p,
+a background where the tumour has 1 copy reads 1 + (1 - p) or similar fractions, which one
+whole-number bulk karyotype cannot match. total_cn_* over D is therefore dominated by background and
+purity; total_cn_ecdna_* is the part where the ecDNA copies matter.
+
+truth/segments.tsv is 0-based half-open ([START, END)); the methods' segments are in the walk frame,
+which is this module's 0-based inclusive frame. CoRAL and CycleExtractor report no segment copy
+numbers of their own, so they get no total score.
+
+What the multi-clone total measures: the route is given each clone's allele copy numbers (the true
+clone profiles with psi folded in, --clone-profiles truth) as RCK's segment copy numbers, which it
+may move within their bounds (cnb) while it infers the haplotype labelling and adjacency copy
+numbers. On bench_IW (array 32267060) it kept them on 99.98% of the (base, clone) pairs: 203 changed
+cells were 1-bp slivers, and 28 longer ones were all in hard_S4_s16003, where about 322 kb per clone
+of a 78-copy region (clone1) came out at 31. So its total recall is mostly a check of its input, the
+cell-averaged frame and the normal share, but it does catch the cases where the model departs from
+the profiles it was given.
 """
 import argparse
 import json
@@ -168,6 +199,124 @@ def score(cycles_path: str, truth: Sequence[Cycle], weights: Optional[Dict[str, 
     return summary, rows
 
 
+def _intervals_total(rows) -> Dict[str, List[tuple]]:
+    """[(chrom, lo, hi, value)] (0-based inclusive) -> per chromosome sorted, non-overlapping."""
+    out: Dict[str, List[tuple]] = defaultdict(list)
+    for chrom, lo, hi, value in rows:
+        out[str(chrom)].append((int(lo), int(hi), float(value)))
+    for chrom in out:
+        out[chrom].sort()
+        for (a_lo, a_hi, _), (b_lo, _b, _v) in zip(out[chrom], out[chrom][1:]):
+            if b_lo <= a_hi:
+                raise ValueError("overlapping segments on {c}: {a}-{b} and {d}".format(c=chrom, a=a_lo, b=a_hi, d=b_lo))
+    return out
+
+
+def truth_total_cn(truth_dir: str) -> List[tuple]:
+    """truth/segments.tsv as [(chrom, lo, hi, CN_A + CN_B)], 0-based inclusive."""
+    t = pd.read_csv(os.path.join(truth_dir, "truth", "segments.tsv"), sep="\t")
+    return [(str(r["#CHR"]), int(r["START"]), int(r["END"]) - 1, float(r["CN_A"]) + float(r["CN_B"])) for r in t.to_dict("records")]
+
+
+def bulk_total_cn(run_dir: str) -> List[tuple]:
+    """rck_bulk's fitted total copy number per segment (flow_segments.tsv inferred_total)."""
+    t = pd.read_csv(os.path.join(run_dir, "flow_segments.tsv"), sep="\t")
+    return [(str(r["chrom"]), int(r["start"]), int(r["end"]), float(r["inferred_total"])) for r in t.to_dict("records")]
+
+
+def multiclone_total_cn(run_dir: str, proportions: Dict[str, float], normal_cn: float = 2.0) -> List[tuple]:
+    """sum_k u_k (A_k + B_k) + (1 - sum_k u_k) x normal_cn per segment of the multi-clone run's
+    rck.scnt.tsv, its ``kind=flank`` segments left out (they are outside the subgraph)."""
+    import ast
+    import re
+
+    rows = []
+    unknown = set()
+    normal = max(0.0, 1.0 - sum(proportions.values())) * normal_cn
+    with open(os.path.join(run_dir, "rck.scnt.tsv")) as handle:
+        next(handle)
+        for line in handle:
+            chrom, lo, hi, extra = line.rstrip("\n").split("\t")[:4]
+            if re.search(r"(^|;)kind=flank(;|$)", extra):
+                continue
+            cn = ast.literal_eval(re.search(r"cn=(\{.*?\}\})", extra).group(1))
+            unknown |= set(cn) - set(proportions)
+            rows.append((chrom, int(lo), int(hi), normal + sum(proportions.get(k, 0.0) * (v["A"] + v["B"]) for k, v in cn.items())))
+    if unknown:
+        raise KeyError("clones {u} have no proportion".format(u=sorted(unknown)))
+    return rows
+
+
+def ecdna_bases(truth: Sequence[Cycle]) -> List[tuple]:
+    """The reference bases any truth species traverses, as [(chrom, lo, hi, 1.0)] (0-based inclusive, merged)."""
+    spans: Dict[str, List[tuple]] = defaultdict(list)
+    for c in truth:
+        for st in c.steps:
+            spans[st.chrom].append((min(st.start, st.end), max(st.start, st.end)))
+    out = []
+    for chrom, items in spans.items():
+        items.sort()
+        lo, hi = items[0]
+        for a, b in items[1:]:
+            if a <= hi + 1:
+                hi = max(hi, b)
+            else:
+                out.append((chrom, lo, hi, 1.0))
+                lo, hi = a, b
+        out.append((chrom, lo, hi, 1.0))
+    return out
+
+
+def _restrict(rows: Sequence[tuple], mask: Sequence[tuple]) -> List[tuple]:
+    """rows cut to the bases of mask (both [(chrom, lo, hi, value)], 0-based inclusive)."""
+    by = _intervals_total(mask)
+    out = []
+    for chrom, lo, hi, v in rows:
+        for m_lo, m_hi, _ in by.get(str(chrom), []):
+            a, b = max(int(lo), m_lo), min(int(hi), m_hi)
+            if a <= b:
+                out.append((chrom, a, b, v))
+    return out
+
+
+def total_cn_all(truth_rows: Sequence[tuple], inferred_rows: Sequence[tuple], truth: Sequence[Cycle]) -> Dict[str, float]:
+    """total_cn_* over the subgraph's segments, and total_cn_*_ecdna over the bases a truth species
+    traverses (where ecDNA errors are not diluted by megabases of background)."""
+    out = total_cn_scores(truth_rows, inferred_rows)
+    out.update({k.replace("total_cn_", "total_cn_ecdna_"): v
+                for k, v in total_cn_scores(truth_rows, _restrict(inferred_rows, ecdna_bases(truth))).items()})
+    return out
+
+
+def total_cn_scores(truth_rows: Sequence[tuple], inferred_rows: Sequence[tuple]) -> Dict[str, float]:
+    """Total copy-number recall / precision / within-tolerance / MAE over the inferred segments' bases
+    (module docstring). A base the truth table does not cover is reported, not scored."""
+    truth, inferred = _intervals_total(truth_rows), _intervals_total(inferred_rows)
+    mass_t = mass_c = overlap = within = err = bases = uncovered = 0.0
+    for chrom, segs in inferred.items():
+        tsegs = truth.get(chrom, [])
+        for lo, hi, c in segs:
+            covered = 0
+            for t_lo, t_hi, t in tsegs:
+                a, b = max(lo, t_lo), min(hi, t_hi)
+                if a > b:
+                    continue
+                n = b - a + 1
+                covered += n
+                mass_t += n * t
+                mass_c += n * c
+                overlap += n * min(c, t)
+                err += n * abs(c - t)
+                within += n * (abs(c - t) <= max(TOL_ABS, TOL_REL * t))
+                bases += n
+            uncovered += (hi - lo + 1) - covered
+    return {"total_cn_recall": overlap / mass_t if mass_t else None,
+            "total_cn_precision": overlap / mass_c if mass_c else None,
+            "total_cn_within_tol": within / bases if bases else None,
+            "total_cn_mae": err / bases if bases else None,
+            "total_cn_bases": int(bases), "total_cn_bases_no_truth": int(uncovered)}
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="python -m rck.ecdna.bench_metrics", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -177,6 +326,7 @@ def main(argv=None) -> int:
     parser.add_argument("--multiclone-run", default=None, help="multi-clone run: weights become sum_k u_k psi_k")
     parser.add_argument("--clone-proportions", default=None, help="DIAG clone_proportions.tsv (with --multiclone-run)")
     parser.add_argument("--strict-rule", default="auto")
+    parser.add_argument("--bulk-run", default=None, help="rck_bulk run: also total copy-number scores (flow_segments.tsv)")
     parser.add_argument("--case", default=None)
     parser.add_argument("--outdir", required=True)
     args = parser.parse_args(argv)
@@ -188,6 +338,11 @@ def main(argv=None) -> int:
             parser.error("--multiclone-run needs --clone-proportions")
         weights = multiclone_bulk_weights(args.multiclone_run, read_proportions(args.clone_proportions))
     summary, rows = score(args.cycles, truth, weights, args.strict_rule)
+    if args.bulk_run:
+        summary.update(total_cn_all(truth_total_cn(args.truth_dir), bulk_total_cn(args.bulk_run), truth))
+    elif args.multiclone_run:
+        summary.update(total_cn_all(truth_total_cn(args.truth_dir),
+                                    multiclone_total_cn(args.multiclone_run, read_proportions(args.clone_proportions)), truth))
     summary["case"] = args.case
     os.makedirs(args.outdir, exist_ok=True)
     with open(os.path.join(args.outdir, "bench_metrics.json"), "w") as handle:

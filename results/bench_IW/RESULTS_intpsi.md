@@ -57,6 +57,10 @@ in all).
 | ce:walks_kept | 0.96 | 0.40 | 0.33 | 0.36 | 0.25 | 2.00 | 0.79 | 0.80 | 1.04 | – |
 | ce:walks_dropped | 0.95 | 0.42 | 0.26 | 0.28 | 0.29 | 0.88 | 0.79 | 0.80 | 1.04 | – |
 
+*Correction (2026-11-15, later):* for `coral:walks_dropped` the J_seg / J_adj / exact-cycle means
+above skip 3 runs with no cycle at all. Counting them as 0 gives J_seg 0.65 and J_adj 0.64
+(`figures_intpsi/table1.md`, which uses that convention).
+
 ## 2. Per class and S (means over 4 replicates)
 
 | method variant | class | S | ecDNA cn recall | ecDNA cn precision | prop. TV (strict) | prop. TV (+low_weight) | missed | false | blind J_seg | blind J_adj | blind exact cycles |

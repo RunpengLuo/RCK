@@ -13,6 +13,16 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Submitted (2026-11-14, 21:55): bench_IW_intpsi methods arrays
+
+NEXT_STEPS step 5, with Yubi's go-ahead (`results/bench_IW/submit_intpsi.sh --submit`):
+- `rck_bulk` 32280369 and `rck_mc` 32280370;
+- `coral` 32280371 and `ce` 32280372, each `--dependency=aftercorr:32280369`;
+- 24 tasks each, `%1`, 4 CPUs, 2 G.
+
+The pilot's two cases are already done and are skipped. How to check them and what follows:
+`results/bench_IW/NEXT_STEPS.md`, "Check the arrays".
+
 ### Changed (2026-11-14, night): multi-clone counts within phase blocks; CoRAL/CE walks both ways
 
 Two scoring decisions Yubi took after the pilot. The reasoning is in `results/bench_IW/NEXT_STEPS.md`

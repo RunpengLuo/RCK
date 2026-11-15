@@ -9,7 +9,9 @@ dated 2026-11-14, evening).*
 
 > **Latest (2026-11-15): bench_IW_intpsi is finished, scored, collected and written up** (steps 5–7).
 > All 96 runs done; results in `RESULTS_intpsi.md` and the three `bench_iw_intpsi_*.tsv` here.
-> Open items for Yubi are under "After step 7" at the end of the next-steps list. Everything is
+> Open items for Yubi are under "After step 7" at the end of the next-steps list. Manuscript figures
+> and Table 1: `make_figures.py` and `RESULTS.md`; what reviewers will likely ask for is in
+> "Additions reviewers will likely ask for". Everything is
 > committed on `yubi_CNP_ionic` (amplicon-allele-analysis unchanged at `0dc2d69`). Nothing pushed.
 
 ### Check the arrays (done 2026-11-15)
@@ -286,6 +288,87 @@ What to look for, and what to do:
   longer `rck_mc` time limit or fewer concurrent arrays.
 - `elapsed_s` includes licence waits; the solvers' own runtimes are in each run's logs and
   `summary.json`, if timings are to be reported.
+
+## Additions reviewers will likely ask for (manuscript; noted 2026-11-15, nothing started)
+
+The manuscript's claim is that RCK-ecDNA reconstructs ecDNA better than CoRAL and CycleExtractor
+(CE). The current evidence is `RESULTS.md` (figures 2–6, Table 1; `make_figures.py`) on
+bench_IW_intpsi. Below is what a reviewer is likely to ask for, roughly in order of how much each
+strengthens the paper, with the reasoning. Each needs Yubi's go-ahead before any new Slurm array.
+
+1. **CoRAL and CE end to end, each building its own graph from the same reads.**
+   - *Why:* today they only decompose RCK bulk's exported graph, which supports "better
+     decomposition given the same graph", not "better method".
+   - The obvious reviewer reply to figures 2 and 4 is that CoRAL was handed a total-copy graph
+     with no ecDNA vs background separation, which is not its intended input. CoRAL builds its own
+     breakpoint graph from long reads; CE normally runs on an AmpliconArchitect graph.
+   - Running both from reads removes that objection, and keeps the current runs as a second,
+     controlled comparison ("same graph").
+   - *Where to start:* array 32267060 (bench_IW) already ran CoRAL / CE on the union subgraph
+     exported directly. CoRAL's own graph-building step is in the `coral-3.1.1` env. AA for CE
+     would need installing; check `module avail` first.
+   - *Score with the same* `bench_iw.py score`, so the tables line up.
+2. **RCK multi-clone with estimated, not true, clone profiles.**
+   - *Why:* `rck_mc` currently gets the true clone profiles (`--clone-profiles truth`), so its
+     numbers are an upper bound and a reviewer will discount them.
+   - Clone profiles from a standard tool (e.g. HATCHet, or whatever the CNP pipeline in
+     amplicon-allele-analysis produces), or perturbed truth profiles (wrong purity, wrong clone
+     proportions, ±1 copy noise), show how much of the advantage survives realistic input.
+   - A curve of the metric against profile error is the most informative form.
+   - Without this, RCK bulk is the only like-for-like comparison with CoRAL / CE. It still wins,
+     but the clone-aware route is the paper's novelty.
+3. **Robustness sweep: read depth, tumour purity, read length / error, breakpoint noise.**
+   - *Why:* one simulator setting proves little about real data.
+   - Reviewers expect metric-against-parameter curves (copy-number precision, J_seg, proportion
+     TV), with all methods on the same cases.
+   - The simulator already exposes depth and purity. Keep the S x class design small (e.g. S = 2
+     and 4, nested only) to bound the run count.
+   - Watch the 2-session Gurobi licence: this is the most expensive addition.
+4. **At least one real tumour dataset.**
+   - *Why:* an all-simulation methods paper is a common rejection reason.
+   - Candidates: a cell line with well-characterised ecDNA and long reads (e.g. COLO320-DM,
+     GBM39 or PC3 have published long-read / FISH / CRISPR-CATCH structures).
+   - Ground truth will be partial, so the comparison is qualitative:
+     - agreement with published structures;
+     - long-read support for the reconstructed junctions;
+     - whether the alleles RCK calls agree with heterozygous SNPs on the reads.
+   - That last check is the evaluation unique to an allele-specific method; make it the centre
+     of the real-data section.
+5. **A larger, more varied benchmark.**
+   - *Why:* 24 cases (4 per class and S, S <= 4, one shared set of clones) gives wide error bars
+     and weak per-class tests (`table1_paired_tests.tsv`).
+   - More replicates (8–10 per cell), S up to 6–8, several clone sets, and other structures
+     (e.g. ecDNA with linear amplicons in the same region) would make the per-class claims
+     testable.
+   - Cheap for RCK; the baselines and the licence set the cost.
+6. **Explain or fix the two RCK multi-clone weak spots** (already open, see "After step 7").
+   - hard_S4_s16003: recall 0.71.
+   - Extra cycles with exact copy numbers in 4 simple cases. These lower its species F1 below RCK
+     bulk's (0.70 vs 0.76) and its simple-case exact-cycle rate (0.75 vs 0.96).
+   - A reviewer will spot both in the per-case points of figures 2, 5 and 6. Either fix them
+     (e.g. a parsimony term or tie-break that prefers fewer cycles per clone) or explain them in
+     the text.
+7. **Runtime and scaling.**
+   - *Why:* methods papers are expected to report compute.
+   - Current `elapsed_s` includes Gurobi licence waits, so it can't be used. Collect solver times
+     from each run's logs / `summary.json`, and time a few cases with an exclusive licence.
+   - Report time against graph size (segments, breakpoints), and note the solver time limits and
+     the two runs that hit them.
+8. **Ablations of RCK-ecDNA's own components.**
+   - *Why:* reviewers ask which part of the model makes the difference.
+   - Candidates:
+     - allele-specific vs allele-blind graph;
+     - with and without the long-read path constraints;
+     - bulk vs multi-clone on the same input;
+     - the opt-in model options from earlier work: `--depth-bias-*` (CHANGELOG) and
+       `--unexplained-junction-penalty` (commit `23b5ecf`).
+   - These are cheap local or small-array runs on bench_IW_intpsi.
+9. **Fair-use statements for the baselines.**
+   - *Why:* to pre-empt "the baselines were misconfigured".
+   - Record versions (CoRAL 3.1.1, CycleExtractor 1.0.0), parameters, time limits, thread counts
+     and the path-constraint handling in a supplementary table, all already in each `run.json`.
+   - State that CE crashed on 2 of 24 bench_IW graphs inside CE itself (`NameError`, `CE.py`),
+     and that CE was not patched.
 
 ## Earlier state (2026-11-14 afternoon, kept for the record)
 

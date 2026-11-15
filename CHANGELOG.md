@@ -13,6 +13,22 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Added (2026-11-15): manuscript figures 2–6 and Table 1 (`results/bench_IW/make_figures.py`)
+
+- **`make_figures.py`** reads the collected bench_IW_intpsi TSVs. No runs are touched and no Gurobi
+  is used.
+- **Outputs** in `figures_intpsi/` (CoRAL / CE with linear walks kept) and
+  `figures_intpsi_walks_dropped/`:
+  - figures 2–6 as PDF and PNG;
+  - `table1.md` / `.tsv`;
+  - paired Wilcoxon tests with Holm correction;
+  - the plotted numbers under `figure_data/`.
+- **`results/bench_IW/RESULTS.md`** describes each figure and Table 1 and their limitations.
+- **NEXT_STEPS:** "Additions reviewers will likely ask for".
+- **Convention:** a run with no cycle at all (3 CoRAL walks-dropped runs) counts as 0 for J_seg /
+  J_adj / exact cycles. The pooled TSV from `collect` skips such runs, which overstates CoRAL with
+  walks dropped (J_seg 0.75 there, 0.65 here, including in `RESULTS_intpsi.md` table 1).
+
 ### Results (2026-11-15): bench_IW_intpsi arrays checked, scored, collected
 
 - **Arrays 32280369–32280372: all 96 runs completed.**

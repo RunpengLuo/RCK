@@ -14,6 +14,10 @@ Changes and their reasons are in the `[yubi_CNP_ionic]` sections of both repos' 
 >   DIAGs built with `--clone-profiles truth --diag-labeling-groups block`.
 > - Steps 3–4 (multi-clone runs on bench cases) run as the `rck_mc` method of the bench_IW array
 >   (Slurm job 32267060, approved by Yubi), next to the bulk route, CoRAL and CycleExtractor.
+> - **Later on 2026-11-14:** bench_IW's psi was real-valued, while `--clone-profiles truth` folds
+>   in round(psi), so the multi-clone input and the scoring truth disagreed (up to 4.7%). Yubi
+>   chose whole-number psi: the benchmark is now **bench_IW_intpsi** (same seeds and structures,
+>   `l3_mixture.integer_psi: true`). Methods are to be rerun there; see the bench_IW NEXT_STEPS.
 >
 > The text below is the 2026-11-13 state, kept for the record.
 

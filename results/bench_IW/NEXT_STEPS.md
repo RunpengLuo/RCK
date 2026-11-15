@@ -1,10 +1,136 @@
 # bench_IW: status and next steps (branch `yubi_CNP_ionic`)
 
-*Written 2026-11-14, at the end of the session that built bench_IW, while its methods array was
-still running. Changes and their reasons are in the `[yubi_CNP_ionic]` sections of both repos'
-`CHANGELOG.md` (entries dated 2026-11-14).*
+*First written 2026-11-14 at the end of the session that built bench_IW; "Resume here" rewritten
+the same evening, after the methods array was checked and Yubi chose whole-number psi. Changes
+and their reasons are in the `[yubi_CNP_ionic]` sections of both repos' `CHANGELOG.md` (entries
+dated 2026-11-14, evening).*
 
 ## Resume here (next session)
+
+**State (2026-11-14, evening).**
+- **bench_IW's methods array (32267060) is finished and checked.** It is not the benchmark's
+  result: bench_IW has a mismatch between the multi-clone input and the scoring truth (below).
+  - 92 of 96 tasks completed; no time-outs, no out-of-memory kills (peak 754 MB of 4 GB).
+  - Failed:
+    - CoRAL on simple_S1_s11004 and hard_S2_s15004 (tasks 14 and 74): the Gurobi licence was
+      busy on all 5 attempts;
+    - CycleExtractor on simple_S4_s13002 and hard_S2_s15005 (tasks 39 and 79): crashes inside
+      CycleExtractor 1.0.0 itself (`NameError: Final_closed_walk`, `CE.py:3757`;
+      `NameError: segments`, `CE.py:3954`). A resubmission fails the same way.
+  - Stopped at the time limit: `rck_bulk` decomposition on hard_S4_s16003 (gap 85%); CoRAL on
+    hard_S4_s16002 and simple_S4_s13002 (gap 9%).
+  - `rck_mc`: every solve optimal, longest 3.95 s (hard_S4_s16003). This is the timing Yubi
+    asked for before fixing the multi-clone time limit: **60 s stays**.
+  - CycleExtractor starts Gurobi with 32 threads on a 4-CPU allocation.
+  - Compute per method (summed run.json elapsed, licence waits included): `rck_bulk` 1.09 h,
+    `coral` 1.87 h, `ce` 0.97 h, `rck_mc` a few minutes.
+  - Not scored or collected.
+- **Found: the multi-clone input and the scoring truth disagreed.**
+  - psi per clone is real-valued, and the reads and `bench_metrics`' truth use it
+    (PHI_s = sum_k u_k psi_k).
+  - The clone karyotypes in `truth/rck/`, which are `--clone-profiles truth`, fold in
+    round(psi).
+  - So `rck_mc` could at best report sum_k u_k round(psi_k), up to 4.7% from PHI_s.
+- **Decision (Yubi): whole-number psi by construction (option A).** The rejected alternatives
+  and the reasons are in both CHANGELOGs.
+- **Done for A (amplicon-allele-analysis, `yubi_CNP_ionic`):**
+  - simulator flag `l3_mixture.integer_psi` (commit `2363469`, 7 tests);
+  - set `iw_intpsi`;
+  - **bench_IW_intpsi**: 24 runs re-simulated from bench_IW's own seeds, both subgraphs built
+    (commits `0a164dc` data, `0dc2d69` docs).
+  - All 48 subgraphs pass their checks; `check-shared`: 24 runs, 0 differ.
+  - `truth/rck/` copy numbers, which are the multi-clone input, are byte-identical to bench_IW's:
+    round(psi) did not change. What moved to match them is the reads and the scoring truth.
+  - One 1-bp DIAG sliver differs in hard_S2_s15005 (chr5:152,315,000; CHANGELOG). Not changed.
+  - The same 24 seeds were accepted. Structures, clones, `segment_max_traversals` and species
+    sizes are identical to bench_IW; only psi, PHI and the reads changed.
+  - psi is whole (3–85) and PHI_s = sum_k u_k psi_k in every run.
+  - Details: that repo's CHANGELOG and `simulations/README.md` 5.5.
+- Nothing pushed. Yubi pushes.
+
+**Decisions that apply from here** (Yubi's; they override the earlier text below where they differ):
+1. Clone-level ecDNA copies are whole numbers by construction (bench_IW_intpsi). The scoring
+   truth stays PHI_s = sum_k u_k psi_k, which is now also what the multi-clone input carries.
+2. CoRAL and CycleExtractor run on **RCK bulk's exported graph** (`<case>/rck_bulk/aa/*_graph.txt`),
+   not on the union subgraph exported directly as array 32267060 did.
+   - Label them *decomposition-only baselines*.
+   - Each case's graph-route tasks depend on that case's bulk task.
+3. The results table has a **`strict_rule` column** (`Status` or `cn-frac:0.1`).
+   `bench_metrics.json` already records it; check that `collect` carries it.
+4. **Scores:**
+   - Headline: ecDNA-only, haplotype-blind, bp-weighted copy-number recall.
+   - For `rck_bulk` and `rck_mc` also **total copy-number recall** (background plus ecDNA).
+   - Proportions over strict cycles, with the `low_weight`-inclusive version too.
+5. **Per run, record** `segment_max_traversals`, species sizes and the strict rule.
+6. **Multi-clone time limit:** 60 s, from the timing above.
+
+**Rules.**
+- Small local runs are fine. New Slurm arrays need Yubi's go-ahead.
+- The licence allows 2 Gurobi sessions: never run local Gurobi jobs while arrays hold both.
+- Wait at least 60 s between `squeue` / `sacct` calls.
+- Do not modify bench_IW's configs, seeds, runs or array outputs (kept for the record).
+- Do not touch `~/RCK` or `~/amplicon-allele-analysis` (`yubi_dev`).
+
+**Next steps, in order:**
+1. **Point the driver at bench_IW_intpsi** (`bench_iw.py`, local, about 30 min).
+   - A `--set iw_intpsi` option, as `bench_IW.py` has. It switches `SEEDS`, `SUBGRAPHS`,
+     `SUBGRAPHS_CNP` and `SIM_RUNS` to the `bench_IW_intpsi` folders, and `OUT` to
+     `/n/fs/yubi-iw/runs/bench_IW_intpsi/methods`.
+   - The results TSVs get their own names (`bench_iw_intpsi_*.tsv`), so nothing from bench_IW is
+     overwritten.
+2. **Graph route on bulk's graph** (decision 2; local code change, about 1 h).
+   - `inferred_graph(case)` returns the bulk run's `aa/*_graph.txt`; check how `aa_export.export`
+     shifts it (`shift_graph`) and whether `graph_route.run_coral`'s 10 kb flanks still apply.
+   - A coral / ce task refuses to start if the bulk run is not `done`.
+   - Pin CycleExtractor to the allocation's CPUs: a `gurobi.env` with `Threads` in its working
+     folder, or the `GRB_*` environment, after checking which CE honours.
+   - `run.json` records `input_graph` and `baseline: decomposition-only`.
+3. **Total copy-number recall for the RCK routes, and the per-run fields** (decisions 4–5; local,
+   about 1 h with tests).
+   - `bench_metrics`: total recall = sum_x min(c, t) / sum_x t over the subgraph's segments,
+     haplotype-blind, bp-weighted.
+     - t = tumour total copy number (background plus ecDNA, `truth/segments.tsv` CN_A + CN_B).
+     - `rck_bulk` c: fitted segment copy numbers (`flow_segments.tsv`).
+     - `rck_mc` c: sum_k u_k x the clone's inferred copy number (its `rck.scnt.tsv`).
+   - `collect` joins `segment_max_traversals` and species sizes (`truth/ecdna.tsv` SIZE) and
+     keeps `strict_rule`.
+   - Tests for each.
+4. **Pilot locally** on simple_S1_s11001 and one hard S=4 case: all four methods plus scoring. It
+   uses 1–2 Gurobi sessions for a few minutes; no array may be running.
+5. **Methods arrays (needs Yubi's go-ahead).** Four 24-task arrays, one task per case, 4 CPUs
+   each:
+
+   | array | method | depends on | time limit | wall time (array 32267060 timings) |
+   |---|---|---|---|---|
+   | A | `rck_bulk` | – | 1 h per task (2026-11-14 max 1908 s, licence waits included) | about 1.1 h at %1 |
+   | B | `rck_mc` | – | 15 min | a few minutes |
+   | C | `coral` | `aftercorr:A` (case i after bulk task i) | 1 h | about 1.9 h |
+   | D | `ce` | `aftercorr:A` | 1 h | about 1 h |
+
+   - **Memory:** 2 G per task (peak 754 MB on bench_IW).
+   - **Gurobi licence:** with 2 sessions, run A and B at `%1` each. C and D start as bulk tasks
+     finish, so they meet A; raise the licence retries (5 x 2 min failed twice) to a wait of up to
+     30 min, or run C and D at `%1` after B ends.
+   - **Expected total:** about 2–2.5 h wall time, about 4 h compute.
+   - CoRAL and CE timings on bulk's graph may differ from these: bulk's graph is not the union
+     subgraph.
+   - CE crashed on two bench_IW graphs; on new graphs it may or may not. Report crashes as
+     method failures; do not patch CE.
+6. **Score and collect (local, no Gurobi):** `bench_iw.py --set iw_intpsi score --jobs 8`, then
+   `collect`.
+   - Scoring time not yet measured; expect well under 1 h.
+   - Commit the TSVs with a short results README.
+7. **Report to Yubi:**
+   - the pooled table per (method, class, S);
+   - failures;
+   - CoRAL / CE behaviour.
+   - Open decision then: should CoRAL / CE linear walks (`0+ ... 0-`) count in precision and
+     proportions (see "Decisions waiting" below)?
+
+## Earlier state (2026-11-14 afternoon, kept for the record)
+
+> Superseded by "Resume here" above. Array 32267060 ran on bench_IW, whose multi-clone input and
+> scoring truth disagree; its outputs are kept but are not the benchmark's results.
 
 **State.**
 - **Simulation side done and committed** (amplicon-allele-analysis, `yubi_CNP_ionic`): 24 accepted
@@ -175,8 +301,14 @@ What the answer files show (no further tests were run):
 | exported graphs (CoRAL, CE input) | `/n/fs/yubi-iw/runs/bench_IW/methods/<case>/graph/` |
 | Slurm logs | `/n/fs/yubi-iw/runs/bench_IW/logs/slurm/bench-iw_32267060_<task>.out` |
 | driver, sbatch, results TSVs | RCK-cnp `results/bench_IW/` |
+| **bench_IW_intpsi** (the benchmark from 2026-11-14 evening): configs, seeds.tsv | `simulations/configs/bench_IW_intpsi/` (tracked) |
+| bench_IW_intpsi simulator runs | `/n/fs/yubi-iw/runs/bench_IW_intpsi/runs/` (linked as `simulations/runs/bench_IW_intpsi`, ignored) |
+| bench_IW_intpsi subgraphs | `simulations/subgraphs/bench_IW_intpsi/`, `subgraphs/bench_IW_intpsi_cnp/` (tracked) |
+| bench_IW_intpsi simulation and subgraph logs | `/n/fs/yubi-iw/runs/bench_IW_intpsi/logs/` |
+| bench_IW_intpsi method runs (planned) | `/n/fs/yubi-iw/runs/bench_IW_intpsi/methods/` |
 
-Commands on the simulation side (amplicon-allele-analysis-cnp `simulations/`):
+Commands on the simulation side (amplicon-allele-analysis-cnp `simulations/`; add `--set iw_intpsi`
+as the first argument for bench_IW_intpsi):
 - `python bench_IW.py seeds | report | check-shared`;
 - `python bench_IW.py [--cnp] rebuild [RUN ...]`;
 - `python bench_IW.py scenario <name> --accept 4 --candidates 20` (resumable; existing runs are

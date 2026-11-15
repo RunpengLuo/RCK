@@ -13,6 +13,57 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Changed (2026-11-14, evening): bench_IW checked; whole-number psi and a revised plan
+
+Status and the ordered plan: [`results/bench_IW/NEXT_STEPS.md`](results/bench_IW/NEXT_STEPS.md)
+("Resume here"). Simulator side: amplicon-allele-analysis `CHANGELOG.md`, same date.
+
+- **Array 32267060 (bench_IW methods) checked.**
+  - 92 of 96 tasks completed; no time-outs, no out-of-memory kills (peak 754 MB of 4 GB).
+  - Four failed:
+    - two CoRAL runs (tasks 14 and 74) after 5 attempts that all found the Gurobi licence busy;
+    - two CycleExtractor runs (39 and 79), which crash inside CycleExtractor 1.0.0 itself
+      (`NameError` at `CE.py:3757` and `CE.py:3954`), so a resubmission would fail the same way.
+  - Three solves stopped at their time limit: `rck_bulk` decomposition on hard_S4_s16003 (gap 85%),
+    CoRAL on hard_S4_s16002 and simple_S4_s13002 (gap 9%).
+  - Every `rck_mc` solve was optimal; the longest took 3.95 s (hard_S4_s16003), under its 60 s
+    limit.
+  - CycleExtractor starts Gurobi with 32 threads on a 4-CPU allocation (it has no thread flag).
+  - Simulation side: all 24 runs complete; clones identical across runs; both subgraphs built and
+    passing their checks. Checked read-only, without `check-shared` / `report`, which rewrite
+    tracked files.
+  - Not scored or collected: the plan below changes the inputs first.
+- **Found: the multi-clone input and the scoring truth disagree on ecDNA copies.**
+  - The simulator draws each clone's ecDNA copies psi as real numbers.
+  - The reads, and `bench_metrics`' truth t = sum_s PHI_s x traversals with PHI_s = sum_k u_k
+    psi_k, use them as drawn.
+  - The clone karyotypes in `truth/rck/` fold in round(psi), because RCK has no extrachromosomal
+    element. That is the multi-clone route's input (`--clone-profiles truth`). Its best possible
+    answer is sum_k u_k round(psi_k), up to 4.7% from PHI_s (simple_S1_s11001: 5.20 vs 4.97).
+  - So `rck_mc` was charged for its input, while the other three methods, which see only the
+    reads, were scored correctly.
+- **Decision (Yubi, 2026-11-14): whole-number psi by construction.** The benchmark is re-simulated
+  as bench_IW_intpsi with `l3_mixture.integer_psi: true`. Reads, multi-clone input and scoring
+  truth then carry the same psi, and every method is scored against one truth.
+  - *Rejected alternative:* rebuild the truth from round(psi) for `rck_mc` only. No re-simulation,
+    but the four methods would sit in one table scored against truths up to 4.7% apart.
+  - *Also rejected:* the rounded truth for every method. It would score the three read-based
+    methods against copy numbers their reads do not support.
+  - bench_IW and its array outputs are kept unchanged, for the record.
+- **Other decisions the revised plan applies** (Yubi's, given with the bench_IW brief):
+  - CoRAL and CycleExtractor take RCK bulk's exported graph (`<bulk run>/aa/*_graph.txt`), not the
+    union subgraph exported directly. They are labelled decomposition-only baselines, and each
+    case's graph-route tasks depend on its bulk task. Array 32267060 used the direct export, with
+    no dependency.
+  - The strict rule (`Status` or `cn-frac:0.1`) is a results-table column. `bench_metrics`
+    already records it as `strict_rule`.
+  - Headline copy-number recall stays ecDNA-only, haplotype-blind and bp-weighted. The two RCK
+    routes also get total copy-number recall (background plus ecDNA); not implemented yet.
+  - Each run records `segment_max_traversals`, species sizes and the strict rule (the first two are
+    not in the table yet).
+  - The multi-clone time limit is fixed after timing one hard S=4 case. Array 32267060 already
+    gives that timing (3.95 s at most), so 60 s stays.
+
 ### Added (2026-11-14): bench_IW metrics and driver
 
 Status and how to resume: [`results/bench_IW/NEXT_STEPS.md`](results/bench_IW/NEXT_STEPS.md). The

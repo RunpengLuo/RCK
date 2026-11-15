@@ -107,8 +107,44 @@ dated 2026-11-14, evening).*
      (hard_S4_s16003 on bench_IW).
    - Table: `segment_max_traversals`, `footprint_bp`, `species_size_bp` (+ min / max),
      `strict_rule`, `baseline`.
-4. **Pilot locally** on simple_S1_s11001 and one hard S=4 case: all four methods plus scoring. It
-   uses 1–2 Gurobi sessions for a few minutes; no array may be running.
+4. **Done (2026-11-14, 21:30): local pilot on bench_IW_intpsi.** Cases simple_S1_s11001 and
+   hard_S4_s16006 (the cheapest hard S=4 case in array 32267060), the four methods one at a time
+   (at most one Gurobi session, 4 threads, `nice`).
+   - The 8 runs are in `/n/fs/yubi-iw/runs/bench_IW_intpsi/methods/` and count as done; the
+     arrays skip them.
+   - Logs: `/n/fs/yubi-iw/runs/bench_IW_intpsi/logs/pilot_<case idx>_<method>.log`.
+
+   | case | method | time | cn_recall | cn_precision | proportion_tv | missed / false | blind J_seg / exact | total_cn_ecdna_recall |
+   |---|---|---|---|---|---|---|---|---|
+   | simple_S1 | rck_bulk | 3 s | 1.00 | 0.91 | 0 | 0 / 0 | 1.00 / 1 | 1.00 |
+   | simple_S1 | rck_mc | 2 s | 1.00 | **1.00** | 0 | 0 / 0 | 1.00 / 1 | 1.00 |
+   | simple_S1 | coral | 53 s | 1.00 | 0.19 | 0.17 | 0 / 1 | 1.00 / 1 | – |
+   | simple_S1 | ce | 1 s | 1.00 | 0.19 | 0.29 | 0 / 2 | 1.00 / 1 | – |
+   | hard_S4_s16006 | rck_bulk | 135 s | 0.85 | 1.00 | 0.25 | 1 / 0 | 0.62 / 1 | 0.90 |
+   | hard_S4_s16006 | rck_mc | 3 s | 1.00 | 1.00 | 0 | 2 / 2 (phased) | 1.00 / 2 | 1.00 |
+   | hard_S4_s16006 | coral | 13 s | 0.77 | 0.23 | 0.55 | 2 / 0 | 0.27 / 0 | – |
+   | hard_S4_s16006 | ce | 3 s | 0.92 | 0.26 | 0.56 | 0 / 2 | 0.67 / 0 | – |
+
+   - **Infrastructure checks passed:**
+     - CE now uses at most 4 Gurobi threads (`gurobi.env`; it used 32 before);
+     - CoRAL / CE read `graph_bulk/` with every path constraint carried (4/4, 26/26);
+     - `run.json` and the table carry `baseline`, `strict_rule`, traversals and sizes;
+     - CE did not crash;
+     - scoring 8 runs took 2 s.
+   - **Whole-number psi works as intended:** on simple_S1, `rck_mc` ecDNA precision is now 1.00
+     (0.96 on bench_IW, where its input carried round(psi) and the truth did not). Its psi
+     evaluation is exact (8 / 4).
+   - **Found: phased matching understates `rck_mc`.** On hard_S4_s16006 its answer is correct
+     haplotype-blind: each truth species has one cycle with J_seg 1.00 and the same weight, and
+     copy-number recall, precision and proportion_tv are exact.
+     - But `aa_eval`'s strict matching (and so `n_missed` / `n_false`, M1) and `rck-ecdna`'s own
+       psi evaluation (`evaluation_psi.tsv`) match by **phased** Jaccard.
+     - The multi-clone route's haplotype labels are meaningful only within phase blocks, so
+       they pair species wrongly: 2 missed / 2 false, phased J_seg 0.42.
+     - Not changed: a metric decision for Yubi (blind matching, or within-block phasing, for
+       `rck_mc`'s species counts).
+   - Times are far below the array limits (bulk 135 s on hard S=4).
+
 5. **Methods arrays (needs Yubi's go-ahead):** `./submit_intpsi.sh` prints the commands,
    `./submit_intpsi.sh --submit` submits. Four 24-task arrays, one task per case, 4 CPUs and 2 G
    each (peak 754 MB on bench_IW):

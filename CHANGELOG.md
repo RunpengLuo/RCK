@@ -13,6 +13,27 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Found (2026-11-14, night): local pilot on bench_IW_intpsi
+
+NEXT_STEPS step 4. Cases simple_S1_s11001 and hard_S4_s16006, all four methods run locally one at a
+time, then scored; all 8 runs ok in about 4 min (table in NEXT_STEPS).
+
+- **Step 2's infrastructure works:**
+  - CycleExtractor runs with at most 4 Gurobi threads (the `gurobi.env` cap);
+  - CoRAL and CE read the bulk route's graph with all path constraints (4/4, 26/26);
+  - the table carries `baseline`, `strict_rule`, traversals and sizes;
+  - CE did not crash on either graph.
+- **Whole-number psi has the intended effect:** `rck_mc` on simple_S1_s11001 now has ecDNA
+  copy-number precision 1.00 (0.96 on bench_IW) and an exact psi (8 / 4).
+- **Phased matching understates the multi-clone route** (not changed; Yubi to decide).
+  - On hard_S4_s16006 `rck_mc`'s answer is right haplotype-blind: four cycles, each with J_seg 1.00
+    to one truth species and the same weight; ecDNA copy-number recall, precision and
+    proportion distance are exact.
+  - `aa_eval`'s strict species matching (`n_missed` / `n_false`, M1) and `rck-ecdna`'s psi
+    evaluation match by phased Jaccard. The multi-clone route's haplotype labels mean something
+    only within phase blocks (`evaluate`'s multi-clone phasing is scored within blocks), so they
+    mis-pair: 2 missed / 2 false, phased J_seg 0.42.
+
 ### Added (2026-11-14, night): total copy-number recall (RCK routes) and per-run fields
 
 NEXT_STEPS step 3. No method was run; checked on bench_IW's finished runs, read-only (scoring was

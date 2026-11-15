@@ -1,12 +1,19 @@
 """bench_IW: run every method on every accepted bench_IW case, score each answer, collect the table.
 
+    python bench_iw.py [--set iw_intpsi] CMD ...   # --set before the command; default iw (bench_IW)
+
     python bench_iw.py list                  # index, case, method (one Slurm array task per line)
     python bench_iw.py run IDX               # one (case, method) run (SLURM_ARRAY_TASK_ID)
     python bench_iw.py status                # done / missing / failed per run
     python bench_iw.py score [--jobs N]      # offline: export + aa_eval + bench_metrics per finished run
     python bench_iw.py collect               # offline: bench_iw_table.tsv and bench_iw_pooled.tsv here
 
-Cases are the accepted seeds of amplicon-allele-analysis configs/bench_IW/seeds.tsv ($AAA, default
+Sets (--set): iw is bench_IW; iw_intpsi is bench_IW_intpsi, bench_IW re-simulated with whole-number
+psi per clone (l3_mixture.integer_psi), so the multi-clone input and the scoring truth agree; it is the
+benchmark from 2026-11-14 evening (NEXT_STEPS.md). A set chooses the case list, the simulator runs,
+both subgraph folders, the method output folder and the results TSV names (SETS below).
+
+Cases are the accepted seeds of amplicon-allele-analysis configs/<set folder>/seeds.tsv ($AAA, default
 ~/amplicon-allele-analysis-cnp), in make_scenarios.IW_SCENARIOS and slot order. Methods, each on the
 case's inputs from amplicon-allele-analysis bench_IW.py:
 
@@ -32,7 +39,7 @@ results/graph_route/score_h2h.normalise_cycles), then
   bench_metrics  ecDNA copy-number recall / precision (bulk copies; rck_mc weights are sum_k u_k psi_k
                with u from the DIAG) and ecDNA proportions, strict and with low_weight cycles
 
-Outputs under $BENCH_IW_OUT (default /n/fs/yubi-iw/runs/bench_IW/methods):
+Outputs under $BENCH_IW_OUT (default /n/fs/yubi-iw/runs/<set folder>/methods):
   <case>/graph/<case>_amplicon1_graph.txt   the exported union subgraph (coral, ce)
   <case>/<method>/                          rck runs; coral / ce runs are in <method>/amplicon1/
   <case>/<method>/score/                    answer/, aa_eval/, bench_metrics.json, bench_proportions.tsv
@@ -54,11 +61,9 @@ sys.path.insert(0, RCK)
 sys.path.insert(0, os.path.join(RCK, "results", "graph_route"))
 AAA = os.environ.get("AAA", os.path.expanduser("~/amplicon-allele-analysis-cnp"))
 SIM = os.path.join(AAA, "simulations")
-SEEDS = os.path.join(SIM, "configs", "bench_IW", "seeds.tsv")
-SUBGRAPHS = os.path.join(SIM, "subgraphs", "bench_IW")
-SUBGRAPHS_CNP = os.path.join(SIM, "subgraphs", "bench_IW_cnp")
-SIM_RUNS = os.path.join(SIM, "runs", "bench_IW")
-OUT = os.environ.get("BENCH_IW_OUT", "/n/fs/yubi-iw/runs/bench_IW/methods")
+# --set: folder name (simulator side and /n/fs/yubi-iw/runs/<folder>) and results TSV prefix
+SETS = {"iw": ("bench_IW", "bench_iw"), "iw_intpsi": ("bench_IW_intpsi", "bench_iw_intpsi")}
+SET = SEEDS = SUBGRAPHS = SUBGRAPHS_CNP = SIM_RUNS = OUT = TABLE = POOLED = PROPORTIONS = None
 METHODS = ["rck_bulk", "rck_mc", "coral", "ce"]
 THREADS = os.environ.get("SLURM_CPUS_PER_TASK", "4")
 TIME_LIMIT = 1800
@@ -66,9 +71,24 @@ MC_TIME_LIMIT = 60
 POOL_LAMBDA, SCORE_LAMBDA = "0.1", 0.2
 LAMBDAS = ["0", "0.02", "0.05", "0.1", "0.2", "0.5"]
 RETRIES = 5
-TABLE = os.path.join(HERE, "bench_iw_table.tsv")
-POOLED = os.path.join(HERE, "bench_iw_pooled.tsv")
-PROPORTIONS = os.path.join(HERE, "bench_iw_proportions.tsv")
+
+
+def configure(set_name):
+    """Point every path at one set (SETS); bench_IW ("iw") keeps its original paths and file names."""
+    global SET, SEEDS, SUBGRAPHS, SUBGRAPHS_CNP, SIM_RUNS, OUT, TABLE, POOLED, PROPORTIONS
+    folder, prefix = SETS[set_name]
+    SET = set_name
+    SEEDS = os.path.join(SIM, "configs", folder, "seeds.tsv")
+    SUBGRAPHS = os.path.join(SIM, "subgraphs", folder)
+    SUBGRAPHS_CNP = os.path.join(SIM, "subgraphs", folder + "_cnp")
+    SIM_RUNS = os.path.join(SIM, "runs", folder)
+    OUT = os.environ.get("BENCH_IW_OUT", "/n/fs/yubi-iw/runs/{f}/methods".format(f=folder))
+    TABLE = os.path.join(HERE, prefix + "_table.tsv")
+    POOLED = os.path.join(HERE, prefix + "_pooled.tsv")
+    PROPORTIONS = os.path.join(HERE, prefix + "_proportions.tsv")
+
+
+configure("iw")
 
 
 # ---------------------------------------------------------------------------------------------- #
@@ -357,6 +377,8 @@ def collect():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--set", choices=sorted(SETS), default="iw",
+                        help="iw: bench_IW (default); iw_intpsi: bench_IW_intpsi (whole-number psi)")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list")
     r = sub.add_parser("run")
@@ -366,6 +388,7 @@ def main():
     s.add_argument("--jobs", type=int, default=8)
     sub.add_parser("collect")
     args = parser.parse_args()
+    configure(args.set)
     if args.cmd == "list":
         for i, (case, method) in enumerate(runs()):
             print(i, case["name"], method, sep="\t")

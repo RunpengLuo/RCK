@@ -1766,10 +1766,13 @@ Files, written only with these options and in addition to the existing tables, w
 - **The species matrix's J_adj does not see multiplicity**, and its merge and split flags can both
   fire on one merged walk, or on a correct answer whose truth species share a novel adjacency
   (§4.7, "Per-cell species matrix").
-- **The species matrix's `phased` mode scores absolute haplotypes.** The multi-clone route's
-  phase is identified only within phase blocks (§3.10), so a correct answer with a flipped block
-  loses J_seg and J_adj in `phased` mode. Read `blind` for that route until the matrix applies
-  §3.10's per-block swaps.
+- **The species matrix's `phased` mode scores absolute haplotypes** unless `aa_eval` is given the
+  phase blocks. The multi-clone route's phase is identified only within phase blocks (§3.10), so a
+  correct answer with a flipped block loses J_seg and J_adj in absolute `phased` mode. Since
+  2026-11-14, `aa_eval --phase-blocks <DIAG>/rck.fragments.tsv` applies §3.10's per-block swaps
+  before every phased score: the strict pairing, `n_missed` / `n_false`, M1, the composites and the
+  phased matrix. It keeps the absolute counts as `n_missed_absolute` / `n_false_absolute`, and
+  `phase_frame` says which was used. bench_IW_intpsi scores `rck_mc` this way.
 - **Multi-clone runs:** `aa_eval` leaves out walks with `Status=chromosomal` (the route's
   telomere-to-telomere paths), so they are neither species nor matrix columns. The route writes no
   `aa/*_graph.txt`, so the graph-level metrics are skipped; M1, M2 and the matrix do not need it.

@@ -63,6 +63,23 @@ dated 2026-11-14, evening).*
    - Proportions over strict cycles, with the `low_weight`-inclusive version too.
 5. **Per run, record** `segment_max_traversals`, species sizes and the strict rule.
 6. **Multi-clone time limit:** 60 s, from the timing above.
+7. **Multi-clone species counts: within phase blocks** (2026-11-14 night, after the pilot).
+   - `rck_mc`'s strict pairing, `n_missed` / `n_false`, M1, composites and phased species matrix
+     are scored within phase blocks (`aa_eval --phase-blocks <DIAG>/rck.fragments.tsv`;
+     `docs/pipeline/evaluation.md` §3.10): one A/B swap per block, shared by all species.
+   - *Why:* closest to the original RCK, whose ILP leaves one allele flip free per fragment
+     (`rck/core/ilp_gurobi.py`, `fragment_flipping`). The multi-clone DIAG's fragments are the
+     phase blocks, so labels are identified only within them.
+   - The absolute counts stay as `n_missed_absolute` / `n_false_absolute`; blind columns
+     unchanged. The swap is chosen to agree best with the truth (state this when reporting).
+   - `rck_bulk` keeps absolute scoring.
+8. **CoRAL / CE linear walks: report both, side by side** (2026-11-14 night).
+   - Each answer is scored with its linear walks kept (`method_variant` `coral:walks_kept`,
+     `score/`) and dropped (`coral:walks_dropped`, `score_nolinear/`).
+   - *Known limit of both:* on the bulk route's total-copy graph the background can also come back
+     as a closed cycle (pilot: 2 copies over 45.6 Mb in hard_S4_s16006), which neither variant
+     removes.
+   - AmpliconClassifier (option d) was not adopted; it is not installed here.
 
 **Rules.**
 - Small local runs are fine. New Slurm arrays need Yubi's go-ahead.
@@ -165,14 +182,16 @@ dated 2026-11-14, evening).*
    - CE crashed on two bench_IW graphs; report crashes as method failures, do not patch CE.
 6. **Score and collect (local, no Gurobi):** `bench_iw.py --set iw_intpsi score --jobs 8`, then
    `collect`.
-   - Scoring time not yet measured; expect well under 1 h.
+   - The pilot's 12 scored variants took 2 s, so all 144 rows (24 cases x 6 method variants)
+     should take under a minute.
+   - The table has one row per (case, `method_variant`); the pooled table groups by
+     `method_variant` and gives `n` and `n_scored`.
    - Commit the TSVs with a short results README.
 7. **Report to Yubi:**
-   - the pooled table per (method, class, S);
+   - the pooled table per (method variant, class, S);
    - failures;
-   - CoRAL / CE behaviour.
-   - Open decision then: should CoRAL / CE linear walks (`0+ ... 0-`) count in precision and
-     proportions (see "Decisions waiting" below)?
+   - CoRAL / CE behaviour, both walk variants side by side;
+   - `rck_mc`'s within-block vs absolute counts.
 
 ## Earlier state (2026-11-14 afternoon, kept for the record)
 
@@ -233,7 +252,8 @@ holds both). Wait at least 60 s between `squeue` / `sacct` calls. Do not touch `
    - the CoRAL / CycleExtractor behaviour below, across all 24 cases.
 
    Do not change the metrics or methods before Yubi decides.
-4. **Decisions waiting for the full results (Yubi):**
+4. **Decisions waiting for the full results (Yubi):** *(resolved 2026-11-14 night: linear walks are
+   reported both kept and dropped; see "Decisions that apply from here", 8)*
    - CoRAL and CycleExtractor answers include linear walks (`0+ ... 0-`) through non-ecDNA
      segments. They count as ecDNA mass, which lowers copy-number precision and proportion
      scores. Should precision (or everything) drop linear walks, as `score_h2h.normalise_cycles(...,

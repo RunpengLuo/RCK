@@ -13,6 +13,62 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Changed (2026-11-14, night): multi-clone counts within phase blocks; CoRAL/CE walks both ways
+
+Two scoring decisions Yubi took after the pilot. The reasoning is in `results/bench_IW/NEXT_STEPS.md`
+("Decisions that apply from here", 7 and 8). Scoring only: no run changes.
+
+- **Multi-clone species counts within phase blocks (`aa_eval --phase-blocks`).**
+  - *Problem:* `aa_eval`'s strict pairing, and so `n_missed` / `n_false` and M1, matched species by
+    absolute haplotype Jaccard. The multi-clone route's A/B is identified only within phase blocks:
+    in the pilot's hard_S4_s16006, 40 of 43 blocks were not oriented by subgraph construction. A
+    correct answer then scored 2 missed / 2 false.
+  - *Decision:* within-block scoring (§3.10), chosen as the closest to the original RCK. Its ILP
+    has one free allele flip per fragment (`rck/core/ilp_gurobi.py`, `fragment_flipping`), and the
+    multi-clone DIAG's fragments are the phase blocks.
+  - *Rejected:* blind matching (no haplotype credit) and absolute matching (penalises phase
+    information no method has).
+  - *Implementation:* `aa_eval.score(phase_blocks=...)` / `--phase-blocks`:
+    - pair truth and strict species blind;
+    - choose one A/B swap per block (`evaluate.block_swaps`, shared by all species);
+    - relabel every inferred cycle (strict, best-of candidates, the others);
+    - run the phased scores on the relabelled cycles.
+
+    New `aa_sample_metrics` columns: `phase_frame` (`absolute` / `within_block`),
+    `n_missed_absolute`, `n_false_absolute`, `n_blocks_swapped`. Without `--phase-blocks` nothing
+    changes (the existing suites pass).
+  - *Caveat to state:* the swap per block is chosen to agree best with the truth, the usual way to
+    score a quantity defined only up to such a flip.
+  - *Pilot (hard_S4_s16006, `rck_mc`):* within-block `n_missed` / `n_false` 0 / 0 (absolute 2 / 2);
+    mean composite 0.875, equal to `rck-ecdna`'s own `mean_composite_blockwise`; the phased matrix
+    pairs every species at J_seg 1.00. M1's exact-cycle headline is 0.5 in both blind and
+    within-block modes: 2 of 4 species are not exact cycles, a structural difference.
+  - Not changed: `rck-ecdna`'s run-time `evaluation_psi.tsv` still pairs absolutely
+    (`evaluation.tsv` has `inferred_blockwise`). `rck_bulk` is still scored absolutely.
+  - `docs/pipeline/evaluation.md` limitations updated. Tests: `tests/ecdna/test_aa_eval_blocks.py`
+    (3).
+- **CoRAL / CE: linear walks kept and dropped, side by side.**
+  - *Background:* their answers carry linear walks (`Path=`, `0+ ... 0-`). The current scoring reads
+    them as candidate species (`cn-frac:0.1` keeps those >= 10% of the heaviest), so their copies
+    lower precision and proportion scores; recall is unaffected.
+  - *Decision:* report both. Option (d), AmpliconClassifier, was not adopted (not installed, and
+    its per-cycle output is unverified).
+  - *Implementation:* `bench_iw.py` scores CoRAL / CE twice: `score/` (kept, `method_variant`
+    `coral:walks_kept`) and `score_nolinear/` (dropped, `score_h2h.normalise_cycles(drop_paths=True)`,
+    `coral:walks_dropped`).
+  - The table has one row per (case, method variant) with `linear_walks` (kept / dropped). The
+    pooled table groups by `method_variant` and gains `n_scored`; `n` counted unscored cases too.
+  - *Known limit of both variants:* on the bulk route's total-copy graph the background can come
+    back as a closed cycle (pilot hard_S4_s16006: 2 copies over 45.6 Mb, 10% on ecDNA), which
+    dropping linear walks does not remove.
+  - *Pilot, kept -> dropped:*
+    - CoRAL on simple_S1: precision 0.19 -> 1.00, proportion distance 0.17 -> 0;
+    - hard_S4_s16006: CoRAL unchanged (0.23); CE precision 0.26 -> 0.26, proportion distance
+      0.56 -> 0.39;
+    - recall changes by at most 0.04.
+- **`rck_mc` is scored with `--phase-blocks`** whenever its DIAG has `rck.fragments.tsv`. Pilot
+  rescored offline (12 variants, 2 s, no errors).
+
 ### Found (2026-11-14, night): local pilot on bench_IW_intpsi
 
 NEXT_STEPS step 4. Cases simple_S1_s11001 and hard_S4_s16006, all four methods run locally one at a

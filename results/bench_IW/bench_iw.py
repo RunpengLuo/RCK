@@ -54,7 +54,15 @@ results/graph_route/score_h2h.normalise_cycles), then
                rck_bulk and rck_mc also total copy number (background + ecDNA, total_cn_*, and
                total_cn_ecdna_* over the truth ecDNA bases; bench_metrics docstring)
 
-collect: one row per (case, method) with the case fields (segment_max_traversals, species sizes,
+Score variants (Yubi, 2026-11-14):
+  rck_mc         phased scores within phase blocks (aa_eval --phase-blocks <DIAG>/rck.fragments.tsv; one
+                 A/B swap per block, as the original RCK's per-fragment allele flip leaves it free), so its
+                 n_missed / n_false, M1 and phased matrix are within-block; n_missed_absolute /
+                 n_false_absolute keep the absolute pairing. rck_bulk is scored as before (absolute).
+  coral, ce      scored twice: linear walks kept (score/, method_variant coral:walks_kept) and dropped
+                 (score_nolinear/, coral:walks_dropped), reported side by side.
+
+collect: one row per (case, method, variant) with the case fields (segment_max_traversals, species sizes,
 footprint), strict_rule (Status or cn-frac:0.1, from bench_metrics), baseline (decomposition-only for
 coral / ce in iw_intpsi) and every score.
 
@@ -339,7 +347,21 @@ def status():
 # scoring
 # ---------------------------------------------------------------------------------------------- #
 
-def answer(case, method, folder):
+# Score variants per method (Yubi, 2026-11-14): CoRAL / CE answers scored twice, side by side,
+# with their linear walks (Path= / 0+ ... 0-) kept as candidate species, and with them dropped
+# (score_h2h.normalise_cycles drop_paths). Neither removes background closed into cycles.
+VARIANTS = {"rck_bulk": [""], "rck_mc": [""], "coral": ["walks_kept", "walks_dropped"], "ce": ["walks_kept", "walks_dropped"]}
+
+
+def score_folder(case, method, variant=""):
+    return os.path.join(run_dir(case, method), "score_nolinear" if variant == "walks_dropped" else "score")
+
+
+def method_variant(method, variant=""):
+    return method + (":" + variant if variant else "")
+
+
+def answer(case, method, folder, drop_paths=False):
     """{cycles, alt_cycles, graph?} of one finished run, as AA files in folder."""
     from rck.ecdna import aa_export
     from rck.ecdna.rerank import rerank
@@ -353,22 +375,26 @@ def answer(case, method, folder):
         return paths
     if method == "rck_mc":
         return aa_export.export(outdir, folder, None, alternatives=0, name=case["name"] + "_" + method)
-    return {"cycles": score_h2h.normalise_cycles(cycles_file(case, method), folder, drop_paths=False), "alt_cycles": [],
+    return {"cycles": score_h2h.normalise_cycles(cycles_file(case, method), folder, drop_paths=drop_paths), "alt_cycles": [],
             "graph": inferred_graph(case)}
 
 
 def score_one(task):
-    case, method = task
-    folder = os.path.join(run_dir(case, method), "score")
+    case, method, variant = task
+    folder = score_folder(case, method, variant)
+    label = method_variant(method, variant)
     try:
         from rck.ecdna import aa_eval, bench_metrics as bm
         from rck.ecdna import evaluate as ev
 
-        paths = answer(case, method, os.path.join(folder, "answer"))
+        paths = answer(case, method, os.path.join(folder, "answer"), drop_paths=variant == "walks_dropped")
         argv = ["--cycles", paths["cycles"], "--truth-dir", case["truth"], "--outdir", os.path.join(folder, "aa_eval"),
-                "--case", "{c}:{m}".format(c=case["name"], m=method)]
+                "--case", "{c}:{m}".format(c=case["name"], m=label)]
         argv += ["--alt-cycles"] + paths["alt_cycles"] if paths.get("alt_cycles") else []
         argv += ["--graph", paths["graph"]] if paths.get("graph") else []
+        fragments = os.path.join(case["rck_input"], "rck.fragments.tsv")
+        if method == "rck_mc" and os.path.exists(fragments):  # phase within phase blocks (aa_eval.score docstring)
+            argv += ["--phase-blocks", fragments]
         aa_eval.main(argv)
         weights = props = None
         if method == "rck_mc":
@@ -381,21 +407,21 @@ def score_one(task):
         elif method == "rck_mc":
             summary.update(bm.total_cn_all(bm.truth_total_cn(case["truth"]),
                                            bm.multiclone_total_cn(run_dir(case, method), props), truth))
-        summary.update(case=case["name"], method=method)
+        summary.update(case=case["name"], method=method, variant=variant)
         with open(os.path.join(folder, "bench_metrics.json"), "w") as handle:
             json.dump(summary, handle, indent=2)
-        pd.DataFrame(rows).assign(case=case["name"], method=method).to_csv(
+        pd.DataFrame(rows).assign(case=case["name"], method=method, method_variant=label).to_csv(
             os.path.join(folder, "bench_proportions.tsv"), sep="\t", index=False)
-        return case["name"], method, "ok"
+        return case["name"], label, "ok"
     except Exception:  # noqa: BLE001 - recorded, the other runs go on
         os.makedirs(folder, exist_ok=True)
         with open(os.path.join(folder, "score_error.txt"), "w") as handle:
             handle.write(traceback.format_exc())
-        return case["name"], method, "error"
+        return case["name"], label, "error"
 
 
 def score(jobs):
-    tasks = [(c, m) for c, m in runs() if done(c, m)]
+    tasks = [(c, m, v) for c, m in runs() if done(c, m) for v in VARIANTS[m]]
     with Pool(jobs) as pool:
         for name, method, state in pool.imap_unordered(score_one, tasks):
             print(name, method, state, flush=True)
@@ -437,24 +463,28 @@ def case_fields(case):
 def collect():
     rows, props = [], []
     fields = {c["name"]: case_fields(c) for c in cases()}
-    for case, method in runs():
+    for case, method, variant in [(c, m, v) for c, m in runs() for v in VARIANTS[m]]:
         state, seconds = elapsed(case, method)
         row = {k: case[k] for k in ("name", "scenario", "class", "S", "replicate", "seed")}
         row.update(fields[case["name"]])
         row["baseline"] = "decomposition-only" if method in ("coral", "ce") and GRAPH_SOURCE != "subgraph" else ""
-        row.update(method=method, run_status=state, elapsed_s=seconds)
-        folder = os.path.join(run_dir(case, method), "score")
+        row.update(method=method, method_variant=method_variant(method, variant),
+                   linear_walks={"walks_kept": "kept", "walks_dropped": "dropped"}.get(variant, ""),
+                   run_status=state, elapsed_s=seconds)
+        folder = score_folder(case, method, variant)
         metrics = os.path.join(folder, "bench_metrics.json")
         if os.path.exists(metrics):
             with open(metrics) as handle:
                 m = json.load(handle)
-            row.update({k: v for k, v in m.items() if k not in ("case", "method")})
+            row.update({k: v for k, v in m.items() if k not in ("case", "method", "variant")})
             ev_dir = os.path.join(folder, "aa_eval")
             sample = _read(os.path.join(ev_dir, "aa_sample_metrics.tsv"))
             if sample is not None:
                 strict = sample[sample["mode"] == "strict"].iloc[0]
                 row.update({"n_inferred_strict": strict["n_inferred"], "n_missed": strict["n_missed"],
-                            "n_false": strict["n_false"], "mean_composite_h0": strict["mean_composite_h0"]})
+                            "n_false": strict["n_false"], "mean_composite_h0": strict["mean_composite_h0"],
+                            "mean_composite": strict.get("mean_composite"), "phase_frame": strict.get("phase_frame"),
+                            "n_missed_absolute": strict.get("n_missed_absolute"), "n_false_absolute": strict.get("n_false_absolute")})
             partition = _read(os.path.join(ev_dir, "aa_partition_metrics.tsv"))
             if partition is not None:  # headline rows: M1 species_detection, M2 adjacency_pairs
                 head = partition[partition["headline"].astype(str).str.lower() == "true"]
@@ -479,10 +509,12 @@ def collect():
     case_cols = ("replicate", "seed", "S", "segment_max_traversals", "species_size_min_bp", "species_size_max_bp", "footprint_bp")
     numeric = [c for c in table.columns if c not in case_cols and pd.api.types.is_numeric_dtype(table[c])]
     pooled = []
-    for keys in (["method", "class", "S"], ["method", "class"], ["method"]):
+    for keys in (["method_variant", "class", "S"], ["method_variant", "class"], ["method_variant"]):
         g = table.groupby(keys)[numeric].agg(["mean", "median"])
         g.columns = ["{c}_{s}".format(c=c, s=s) for c, s in g.columns]
-        g = g.reset_index().assign(n=table.groupby(keys).size().values, level="+".join(keys))
+        scored = table["cn_recall"].notna() if "cn_recall" in table else pd.Series(False, index=table.index)
+        g = g.reset_index().assign(n=table.groupby(keys).size().values, n_scored=scored.groupby([table[k] for k in keys]).sum().values,
+                                   level="+".join(keys))
         pooled.append(g)
     pd.concat(pooled, ignore_index=True).to_csv(POOLED, sep="\t", index=False)
     print("{n} rows -> {t}; pooled -> {p}".format(n=len(table), t=TABLE, p=POOLED))

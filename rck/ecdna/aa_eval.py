@@ -944,9 +944,19 @@ def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = 
           mixture: Optional[Sequence[MixtureAmplicon]] = None, segment_cn: Optional[str] = None, paths: Optional[str] = None,
           strict_rule: str = "auto", species_tol: int = SPECIES_TOL, graph_tol: int = GRAPH_TOL,
           min_truth_fraction: float = 0.5, all_truth_species: bool = False, cn_min: float = CN_EXPLAINED_MIN_CN,
-          case: Optional[str] = None) -> ScoreResult:
+          case: Optional[str] = None, phase_blocks: Optional[Sequence[ev.Block]] = None) -> ScoreResult:
     """Score one method answer. ``truth`` is the species truth (evaluate.load_truth). ``case``
-    names the answer in the species matrix (default: the cycles file name)."""
+    names the answer in the species matrix (default: the cycles file name).
+
+    ``phase_blocks`` (``evaluate.read_phase_blocks`` of the run's ``rck.fragments.tsv``): score the
+    phased answer *within phase blocks* (docs/pipeline/evaluation.md §3.10). Truth and strict species
+    are paired haplotype-blind, one A/B swap per block is chosen from those pairs
+    (``evaluate.block_swaps``, shared by every species), and every inferred cycle is relabelled
+    before the phased scores, so the strict counts, M1, the composites and the phased species
+    matrix are within-block. The absolute counts are kept (``n_missed_absolute`` /
+    ``n_false_absolute``). Why: a phase block's A/B is arbitrary unless subgraph construction could
+    orient it, as the original RCK's per-fragment allele flip leaves it; the multi-clone route
+    reconstructs haplotypes within blocks only (Yubi, 2026-11-14)."""
     records = aaf.read_cycles(cycles_path)
     cycles = species_cycles(records)
     graph = aaf.read_graph(graph_path) if graph_path else None
@@ -963,6 +973,18 @@ def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = 
         frac = ev.fraction_in_regions(t.steps, regions, pad=species_tol) if regions else 1.0
         if frac >= min_truth_fraction:
             scored.append(t)
+    phase_frame, absolute, n_swapped = "absolute", {}, None
+    if phase_blocks and phased:
+        _rows, absolute = strict_rows(scored, strict, phased, species_tol, graph_tol)
+        by = {c.name: c for c in strict}
+        truth_by = {t.name: t for t in scored}
+        pairs = [(truth_by[t], by[c]) for t, c in ev._match(scored, strict, False).items()]
+        swaps = ev.block_swaps(pairs, phase_blocks)
+        n_swapped = int(sum(swaps.values()))
+        strict = [ev.relabel(c, phase_blocks, swaps) for c in strict]
+        candidates = [ev.relabel(c, phase_blocks, swaps) for c in candidates]
+        cycles = [ev.relabel(c, phase_blocks, swaps) for c in cycles]
+        phase_frame = "within_block"
     rows, counts = strict_rows(scored, strict, phased, species_tol, graph_tol)
     rows += best_of_rows(scored, candidates, phased, species_tol, graph_tol)
     species = pd.DataFrame(rows, columns=SPECIES_COLUMNS)
@@ -998,7 +1020,11 @@ def score(cycles_path: str, truth: Sequence[Cycle], graph_path: Optional[str] = 
                "mean_cyclic_lcs_coral_code": mine["cyclic_lcs_coral_code"].astype(float).mean() if len(mine) else None,
                "mean_cycle_overlap_supp": mine["cycle_overlap_supp"].astype(float).mean() if len(mine) else None,
                "mean_cyclic_lcs_supp": mine["cyclic_lcs_supp"].astype(float).mean() if len(mine) else None,
-               "n_exact_cycles": int(mine["exact_cycle"].fillna(0).sum()) if len(mine) else 0}
+               "n_exact_cycles": int(mine["exact_cycle"].fillna(0).sum()) if len(mine) else 0,
+               "phase_frame": phase_frame if phased else None,
+               "n_missed_absolute": absolute.get("n_missed") if mode == "strict" else None,
+               "n_false_absolute": absolute.get("n_false") if mode == "strict" else None,
+               "n_blocks_swapped": n_swapped}
         row.update(explained)
         row.update(subwalks_satisfied(read_paths_, chosen, graph_tol))
         if len(graph_frame):
@@ -1058,6 +1084,8 @@ def main(argv=None) -> int:
     parser.add_argument("--all-truth-species", action="store_true")
     parser.add_argument("--cn-explained-min-cn", type=float, default=CN_EXPLAINED_MIN_CN)
     parser.add_argument("--case", default=None, help="name of the answer in aa_species_matrix.tsv (default: the cycles file name)")
+    parser.add_argument("--phase-blocks", default=None,
+                        help="RCK fragments file (rck_input/rck.fragments.tsv): score phasing within phase blocks (score() docstring)")
     parser.add_argument("--matrix-plot", action="store_true",
                         help="also draw aa_species_matrix_<blind|phased>.png (the per-cell J_seg, J_adj heatmap)")
     parser.add_argument("--outdir", required=True)
@@ -1070,7 +1098,7 @@ def main(argv=None) -> int:
         log.warning("no truth mixture graph: graph-level metrics skipped (build it with simulations/truth_mixture.py)")
     result = score(args.cycles, truth, args.graph, args.alt_cycles, mixture, args.segment_cn, args.paths, args.strict_rule,
                    args.species_tol, args.graph_tol, args.min_truth_fraction, args.all_truth_species, args.cn_explained_min_cn,
-                   args.case)
+                   args.case, ev.read_phase_blocks(args.phase_blocks) if args.phase_blocks else None)
     write(args.outdir, result)
     if args.matrix_plot and result.matrix is not None:
         from rck.ecdna.species_matrix import plot_species_matrix

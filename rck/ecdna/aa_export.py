@@ -3,6 +3,11 @@
     python -m rck.ecdna.aa_export RUN_DIR OUT [--pool-index I | --lambda L] [--alternatives 2]
     python -m rck.ecdna.aa_export subgraph SUBGRAPH_DIR OUTDIR [--name N] [--amplicon 1]
                                   [--imputed comment|drop] [--min-path-junctions 1]
+    python -m rck.ecdna.aa_export baseline BULK_RUN_DIR SUBGRAPH_GRAPH DST
+
+The ``baseline`` subcommand (:func:`baseline_graph`) writes the bulk route's fitted graph plus the
+subgraph export's long-read path constraints: what CoRAL and CycleExtractor decompose as
+decomposition-only baselines in bench_IW_intpsi (results/bench_IW/).
 
 The ``subgraph`` subcommand (:func:`export_subgraph`) writes the breakpoint graph RCK-ecDNA
 solves on as an AA graph that CoRAL 3.1.1 ``cycle`` and CycleExtractor read, for the graph
@@ -468,6 +473,141 @@ def _path_edges(graph, nodes, seq_index, edge_index):
     return path, reason, n_novel, n_rck
 
 
+# ------------------------------------------------------------------------------------------ #
+# bulk answer's graph + the subgraph's read paths (decomposition-only baselines)
+# ------------------------------------------------------------------------------------------ #
+
+BASELINE_FORMAT = "rck-ecdna-aa-graph/1"
+
+
+def _token_parts(token: str):
+    import re
+
+    m = re.match(r"^([ecd])(\d+)([+-]):(\d+)$", token.strip())
+    if not m:
+        raise ValueError("unreadable path-constraint token {t!r}".format(t=token))
+    return m.group(1), int(m.group(2)), m.group(3), m.group(4)
+
+
+def baseline_graph(bulk_run_dir: str, subgraph_graph: str, dst: str) -> Dict[str, object]:
+    """Write the graph CoRAL and CycleExtractor decompose as *decomposition-only baselines*:
+    ``rck-ecdna``'s bulk graph with the subgraph's long-read path constraints. Returns the info
+    also written to ``<dst stem>.json``.
+
+    Why (Yubi, 2026-11-14; results/bench_IW/NEXT_STEPS.md): the baselines decompose the graph
+    the bulk route fitted, so the comparison isolates the decomposition, and they should stay as
+    close to stock CoRAL / CycleExtractor as possible. Both use long-read path constraints by
+    default (CoRAL 3.1.1 makes them MILP constraints unless ``--ignore-path-constraints``; CE
+    parses ``path_constraint`` lines), and the bulk route itself reads the same paths
+    (``paths.tsv``) when it decomposes. ``rck-ecdna``'s own ``aa/*_graph.txt`` has none, so
+    they are taken from the direct subgraph export (:func:`export_subgraph`), which built them
+    from ``paths.tsv``.
+
+    What is written:
+
+    * **sequences and breakpoint edges:** ``<bulk_run_dir>/aa/*_graph.txt`` with every position
+      + :data:`SHIFT` (:func:`shift_graph`), so copy numbers are the bulk route's fitted ones
+      (background plus ecDNA) and every edge it used is present, imputed ones included.
+      Sequences and edges are put in CoRAL's order (:func:`rck.ecdna.aa_format.sequence_key`,
+      ``edge_key`` of the lower-first breakend pair), as :func:`export_subgraph` writes them.
+    * **edges to nodes outside the sequence edges** are left out and listed in the info and
+      as ``#rck_outside_bulk`` comments: they continue the reference past an interval end,
+      which the direct export also keeps as comments only, and CoRAL's flanks
+      (:mod:`rck.ecdna.coral_flank`) add the same join, which would duplicate the edge.
+    * **path constraints:** those of ``subgraph_graph`` with every ``e``/``c``/``d`` index
+      renumbered to the edge with the same coordinates here. Token strands name the node a read
+      leaves or enters by, so they do not depend on file order and are kept. A constraint with
+      an edge that is not here is dropped, counted by reason. Support is unchanged.
+    * ``interval`` lines: the runs of contiguous sequences (both tools ignore them).
+    """
+    from rck.ecdna import aa_format as aaf
+
+    graphs = sorted(glob.glob(os.path.join(bulk_run_dir, "aa", "*_graph.txt")))
+    if len(graphs) != 1:
+        raise FileNotFoundError("{d}/aa/: expected one *_graph.txt, found {n}".format(d=bulk_run_dir, n=len(graphs)))
+    tmp = dst + ".shifted.tmp"
+    shift_graph(graphs[0], tmp)
+    bulk = aaf.read_graph(tmp)
+    os.remove(tmp)
+    direct = aaf.read_graph(subgraph_graph)
+
+    seqs = sorted(bulk.sequences, key=aaf.sequence_key)
+    nodes = {(s.chrom, s.start, "-") for s in seqs} | {(s.chrom, s.end, "+") for s in seqs}
+    kept: Dict[str, list] = {"concordant": [], "discordant": []}
+    outside, other = [], []
+    for e in bulk.edges:
+        a, b = aaf.lower_first(e.a, e.b)
+        if e.kind not in kept:
+            other.append(e.kind)
+        elif a in nodes and b in nodes:
+            kept[e.kind].append(aaf.AAEdge(e.kind, a, b, e.cn, e.reads))
+        else:
+            outside.append({"kind": e.kind, "edge": aaf.format_breakend(a) + "->" + aaf.format_breakend(b), "cn": e.cn})
+    if other:
+        raise ValueError("{g}: unexpected edge kinds {k}".format(g=graphs[0], k=sorted(set(other))))
+    for kind in kept:
+        kept[kind].sort(key=lambda e: aaf.edge_key(e.a, e.b))
+
+    # index maps (1-based, file order) from the direct export to this graph, by coordinates
+    seq_here = {(s.chrom, s.start, s.end): i + 1 for i, s in enumerate(seqs)}
+    edge_here = {k: {(e.a, e.b): i + 1 for i, e in enumerate(kept[k])} for k in kept}
+    maps = {"e": {i + 1: seq_here.get((s.chrom, s.start, s.end)) for i, s in enumerate(direct.sequences)}}
+    for letter, kind in (("c", "concordant"), ("d", "discordant")):
+        mine = [e for e in direct.edges if e.kind == kind]
+        maps[letter] = {i + 1: edge_here[kind].get(aaf.lower_first(e.a, e.b)) for i, e in enumerate(mine)}
+    zero_cn = {"e": {i + 1 for i, s in enumerate(seqs) if s.cn <= 0},
+               "c": {i + 1 for i, e in enumerate(kept["concordant"]) if e.cn <= 0},
+               "d": {i + 1 for i, e in enumerate(kept["discordant"]) if e.cn <= 0}}
+
+    constraints, dropped, through_zero = [], Counter(), 0
+    for tokens, support in direct.path_constraints:
+        out, missing, zero = [], None, False
+        for t in tokens.split(","):
+            kind, idx, strand, count = _token_parts(t)
+            new = maps[kind].get(idx)
+            if new is None:
+                missing = missing or "no_{k}_edge".format(k={"e": "sequence", "c": "concordant", "d": "discordant"}[kind])
+                break
+            zero = zero or new in zero_cn[kind]
+            out.append("{k}{i}{s}:{c}".format(k=kind, i=new, s=strand, c=count))
+        if missing:
+            dropped[missing] += 1
+            continue
+        through_zero += int(zero)
+        constraints.append((",".join(out), support))
+
+    runs = _runs(seqs)
+    info = {
+        "format": BASELINE_FORMAT, "created_by": "rck.ecdna.aa_export baseline", "role": "decomposition-only baseline input",
+        "bulk_graph": os.path.abspath(graphs[0]), "path_constraints_from": os.path.abspath(subgraph_graph), "shift": SHIFT,
+        "counts": {"sequence": len(seqs), "concordant": len(kept["concordant"]), "discordant": len(kept["discordant"]),
+                   "outside_dropped": len(outside), "path_constraints_in": len(direct.path_constraints),
+                   "path_constraints_written": len(constraints), "path_constraints_dropped": sum(dropped.values()),
+                   "path_constraints_through_zero_cn": through_zero, "interval": len(runs)},
+        "path_constraints_dropped_by_reason": dict(dropped),
+        "outside_edges": outside,
+    }
+    header = "#rck-ecdna aa graph {f} source=bulk+paths bulk={b} paths={p} shift={s}".format(
+        f=BASELINE_FORMAT, b=os.path.basename(graphs[0]), p=os.path.basename(subgraph_graph), s=SHIFT)
+    comments = ["#rck_outside_bulk\t{k}\t{e}\t{c}".format(k=o["kind"], e=o["edge"], c=repr(float(o["cn"]))) for o in outside]
+    aaf.write_graph(dst, seqs, kept["concordant"] + kept["discordant"], constraints, runs, header=header, comments=comments)
+    with open(os.path.splitext(dst)[0] + ".json", "w") as handle:
+        json.dump(info, handle, indent=2)
+    return info
+
+
+def main_baseline(argv) -> int:
+    parser = argparse.ArgumentParser(prog="python -m rck.ecdna.aa_export baseline", description=baseline_graph.__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("bulk_run_dir", help="an rck-ecdna bulk run (its aa/*_graph.txt)")
+    parser.add_argument("subgraph_graph", help="the direct subgraph export (aa_export subgraph) whose path constraints to carry")
+    parser.add_argument("dst", help="the graph to write; <stem>.json gets the info")
+    args = parser.parse_args(argv)
+    json.dump(baseline_graph(args.bulk_run_dir, args.subgraph_graph, args.dst)["counts"], sys.stdout, indent=2)
+    print()
+    return 0
+
+
 def main_subgraph(argv) -> int:
     parser = argparse.ArgumentParser(prog="python -m rck.ecdna.aa_export subgraph", description=export_subgraph.__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -496,6 +636,8 @@ def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv and argv[0] == "subgraph" and not os.path.exists(os.path.join("subgraph", "summary.json")):
         return main_subgraph(argv[1:])
+    if argv and argv[0] == "baseline" and not os.path.exists(os.path.join("baseline", "summary.json")):
+        return main_baseline(argv[1:])
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("run_dir")
     parser.add_argument("outdir")

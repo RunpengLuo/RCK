@@ -22,13 +22,26 @@ case's inputs from amplicon-allele-analysis bench_IW.py:
              lambda 0.2 (rck.ecdna.rerank) as bench_nested's; --time-limit 1800 per MILP
   rck_mc     rck-ecdna --model multiclone on subgraphs/bench_IW_cnp/<run>/union/rck_input (the DIAG built
              with --clone-profiles truth --diag-labeling-groups block); --time-limit 60
-  coral      CoRAL 3.1.1 on the union subgraph exported as an AA graph (aa_export subgraph), with 10 kb
-             flanks (results/graph_route/graph_route.py run_coral: --solver gurobi_direct, 1800 s per MILP)
-  ce         CycleExtractor 1.0.0 on the same graph (graph_route.py run_ce: its defaults, gurobi)
+  coral      CoRAL 3.1.1 on the case's graph (below), with 10 kb flanks (results/graph_route/graph_route.py
+             run_coral: --solver gurobi_direct, 1800 s per MILP)
+  ce         CycleExtractor 1.0.0 on the same graph (graph_route.py run_ce: its defaults, gurobi; Gurobi's
+             threads capped at --threads by a gurobi.env in the run folder, CE has no thread flag)
+
+The graph CoRAL and CE decompose (GRAPH_SOURCE, by set):
+  iw         the union subgraph exported directly as an AA graph (aa_export subgraph): observed copy
+             numbers, long-read path constraints. As array 32267060 ran.
+  iw_intpsi  decomposition-only baselines (Yubi, 2026-11-14): the case's rck_bulk graph (aa/*_graph.txt,
+             its fitted copy numbers and every edge it used) plus the long-read path constraints of the
+             direct export, renumbered onto it (aa_export.baseline_graph; the reasons are in its
+             docstring). A coral / ce run refuses to start until the case's rck_bulk run is done; the
+             Slurm arrays also chain them (bench_iw_method.sbatch, submit_intpsi.sh).
 
 Every run has --threads $SLURM_CPUS_PER_TASK (default 4) and keeps a run.json (command, elapsed, status).
-Gurobi licence errors are retried up to 5 times, 2 min apart (the academic WLS licence allows 2
-sessions, so the array runs %2). A finished run is skipped, so the array can be resubmitted.
+Gurobi licence errors are retried up to LICENCE_RETRIES times (15), 2 min apart: the academic WLS
+licence allows 2 sessions, and in array 32267060 two CoRAL runs used up 5 tries. Other errors of the
+rck runs are retried up to RETRIES times (5), as before. A finished run is skipped, so an array can be
+resubmitted. `list --method M` and `run --method M IDX` index the cases of one method (IDX = case),
+for the one-array-per-method layout of bench_iw_method.sbatch.
 
 Scoring (per run, into <run>/score/): the answer as an AA cycles file (rck_bulk: aa_export at the
 lambda 0.2 pool index; rck_mc: aa_export rank 1; coral / ce: their cycles with Path= read as Cycle=,
@@ -40,7 +53,10 @@ results/graph_route/score_h2h.normalise_cycles), then
                with u from the DIAG) and ecDNA proportions, strict and with low_weight cycles
 
 Outputs under $BENCH_IW_OUT (default /n/fs/yubi-iw/runs/<set folder>/methods):
-  <case>/graph/<case>_amplicon1_graph.txt   the exported union subgraph (coral, ce)
+  <case>/graph/<case>_amplicon1_graph.txt   the exported union subgraph (coral and ce for iw; path
+                                            constraints for iw_intpsi)
+  <case>/graph_bulk/<case>_amplicon1_graph.txt  iw_intpsi: rck_bulk's graph + path constraints (coral, ce),
+                                            with <case>_amplicon1_graph.json (counts, dropped edges)
   <case>/<method>/                          rck runs; coral / ce runs are in <method>/amplicon1/
   <case>/<method>/score/                    answer/, aa_eval/, bench_metrics.json, bench_proportions.tsv
 """
@@ -63,7 +79,8 @@ AAA = os.environ.get("AAA", os.path.expanduser("~/amplicon-allele-analysis-cnp")
 SIM = os.path.join(AAA, "simulations")
 # --set: folder name (simulator side and /n/fs/yubi-iw/runs/<folder>) and results TSV prefix
 SETS = {"iw": ("bench_IW", "bench_iw"), "iw_intpsi": ("bench_IW_intpsi", "bench_iw_intpsi")}
-SET = SEEDS = SUBGRAPHS = SUBGRAPHS_CNP = SIM_RUNS = OUT = TABLE = POOLED = PROPORTIONS = None
+GRAPH_SOURCES = {"iw": "subgraph", "iw_intpsi": "bulk+paths"}  # the graph coral / ce decompose (module docstring)
+SET = GRAPH_SOURCE = SEEDS = SUBGRAPHS = SUBGRAPHS_CNP = SIM_RUNS = OUT = TABLE = POOLED = PROPORTIONS = None
 METHODS = ["rck_bulk", "rck_mc", "coral", "ce"]
 THREADS = os.environ.get("SLURM_CPUS_PER_TASK", "4")
 TIME_LIMIT = 1800
@@ -71,13 +88,14 @@ MC_TIME_LIMIT = 60
 POOL_LAMBDA, SCORE_LAMBDA = "0.1", 0.2
 LAMBDAS = ["0", "0.02", "0.05", "0.1", "0.2", "0.5"]
 RETRIES = 5
+LICENCE_RETRIES = 15
 
 
 def configure(set_name):
     """Point every path at one set (SETS); bench_IW ("iw") keeps its original paths and file names."""
-    global SET, SEEDS, SUBGRAPHS, SUBGRAPHS_CNP, SIM_RUNS, OUT, TABLE, POOLED, PROPORTIONS
+    global SET, GRAPH_SOURCE, SEEDS, SUBGRAPHS, SUBGRAPHS_CNP, SIM_RUNS, OUT, TABLE, POOLED, PROPORTIONS
     folder, prefix = SETS[set_name]
-    SET = set_name
+    SET, GRAPH_SOURCE = set_name, GRAPH_SOURCES[set_name]
     SEEDS = os.path.join(SIM, "configs", folder, "seeds.tsv")
     SUBGRAPHS = os.path.join(SIM, "subgraphs", folder)
     SUBGRAPHS_CNP = os.path.join(SIM, "subgraphs", folder + "_cnp")
@@ -143,7 +161,7 @@ def done(case, method):
     return all(os.path.exists(os.path.join(outdir, f)) for f in need)
 
 
-def inferred_graph(case):
+def subgraph_graph(case):
     """The union subgraph as an AA graph (aa_export subgraph), written once per case."""
     from rck.ecdna.aa_export import export_subgraph
 
@@ -154,6 +172,44 @@ def inferred_graph(case):
     return graph
 
 
+class BulkNotDone(RuntimeError):
+    """A decomposition-only baseline asked for before the case's rck_bulk run finished."""
+
+
+def bulk_graph(case):
+    """rck_bulk's graph + the subgraph export's path constraints (aa_export.baseline_graph), written once
+    per case. Written into a private folder and moved into place, so coral and ce of one case can
+    ask for it at the same time."""
+    import shutil
+    import tempfile
+
+    from rck.ecdna.aa_export import baseline_graph
+
+    folder = os.path.join(OUT, case["name"], "graph_bulk")
+    graph = os.path.join(folder, "{c}_amplicon1_graph.txt".format(c=case["name"]))
+    if os.path.exists(graph):
+        return graph
+    if not done(case, "rck_bulk"):
+        raise BulkNotDone("{c}: rck_bulk is not done ({d}); the baselines decompose its graph".format(
+            c=case["name"], d=run_dir(case, "rck_bulk")))
+    os.makedirs(folder, exist_ok=True)
+    work = tempfile.mkdtemp(dir=folder, prefix=".build_")
+    try:
+        tmp = os.path.join(work, os.path.basename(graph))
+        baseline_graph(run_dir(case, "rck_bulk"), subgraph_graph(case), tmp)
+        os.replace(os.path.splitext(tmp)[0] + ".json", os.path.splitext(graph)[0] + ".json")
+        os.replace(tmp, graph)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    return graph
+
+
+def inferred_graph(case):
+    """The graph coral / ce decompose and aa_eval scores the graph-route methods and rck_bulk with
+    (GRAPH_SOURCE): the direct export (iw) or rck_bulk's graph + path constraints (iw_intpsi)."""
+    return subgraph_graph(case) if GRAPH_SOURCE == "subgraph" else bulk_graph(case)
+
+
 def rck_argv(case, method, outdir):
     common = ["--truth-dir", case["truth"], "--outdir", outdir, "--no-plots", "--threads", THREADS]
     if method == "rck_bulk":
@@ -162,10 +218,21 @@ def rck_argv(case, method, outdir):
     return ["--model", "multiclone", "--rck-input", case["rck_input"]] + common + ["--time-limit", str(MC_TIME_LIMIT)]
 
 
-def run(index):
+def runs_of(method=None):
+    """runs(), or with a method the cases in order (index = case) for that method's array."""
+    return runs() if method is None else [(c, method) for c in cases()]
+
+
+def _licence(text):
     import graph_route as gr
 
-    table = runs()
+    return any(e in text for e in gr.LICENCE_ERRORS[:2])
+
+
+def run(index, method=None):
+    import graph_route as gr
+
+    table = runs_of(method)
     if index >= len(table):
         print("no run {i} ({n} runs)".format(i=index, n=len(table)))
         return 0
@@ -186,31 +253,48 @@ def run(index):
         argv = rck_argv(case, method, outdir)
         record.update({"command": ["python", "-m", "rck.ecdna_run"] + argv, "solver": "gurobi",
                        "gurobi": ".".join(map(str, gurobipy.gurobi.version()))})
-        for attempts in range(1, RETRIES + 1):
+        attempts, other = 0, 0
+        while True:
+            attempts += 1
             try:
                 rck_run(build_parser().parse_args(argv))
                 ok = True
                 break
             except Exception as error:  # noqa: BLE001 - licence hiccups: retry, then report
-                print("attempt {k} failed: {e!r}".format(k=attempts, e=error), flush=True)
-                if attempts < RETRIES:
-                    time.sleep(120)
+                licence = _licence(repr(error))
+                other += 0 if licence else 1
+                print("attempt {k} failed{l}: {e!r}".format(k=attempts, l=" (licence)" if licence else "", e=error), flush=True)
+                if attempts >= LICENCE_RETRIES or other >= RETRIES:
+                    break
+                time.sleep(120)
         try:
             gurobipy.disposeDefaultEnv()
         except Exception:  # noqa: BLE001
             pass
     else:
-        graph = inferred_graph(case)
+        try:
+            graph = inferred_graph(case)
+        except BulkNotDone as error:  # no run.json: the run never started
+            print(error, flush=True)
+            return 2
         argv, meta = (gr.run_coral if method == "coral" else gr.run_ce)(graph, outdir, 1)
         record.update(meta)
-        record["input_graph"] = graph
-        for attempts in range(1, RETRIES + 1):
+        record.update(input_graph=graph, graph_source=GRAPH_SOURCE)
+        if GRAPH_SOURCE != "subgraph":
+            record["baseline"] = "decomposition-only"
+            with open(os.path.splitext(graph)[0] + ".json") as handle:
+                record["input_graph_counts"] = json.load(handle)["counts"]
+        if method == "ce":  # CE has no thread flag; Gurobi reads gurobi.env in the working folder (outdir)
+            with open(os.path.join(outdir, "gurobi.env"), "w") as handle:
+                handle.write("Threads {t}\n".format(t=THREADS))
+            record["gurobi_env"] = "Threads {t}".format(t=THREADS)
+        for attempts in range(1, LICENCE_RETRIES + 1):
             rc, licence = gr.subprocess_run(argv, outdir, "{m}.stdout".format(m=method))
             ok = rc == 0 and os.path.exists(cycles_file(case, method))
             if ok:
                 break
             print("attempt {k} failed: rc {r}{l}".format(k=attempts, r=rc, l=" (licence)" if licence else ""), flush=True)
-            if not licence or attempts == RETRIES:
+            if not licence or attempts == LICENCE_RETRIES:
                 break
             time.sleep(120)
     record.update({"status": "ok" if ok else "failed", "attempts": attempts, "elapsed_s": round(time.time() - started, 1)})
@@ -380,9 +464,11 @@ def main():
     parser.add_argument("--set", choices=sorted(SETS), default="iw",
                         help="iw: bench_IW (default); iw_intpsi: bench_IW_intpsi (whole-number psi)")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("list")
+    lst = sub.add_parser("list")
+    lst.add_argument("--method", choices=METHODS, default=None, help="only this method; the index is then the case")
     r = sub.add_parser("run")
     r.add_argument("index", type=int)
+    r.add_argument("--method", choices=METHODS, default=None, help="IDX is the case index of this method's array")
     sub.add_parser("status")
     s = sub.add_parser("score")
     s.add_argument("--jobs", type=int, default=8)
@@ -390,10 +476,10 @@ def main():
     args = parser.parse_args()
     configure(args.set)
     if args.cmd == "list":
-        for i, (case, method) in enumerate(runs()):
+        for i, (case, method) in enumerate(runs_of(args.method)):
             print(i, case["name"], method, sep="\t")
     elif args.cmd == "run":
-        return run(args.index)
+        return run(args.index, args.method)
     elif args.cmd == "status":
         status()
     elif args.cmd == "score":

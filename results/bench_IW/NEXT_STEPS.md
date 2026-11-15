@@ -72,19 +72,28 @@ dated 2026-11-14, evening).*
 - Do not touch `~/RCK` or `~/amplicon-allele-analysis` (`yubi_dev`).
 
 **Next steps, in order:**
-1. **Point the driver at bench_IW_intpsi** (`bench_iw.py`, local, about 30 min).
-   - A `--set iw_intpsi` option, as `bench_IW.py` has. It switches `SEEDS`, `SUBGRAPHS`,
-     `SUBGRAPHS_CNP` and `SIM_RUNS` to the `bench_IW_intpsi` folders, and `OUT` to
-     `/n/fs/yubi-iw/runs/bench_IW_intpsi/methods`.
-   - The results TSVs get their own names (`bench_iw_intpsi_*.tsv`), so nothing from bench_IW is
-     overwritten.
-2. **Graph route on bulk's graph** (decision 2; local code change, about 1 h).
-   - `inferred_graph(case)` returns the bulk run's `aa/*_graph.txt`; check how `aa_export.export`
-     shifts it (`shift_graph`) and whether `graph_route.run_coral`'s 10 kb flanks still apply.
-   - A coral / ce task refuses to start if the bulk run is not `done`.
-   - Pin CycleExtractor to the allocation's CPUs: a `gurobi.env` with `Threads` in its working
-     folder, or the `GRB_*` environment, after checking which CE honours.
-   - `run.json` records `input_graph` and `baseline: decomposition-only`.
+1. **Done (2026-11-14 night, `9620a8a`): driver points at bench_IW_intpsi.** `bench_iw.py --set
+   iw_intpsi` switches the case list, simulator runs, subgraphs, method outputs
+   (`/n/fs/yubi-iw/runs/bench_IW_intpsi/methods`) and the results TSVs (`bench_iw_intpsi_*.tsv`).
+   Default `iw` unchanged.
+2. **Done (2026-11-14 night): CoRAL / CE on the bulk route's graph, as decomposition-only
+   baselines.** Details and checks: CHANGELOG, "bench_IW_intpsi driver; graph route on the bulk
+   route's graph".
+   - Graph: `rck.ecdna.aa_export.baseline_graph`, the bulk run's `aa/*_graph.txt` (+1 shift,
+     fitted copy numbers, every edge it used) plus the direct subgraph export's long-read path
+     constraints, renumbered by coordinate.
+   - *Why the path constraints* (Yubi chose to keep them, to stay close to the original tools):
+     CoRAL uses them by default as MILP constraints, CE reads them, and the bulk route reads the
+     same paths.
+   - Written once per case to `<case>/graph_bulk/`. A coral / ce run exits 2 without running
+     until the case's `rck_bulk` is done.
+   - `run.json`: `baseline: decomposition-only`, `graph_source`, the graph's counts.
+   - CE's Gurobi threads are capped by a `gurobi.env` in its run folder; **to confirm in the
+     pilot.**
+   - Licence errors: up to 15 retries, 2 min apart.
+   - `bench_iw_method.sbatch` + `submit_intpsi.sh` (prints the four commands; `--submit` submits).
+   - Offline check on bench_IW's 24 bulk runs: all 389 path constraints carried, none dropped;
+     3,391 tokens point at the same coordinates.
 3. **Total copy-number recall for the RCK routes, and the per-run fields** (decisions 4–5; local,
    about 1 h with tests).
    - `bench_metrics`: total recall = sum_x min(c, t) / sum_x t over the subgraph's segments,
@@ -97,25 +106,24 @@ dated 2026-11-14, evening).*
    - Tests for each.
 4. **Pilot locally** on simple_S1_s11001 and one hard S=4 case: all four methods plus scoring. It
    uses 1–2 Gurobi sessions for a few minutes; no array may be running.
-5. **Methods arrays (needs Yubi's go-ahead).** Four 24-task arrays, one task per case, 4 CPUs
-   each:
+5. **Methods arrays (needs Yubi's go-ahead):** `./submit_intpsi.sh` prints the commands,
+   `./submit_intpsi.sh --submit` submits. Four 24-task arrays, one task per case, 4 CPUs and 2 G
+   each (peak 754 MB on bench_IW):
 
    | array | method | depends on | time limit | wall time (array 32267060 timings) |
    |---|---|---|---|---|
-   | A | `rck_bulk` | – | 1 h per task (2026-11-14 max 1908 s, licence waits included) | about 1.1 h at %1 |
-   | B | `rck_mc` | – | 15 min | a few minutes |
-   | C | `coral` | `aftercorr:A` (case i after bulk task i) | 1 h | about 1.9 h |
-   | D | `ce` | `aftercorr:A` | 1 h | about 1 h |
+   | A | `rck_bulk` | – | 90 min (max 1908 s, licence waits included) | about 1.1 h at %1 |
+   | B | `rck_mc` | – | 15 min (solves <= 4 s) | a few minutes |
+   | C | `coral` | `aftercorr:A` (case i after bulk task i succeeds) | 90 min (max 2002 s) | about 1.9 h |
+   | D | `ce` | `aftercorr:A` | 60 min (max 374 s; CE's own limit is 7200 s per MILP) | about 1 h |
 
-   - **Memory:** 2 G per task (peak 754 MB on bench_IW).
-   - **Gurobi licence:** with 2 sessions, run A and B at `%1` each. C and D start as bulk tasks
-     finish, so they meet A; raise the licence retries (5 x 2 min failed twice) to a wait of up to
-     30 min, or run C and D at `%1` after B ends.
+   - **Gurobi licence (2 sessions):** A and B hold at most one each. C and D join as bulk tasks
+     finish, so up to 4 may ask at once; a task waits up to 15 x 2 min.
+   - **A failed bulk task** leaves that case's C / D pending (DependencyNeverSatisfied): cancel
+     them, diagnose, and resubmit (finished runs are skipped).
    - **Expected total:** about 2–2.5 h wall time, about 4 h compute.
-   - CoRAL and CE timings on bulk's graph may differ from these: bulk's graph is not the union
-     subgraph.
-   - CE crashed on two bench_IW graphs; on new graphs it may or may not. Report crashes as
-     method failures; do not patch CE.
+   - CoRAL / CE timings on the bulk route's graph may differ from these.
+   - CE crashed on two bench_IW graphs; report crashes as method failures, do not patch CE.
 6. **Score and collect (local, no Gurobi):** `bench_iw.py --set iw_intpsi score --jobs 8`, then
    `collect`.
    - Scoring time not yet measured; expect well under 1 h.

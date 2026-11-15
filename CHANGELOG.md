@@ -13,6 +13,72 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Added (2026-11-14, night): bench_IW_intpsi driver; graph route on the bulk route's graph
+
+NEXT_STEPS steps 1 and 2 (`results/bench_IW/NEXT_STEPS.md`). No method was run; all checks below
+are offline.
+
+- **Step 1: `bench_iw.py --set iw_intpsi`.** One switch points the case list, simulator runs,
+  both subgraph folders, the method outputs (`/n/fs/yubi-iw/runs/bench_IW_intpsi/methods`) and the
+  results TSVs (`bench_iw_intpsi_*.tsv`) at bench_IW_intpsi. Default `iw` is unchanged, and its
+  `list` output is identical to before.
+- **Step 2: decomposition-only baselines on the bulk route's graph.**
+  - **Decision (Yubi):** CoRAL and CycleExtractor decompose the graph the bulk route fitted, so
+    the comparison isolates the decomposition; they are labelled decomposition-only baselines.
+  - **Follow-up decision (Yubi, after asking): keep the long-read path constraints.** Yubi wants
+    the tools as close as possible to the originals, and that argues for keeping them:
+    - CoRAL 3.1.1 uses path constraints by default as MILP constraints
+      (`coral/models/concrete.py`, `ConstraintSubpathEdges`); dropping them is its non-default
+      `--ignore-path-constraints` mode.
+    - CycleExtractor reads `path_constraint` lines from its input graph.
+    - The bulk route itself reads the same reads (`paths.tsv`) when it decomposes.
+
+    The bulk route's own `aa/*_graph.txt` has no path constraints, so they come from the direct
+    subgraph export. The original RCK does not decompose into cycles; its long-read input is
+    molecule adjacency groups (`docs/AdjacencyGroups.md`), which the multi-clone route already
+    passes on. Remaining departures from stock CoRAL / CE, part of the baseline design: they get
+    RCK's fitted graph instead of building their own from the BAM, and CoRAL gets the 10 kb flanks.
+  - **`rck.ecdna.aa_export.baseline_graph`** (CLI `python -m rck.ecdna.aa_export baseline BULK_RUN
+    SUBGRAPH_GRAPH DST`) writes:
+    - the bulk route's graph, shifted +1 to the AA frame, with its fitted copy numbers and every
+      edge it used, imputed ones included (the direct export keeps imputed edges as comments
+      only);
+    - edges to nodes outside the sequence edges left out and listed (`#rck_outside_bulk`, info
+      JSON). The direct export also keeps them as comments only, and CoRAL's flanks add the same
+      join, which would otherwise duplicate the edge;
+    - the direct export's path constraints, each index renumbered to the edge with the same
+      coordinates. Token strands name nodes, not file order, so they are kept. A constraint with
+      a missing edge is dropped and counted by reason, and constraints through 0-copy edges are
+      counted. Support is unchanged;
+    - `interval` lines (both tools ignore them);
+    - `<stem>.json`: counts, dropped edges, provenance.
+  - **Checked offline on all 24 bench_IW cases** (bulk runs from array 32267060; scratch output):
+    - every graph builds and passes `coral_flank`;
+    - all 389 path constraints carried, none dropped, none through 0-copy edges;
+    - all 3,391 renumbered tokens point at an edge with the same coordinates and keep their
+      strand and count;
+    - sequence sets are identical to the direct export's. The edges differ by one imputed
+      discordant edge RCK used (hard_S4_s16003), and 90 outside edges were left out.
+  - Tests: `tests/ecdna/test_aa_export_baseline.py` (6). Related suites pass (68 tests).
+- **`bench_iw.py`, for the set `iw_intpsi`:**
+  - CoRAL / CE take the case's `graph_bulk/<case>_amplicon1_graph.txt` (built once from the
+    finished `rck_bulk` run; concurrent requests are safe).
+  - A coral / ce run refuses to start, exit code 2 and no `run.json`, until `rck_bulk` is done.
+  - `run.json` records `baseline: decomposition-only`, `graph_source` and the graph's counts.
+  - Scoring (`aa_eval --graph`) uses the same graph for `rck_bulk`, `coral` and `ce`.
+  - `iw` keeps the direct export, as array 32267060 ran.
+- **CycleExtractor threads:** CE has no thread flag and started Gurobi with 32 threads on 4 CPUs.
+  A `gurobi.env` with `Threads <--threads>` is now written in its run folder (its working folder),
+  which Gurobi reads for the default environment. Recorded in `run.json`; the pilot (step 4)
+  checks CE's log.
+- **Licence waits:** licence errors are retried up to `LICENCE_RETRIES` = 15 times, 2 min apart
+  (array 32267060 lost two CoRAL runs after 5). Other `rck-ecdna` errors are still retried up to 5
+  times, and no longer 5 times for licence errors as well.
+- **One array per method:** `list --method M` / `run --method M IDX` (IDX = case). New
+  `bench_iw_method.sbatch` (`SET`, `METHOD` exported) and `submit_intpsi.sh`, which prints the
+  four sbatch commands (A bulk, B multi-clone, C CoRAL and D CE with `--dependency=aftercorr:A`)
+  and submits them only with `--submit`. `bench_iw.sbatch` is kept as array 32267060 ran.
+
 ### Changed (2026-11-14, evening): bench_IW checked; whole-number psi and a revised plan
 
 Status and the ordered plan: [`results/bench_IW/NEXT_STEPS.md`](results/bench_IW/NEXT_STEPS.md)

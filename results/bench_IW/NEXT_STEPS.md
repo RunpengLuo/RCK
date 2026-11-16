@@ -308,6 +308,7 @@ strengthens the paper, with the reasoning. Each needs Yubi's go-ahead before any
      exported directly. CoRAL's own graph-building step is in the `coral-3.1.1` env. AA for CE
      would need installing; check `module avail` first.
    - *Score with the same* `bench_iw.py score`, so the tables line up.
+   - *How:* outlined step by step in "Addition 1 in detail" below.
 2. **RCK multi-clone with estimated, not true, clone profiles.**
    - *Why:* `rck_mc` currently gets the true clone profiles (`--clone-profiles truth`), so its
      numbers are an upper bound and a reviewer will discount them.
@@ -369,6 +370,147 @@ strengthens the paper, with the reasoning. Each needs Yubi's go-ahead before any
      and the path-constraint handling in a supplementary table, all already in each `run.json`.
    - State that CE crashed on 2 of 24 bench_IW graphs inside CE itself (`NameError`, `CE.py`),
      and that CE was not patched.
+
+### Addition 1 in detail: CoRAL and CE end to end on bench_IW_intpsi (outline, 2026-11-15)
+
+> **Started 2026-11-15 evening:** route (B); status and next steps in
+> [`results/bench_IW_e2e/NEXT_STEPS.md`](../bench_IW_e2e/NEXT_STEPS.md). Two refinements to the outline
+> below: reads cover each ecDNA interval ± 5 Mb plus a 2 Mb window per chromosome arm (not the whole
+> genome), and `--rck-junction-reads-per-copy` is dropped for the end-to-end RCK runs.
+
+**Goal.** Score CoRAL and CE when each one builds its own graph from the same simulated reads.
+Compare that with RCK-ecDNA's own end-to-end result on the same 24 cases, against the same truth,
+with the same scorer. The current runs (CoRAL / CE decomposing RCK bulk's graph) stay in the
+paper as the controlled "same graph" comparison.
+
+**What blocks it today (checked 2026-11-15).**
+- **No reads exist.** bench_IW_intpsi runs hold only `obs/` count tables and `truth/`. The
+  simulator's read layer L5 is not written: `simulations/src/simulation.py::run_reads` raises
+  `NotImplementedError`, and `emit_reads`, `l5_reads` and `--reference-fasta` are unused
+  (amplicon-allele-analysis `simulations/README.md` §S10). RCK-ecDNA reads the count tables of
+  L4 directly. CoRAL needs a long-read BAM; AA needs a short-read BAM.
+- **No read tools on ionic.** `module avail` and `PATH` have no minimap2, samtools, NanoSim,
+  CNVkit, ART / Mason or AmpliconSuite. The `coral-3.1.1` env has `coral` only. No hg38 FASTA is
+  configured.
+- **CE needs a graph.** It decomposes an AA (short read) or CoRAL (long read) `*_graph.txt`
+  (`/n/fs/yubi-iw/tools/CycleExtractor/README.md`). On long reads, "CE end to end" therefore
+  means CoRAL's graph followed by CE's decomposition. CE on an AA graph is a separate short-read
+  arm (optional, step 8).
+
+**Decision for Yubi: how far "end to end" goes for RCK-ecDNA.**
+- **(A) Baselines from reads, RCK-ecDNA from the simulator's counts.**
+  - Least work.
+  - A reviewer will object: RCK-ecDNA gets error-free breakpoint calls, exact junction-read
+    counts and the true SNP phasing, while CoRAL / CE pay for alignment and calling.
+  - Not recommended as the main comparison.
+- **(B) Everything from the same BAMs (recommended).**
+  - RCK-ecDNA's inputs (`obs/`: depth windows, SNP BAF, adjacency / extremity / path tables,
+    `#NOV_A/B`) are rebuilt from the BAMs. The tools: the callers in
+    `prepare_adjacency_02/` (Severus, Sniffles, GRIDSS2; `run_phasing.sh`), `genotype_snps.sh`,
+    and the UGP window layout that `scripts/read_ugp_outputs.py` reads.
+  - Then `subgraph_construct.py` and `rck-ecdna` run unchanged.
+  - Not yet checked: whether this real-data path writes `path.tsv` and the allele-split
+    junction counts. If it does not, a converter from phased long reads is needed (step 4).
+  - `rck_mc` still takes the true clone profiles (`--clone-profiles truth`). In (B) it should
+    be reported with addition 2 (estimated profiles); otherwise mark it as an upper bound.
+- Report (A) as well if (B) is done: the gap between (A) and (B) is RCK-ecDNA's own loss from
+  read processing.
+
+**Steps.**
+1. **Tools and reference** (one-off; ask before installing).
+   - A new conda env under `/n/fs/yubi-iw/conda/envs/` with minimap2, samtools, NanoSim (with
+     ecSimulator's `promethion_10_4_1_guppy_model`), CNVkit and bedtools. For (B), also the
+     `prepare_adjacency_02/env_*.yaml` envs.
+   - A chr-prefixed GRCh38 FASTA with its minimap2 index (about 3 GB plus about 8 GB) in
+     `/n/fs/yubi-iw/ref/`. The simulator's coordinates are GRCh38 (`simulation.yaml`
+     `reference`), and ecSimulator ships `GRCh38_centromere.bed`, which `coral seed` needs.
+2. **Write L5** (amplicon-allele-analysis `simulations/src/simulation.py::run_reads`, as planned
+   in README §S10), as a new command that adds reads to an existing run without re-running
+   L0–L4.
+   - The truth tables stay byte-identical, so the current scores remain valid.
+   - Seed it from the run's `random_seed`.
+   - **Sequences.**
+     - Apply the phased germline SNPs (`truth/phasing.tsv`, `obs/windows/snp.tsv.gz`) to the
+       reference to get haplotypes A and B over the run's regions plus `flanking_length`.
+     - Build each clone's linear karyotype from `truth/segments.tsv` (per-clone $(a_{i,j},
+       b_{i,j})$) and each ecDNA species' circular sequence from `truth/walks.walk`, with the
+       haplotype of every step. ecSimulator's `cycles_file_to_fasta.py` handles the walk part;
+       the haplotype per step is new.
+   - **Coverage.** Use the count layer's depth per copy (`l4_counts`; γ from `library_size`):
+     clone $i$'s karyotype at $u_i \gamma$ per copy, and species $s$ at
+     $\gamma \sum_i u_i \psi_{s,i}$, the same $\psi$ as `truth/proportions.tsv`. Generate the
+     matched normal the same way (diploid, `normal_library_size`). This is how ecSimulator's
+     `run_nanosim.py` scales amplicon against background (NanoSim `genome`, `-dna_type circular`
+     for walks), done per sequence.
+   - **Scope.** Simulate reads only over the run's regions plus flanks: the grid already has
+     `restrict_to_regions: true`, and whole-genome coverage would be about 40 Gbp per case. Do
+     align to the whole of GRCh38, so mapping ambiguity stays realistic.
+   - **Check the reads against the counts on 2 pilot cases** (one simple_S1, one hard_S4):
+     depth per copy, junction-spanning reads per adjacency against `obs/adjacency.tsv` `#NOV`,
+     and SNP BAF. They should agree within sampling noise. If they do not, L5 and L4 disagree,
+     and the comparison is not apples to apples.
+3. **Align and call copy number** (per case, Slurm).
+   - `minimap2 -ax map-ont` → `samtools sort/index` for the tumour and the normal BAM.
+   - CNVkit with the matched normal as the reference, restricted to the simulated regions
+     (`--targets` the region BED, `-m wgs`). The output `.cns` is CoRAL's `--cn-seg`.
+   - Keep BAMs and intermediates in `/tmp` during the job, then write one compressed copy of
+     each BAM under `/n/fs/yubi-iw/runs/bench_IW_intpsi/reads/<case>/`. That is a few large
+     files per case, not many small ones.
+4. **(B) only: rebuild RCK-ecDNA's inputs from the BAMs.**
+   - Call SVs (Severus / Sniffles on the long reads), phase SNPs, and genotype the SNPs.
+   - Write `obs/` in the simulator's schema (`build_adjacency_graph/schema.py`) into a new run
+     folder, `runs/bench_IW_intpsi_reads/<case>/`, with `truth/` symlinked.
+   - Then `bench_IW.py [--cnp] rebuild` builds the subgraphs and the DIAGs as now.
+5. **CoRAL end to end** (method `coral_e2e`).
+   - `coral seed --cn-seg <cns> --lr-bam <bam> --centromere-file GRCh38_centromere.bed`
+     at defaults (`--gain 6`, `--min-seed-size 100000`).
+   - Then `coral reconstruct --lr-bam --cnv-seed --cn-seg` with `--solver gurobi_direct`, the
+     same 1800 s per MILP as today, and the default `--cycle-decomp-mode max_weight`.
+   - Defaults are the main result, for fair use. The bench's smallest species are 300 kb with 4
+     copies, below the `--gain 6` seed threshold. Record which truth species no seed covers
+     (their recall is 0 for a seeding reason, not a decomposition reason), and add one
+     sensitivity run with `--gain` lowered, reported separately.
+6. **CE end to end** (method `ce_e2e`): `CE.py` at its defaults on each `*_graph.txt` from step
+   5, path constraints included. Same Gurobi `gurobi.env` thread cap as `bench_iw.py run_ce`.
+7. **RCK-ecDNA end to end** ((B) only; methods `rck_bulk_e2e`, `rck_mc_e2e`): today's
+   `rck_argv` flags on step 4's subgraphs.
+8. **Optional short-read arm for CE's native input.**
+   - ART / Mason short reads (`l5_reads.short_simulator`), then AmpliconSuite-pipeline (AA, with
+     its own CNVkit seeds), then CE on the AA graph.
+   - Needs the AA data repo and AA's licence requirements; check them before committing to it.
+     Only worth it if a reviewer is expected to say "CE is meant for AA graphs".
+9. **Driver and scoring** (RCK `results/bench_IW/bench_iw.py`).
+   - Add the new methods, with their own graph sources, to `METHODS` and `GRAPH_SOURCES`, and a
+     set, e.g. `--set iw_intpsi_e2e`, that reuses bench_IW_intpsi's cases and truth.
+   - CoRAL reconstruct can report several amplicons per case. Pool their cycles into one answer
+     per case before scoring, as `results/graph_route/score_h2h.py` does per (case, amplicon),
+     and say so in the methods text.
+   - Score with `bench_iw.py score`, unchanged: `aa_eval` (species matrix, M1 / M2, strict and
+     best-of) and `bench_metrics`; linear walks kept and dropped, as for `coral` / `ce` now.
+   - **Add graph-level metrics.** Once the methods build their own graphs, build the truth mixture
+     graph (`simulations/truth_mixture.py`; `aa_eval` reads it from `truth/aa/mixture_amplicon<N>_*` or `--mixture-dir`). `bp_accuracy`,
+     novel-adjacency FNR / FDR and `segment_cn_*` then separate graph-construction errors from
+     decomposition errors (`docs/pipeline/evaluation.md` §4.2–§4.3). Today's runs have none.
+10. **Arrays.**
+    - Per method, chained with `--dependency=afterok`, in this order:
+      - reads (step 2) → align + CNVkit (step 3) → (B) inputs (step 4);
+      - `coral_e2e` → `ce_e2e`;
+      - `rck_*_e2e`.
+    - Read simulation and alignment need no Gurobi and can run wide. The Gurobi steps share the
+      2-session licence: keep `%1`–`%2` per array and the 15-try licence retry. Size memory from
+      the 2 pilot cases (`seff`).
+    - Yubi's go-ahead before each array.
+11. **Report.**
+    - Figures 2–6 and Table 1 rows for `coral_e2e`, `ce_e2e` and (B)'s `rck_*_e2e`, next to the
+      current "same graph" rows.
+    - A supplementary table of seeds missed by `coral seed`, graph-level metrics per method, and
+      every tool version and flag (from each `run.json`).
+
+**Cost, roughly.**
+- Per case: one NanoSim run over a ≤ 8 Mb footprint plus flanks; one minimap2 alignment
+  (minutes); CNVkit (minutes); CoRAL reconstruct (bounded by its time limits).
+- The licence, not CPU, sets the wall time, as in the methods arrays of 2026-11-14.
+- Writing L5 and checking it (step 2) is most of the human time.
 
 ## Earlier state (2026-11-14 afternoon, kept for the record)
 

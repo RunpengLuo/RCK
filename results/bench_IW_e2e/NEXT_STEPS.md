@@ -7,6 +7,11 @@ partial-genome design: amplicon-allele-analysis `simulations/e2e/README.md`.*
 
 ## Resume here
 
+**2026-11-16: pilot array checked; blocked on two decisions for Yubi** (details under "Pilot array 32318772",
+below). (a) The purity / ploidy fit is still wrong with sentinels (hard_S1: class 6, purity 0.34, γ 8.04),
+so the arrays are on hold, as agreed. (b) hard_S4's NanoSim hung (one worker), so the reads step needs a
+guard. Steps 1–2 below are done; step 3 (resize, submit) waits for Yubi.
+
 1. **Check the pilot array, Slurm job `32318772`** (tasks 12 = `hard_S1_s14001`, 21 = `hard_S4_s16003`;
    submitted 2026-11-15 22:11, 16 CPUs, 40 GB, 6 h each; `pilot_e2e.sbatch`).
    - Log: `/n/fs/yubi-iw/runs/bench_IW_intpsi_e2e/logs/slurm/iwe-pilot_32318772_{12,21}.out`.
@@ -47,6 +52,38 @@ partial-genome design: amplicon-allele-analysis `simulations/e2e/README.md`.*
 4. After the arrays: `score`, `collect`, then a write-up (`RESULTS_e2e.md` here, figures from
    `results/bench_IW/make_figures.py` pointed at `bench_iw_e2e_table.tsv`, as new figures; the existing
    figures stay as they are).
+
+## Pilot array 32318772 (checked 2026-11-16)
+
+- **Task 12, hard_S1_s14001: COMPLETED in 24:38, MaxRSS 7.0 GB** (16 CPUs, 40 GB asked; CPU efficiency 57%).
+  Steps: reads skipped (done locally: NanoSim 992 s, minimap2 514 s, CNVkit 404 s at 12 threads), check_reads
+  54 s, **inputs 1,360 s**, coral_e2e 53 s, ce_e2e 1 s, rck_bulk_e2e 5 s, rck_mc_e2e 1 s, score 1 s.
+- **Task 21, hard_S4_s16003: TIMEOUT at 6 h, MaxRSS 16.5 GB, CPU efficiency 8%.** Never left `reads`:
+  NanoSim normal ~11 min and tumour clone_normal done; in tumour clone_clone1, worker 6 of 16 stopped at 22:25
+  after 419 of ~5,300 reads (mid-record, no traceback), the other 15 finished at 22:26, and the parent waited
+  until the time limit. Not the cause: NanoSim's linear-genome retry loop (every clone piece is ≥ 2 Mb,
+  reads ~11 kb median) or `mutate_homo` (no `-k`). Cause not found. Proposed guard: run NanoSim under a
+  timeout (a few × the group's expected time) and retry once with seed + 1000, recorded in `groups.tsv`.
+- **check_reads (hard_S1): passes.** Depth / expectation 0.98 (tumour background), 0.95 (tumour ecDNA),
+  1.00 / 0.99 (normal); ecDNA ALT-fraction correlation 0.9988 (MAE 0.020). Junction reads 1,251 vs `#NOV`
+  466 (2.7×); one adjacency (`sim00009`, `#NOV` 78) has 0 junction reads in the check, and `sim00010` /
+  `sim00011` both 366: check whether the check's matching window double-counts.
+- **scale.json (hard_S1): still wrong.** Class 6, purity 0.34, γ 8.04 (class 2: purity 0.20, γ 13.57).
+  Cause 1 (a bug, found): `rck_inputs._segments` segments each chromosome's 1 Mb blocks with `min_size=3`
+  and not at all below 6 blocks; a 2 Mb sentinel gives 2 usable blocks, so a chromosome's p- and q-arm
+  sentinels merge into one segment (22 segments, one per chromosome). Splitting at footprint gaps (local
+  test, not in the code) gives 41 segments and the right class-2 solution (purity 0.79, γ 15.13), **but
+  class 6 still scores lower** (0.320 vs 0.340). Cause 2: the lattice fit is marginal anyway; the count
+  route's whole-genome fit on this case chose class 2 by 0.113 vs 0.118 vs 0.122. The sentinels have
+  subclonal arms (chr5, chr12 at 1.3–1.4 tumour copies under class 2) that a clonal lattice cannot fit.
+- **θ:** `scale.json` has none (no background extremities from the BAMs, "0 used"); `rck_bulk_e2e` estimated
+  7.74 (`subgraph_reference_median`), scaled by the wrong γ (8.04), so roughly half the true value.
+- **rck_bulk_e2e and rck_mc_e2e reach `ok`** (first runs). rck_bulk_e2e: 2 species where the truth has 1, residual
+  17.1, 12 tied alternatives; composite_h0 0.33 (0.997 on counts), graph segment FDR high (8 of 10 false), a
+  consequence of the wrong γ. rck_mc_e2e (truth clone profiles) equals rck_mc on counts (0.70).
+- **coral_e2e / ce_e2e (hard_S1):** 1 species, composite_h0 0.75 (0.96 on RCK bulk's graph); own graph exact
+  (breakpoints 1.0, novel-adjacency FNR / FDR 0 / 0).
+- `collect` failed on rck_mc_e2e's empty `aa_graph_metrics.tsv` (no AA graph); fixed in `bench_iw_e2e.py`.
 
 ## Decisions so far (with whom)
 

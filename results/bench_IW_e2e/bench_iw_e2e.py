@@ -490,7 +490,8 @@ def collect():
     for _, r in table.iterrows():
         case = next(c for c in cases() if c["name"] == r["name"])
         ev = os.path.join(score_folder(case, r["method"], r["method_variant"].split(":")[-1] if ":" in r["method_variant"] else ""), "aa_eval")
-        g = bi._read(os.path.join(ev, "aa_graph_metrics.tsv"))
+        gpath = os.path.join(ev, "aa_graph_metrics.tsv")
+        g = bi._read(gpath) if os.path.exists(gpath) and os.path.getsize(gpath) > 1 else None  # rck_mc: no AA graph, empty file
         rec = json.load(open(os.path.join(run_dir(case, r["method"]), "run.json"))) if os.path.exists(os.path.join(run_dir(case, r["method"]), "run.json")) else {}
         row = {"n_seeds": rec.get("n_seeds"), "n_amplicons": rec.get("n_amplicons")}
         if g is not None and len(g):

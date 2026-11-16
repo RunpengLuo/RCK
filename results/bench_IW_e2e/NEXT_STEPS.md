@@ -161,8 +161,9 @@ guard. Steps 1–2 below are done; step 3 (resize, submit) waits for Yubi.
 - **Optional short-read arm** (CE on AmpliconArchitect graphs; outline step 8): not started.
 - **Committed 2026-11-15 (not pushed):** RCK `e0e76fd` (evaluation.md audit), `6c4dc73` (this folder and
   the outline in `results/bench_IW/NEXT_STEPS.md`); amplicon-allele-analysis `420ddaf` (`simulations/e2e/`).
-  Left untracked: `bench_iw_e2e_{table,pooled,proportions}.tsv` here, from the pre-sentinel pilot runs
-  (since deleted); the next `collect` overwrites them.
+  **Committed 2026-11-16:** `d43ba70` (pilot checked, `collect` fix), `7b0477d` (bench_IW_allele; pause note
+  here), and `bench_iw_e2e_{table,pooled,proportions}.tsv` from the 2026-11-16 `collect` (hard_S1_s14001
+  only, with the wrong sentinel fit: not results; the next `collect` overwrites them).
 
 ## Where things are
 

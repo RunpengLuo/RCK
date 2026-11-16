@@ -1,0 +1,22 @@
+set	truth	inferred	truth_proportion	inferred_proportion	abs_err	jaccard_blind	case	method	method_variant
+strict	ecdna1	cycle1	1.0	0.859427155225814	0.1405728447741859	0.9999949925062857	hard_S1_s14001	coral_e2e	coral_e2e:walks_kept
+strict		cycle2		0.1405728447741859			hard_S1_s14001	coral_e2e	coral_e2e:walks_kept
+all	ecdna1	cycle1	1.0	0.859427155225814	0.1405728447741859	0.9999949925062857	hard_S1_s14001	coral_e2e	coral_e2e:walks_kept
+all		cycle2		0.1405728447741859			hard_S1_s14001	coral_e2e	coral_e2e:walks_kept
+strict	ecdna1	cycle1	1.0	1.0	0.0	0.9999949925062857	hard_S1_s14001	coral_e2e	coral_e2e:walks_dropped
+all	ecdna1	cycle1	1.0	1.0	0.0	0.9999949925062857	hard_S1_s14001	coral_e2e	coral_e2e:walks_dropped
+strict	ecdna1	cycle1	1.0	0.8594271552252761	0.1405728447747238	0.9999949925062857	hard_S1_s14001	ce_e2e	ce_e2e:walks_kept
+strict		cycle2		0.1405728447747239			hard_S1_s14001	ce_e2e	ce_e2e:walks_kept
+all	ecdna1	cycle1	1.0	0.8594271552252761	0.1405728447747238	0.9999949925062857	hard_S1_s14001	ce_e2e	ce_e2e:walks_kept
+all		cycle2		0.1405728447747239			hard_S1_s14001	ce_e2e	ce_e2e:walks_kept
+strict	ecdna1	cycle1	1.0	1.0	0.0	0.9999949925062857	hard_S1_s14001	ce_e2e	ce_e2e:walks_dropped
+all	ecdna1	cycle1	1.0	1.0	0.0	0.9999949925062857	hard_S1_s14001	ce_e2e	ce_e2e:walks_dropped
+strict	ecdna1	ec3	1.0	0.0657852305707836	0.9342147694292164	0.5501571254208788	hard_S1_s14001	rck_bulk_e2e	rck_bulk_e2e
+strict		ec1		0.653660109642051			hard_S1_s14001	rck_bulk_e2e	rck_bulk_e2e
+strict		ec2		0.2805546597871654			hard_S1_s14001	rck_bulk_e2e	rck_bulk_e2e
+all	ecdna1	ec3	1.0	0.0627692307692307	0.9372307692307692	0.5501571254208788	hard_S1_s14001	rck_bulk_e2e	rck_bulk_e2e
+all		ec1		0.6236923076923077			hard_S1_s14001	rck_bulk_e2e	rck_bulk_e2e
+all		ec2		0.2676923076923077			hard_S1_s14001	rck_bulk_e2e	rck_bulk_e2e
+all		ec4		0.0458461538461538			hard_S1_s14001	rck_bulk_e2e	rck_bulk_e2e
+strict	ecdna1	ec1	1.0	1.0	0.0	0.9999969954977532	hard_S1_s14001	rck_mc_e2e	rck_mc_e2e
+all	ecdna1	ec1	1.0	1.0	0.0	0.9999969954977532	hard_S1_s14001	rck_mc_e2e	rck_mc_e2e

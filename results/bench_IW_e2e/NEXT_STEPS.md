@@ -120,10 +120,10 @@ partial-genome design: amplicon-allele-analysis `simulations/e2e/README.md`.*
   `simulations/e2e/README.md`, "Open"); about 3–4 h and tens of GB per case. Yubi to decide when.
 - **Sniffles instead of the split-read clustering**, if Yubi wants a standard SV caller on RCK-ecDNA's side.
 - **Optional short-read arm** (CE on AmpliconArchitect graphs; outline step 8): not started.
-- **Nothing is committed.** New, uncommitted: RCK `results/bench_IW_e2e/` (this folder);
-  amplicon-allele-analysis `simulations/e2e/`. Also uncommitted from the same day: RCK
-  `docs/pipeline/evaluation.md` (audit) and `results/bench_IW/NEXT_STEPS.md` (the outline). Commit when
-  Yubi asks.
+- **Committed 2026-11-15 (not pushed):** RCK `e0e76fd` (evaluation.md audit), `6c4dc73` (this folder and
+  the outline in `results/bench_IW/NEXT_STEPS.md`); amplicon-allele-analysis `420ddaf` (`simulations/e2e/`).
+  Left untracked: `bench_iw_e2e_{table,pooled,proportions}.tsv` here, from the pre-sentinel pilot runs
+  (since deleted); the next `collect` overwrites them.
 
 ## Where things are
 

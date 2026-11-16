@@ -7,6 +7,8 @@ partial-genome design: amplicon-allele-analysis `simulations/e2e/README.md`.*
 
 ## Resume here
 
+**Paused by Yubi on 2026-11-16** ("since i am getting issues with end to end comparison of CoRAL and CE, i want to pause work on this for now"). Work moved to the allele-specific analyses, [`../bench_IW_allele/PLAN.md`](../bench_IW_allele/PLAN.md). Pick this up again from the blocked decisions below.
+
 **2026-11-16: pilot array checked; blocked on two decisions for Yubi** (details under "Pilot array 32318772",
 below). (a) The purity / ploidy fit is still wrong with sentinels (hard_S1: class 6, purity 0.34, γ 8.04),
 so the arrays are on hold, as agreed. (b) hard_S4's NanoSim hung (one worker), so the reads step needs a

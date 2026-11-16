@@ -13,6 +13,32 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Added (2026-11-16): allele-specific analyses of bench_IW_intpsi (`results/bench_IW_allele/`)
+
+Yubi asked which analyses would show that the allele-specific reconstructions are right, for them to be
+written down for later sessions, and for items 2 and 3 to be started. The plan, item 1's design (the
+allelic-twin benchmark) and the results are in
+[`results/bench_IW_allele/PLAN.md`](results/bench_IW_allele/PLAN.md). Nothing in `results/bench_IW/` or the
+bench_IW_intpsi runs is written; all runs were local, no Gurobi.
+- `rck/ecdna/allele_metrics.py` (new): allele-specific ecDNA copy numbers of any answer (t_A, t_B vs c_A,
+  c_B, plus unphased c_U), with recall / precision, error, within-tolerance share, major-allele accuracy and
+  ecDNA BAF error, absolute and within phase blocks; `mixed_bp_frac` (true ecDNA bases with both alleles
+  amplified). Post-hoc phasing of an AA cycles file by a per-segment rule (`baf_major` from the subgraph's
+  observed CN_A / CN_B, `truth_major` as the upper bound), with SNP-less segments taking the nearest called
+  neighbour's allele. Tests: `tests/ecdna/test_allele_metrics.py` (7).
+- `results/bench_IW_allele/allele_bench.py`: phases and scores every (case, method variant, phasing) of the
+  scored bench_IW_intpsi answers (336 tasks, `aa_eval` absolute and within blocks + `allele_metrics`);
+  `make_allele_figures.py`: figure 7 (phasing inside vs after the decomposition), figure 8 (true vs
+  inferred allele copy numbers per segment), Table 2.
+- Checked: the native RCK rows reproduce `bench_iw_intpsi_table.tsv` exactly, and rephasing leaves
+  every blind CoRAL / CE score unchanged.
+- Result: only 6 of 24 cases (nested) have ecDNA bases where both alleles are amplified. There, phasing
+  after the decomposition loses 15–20% of the ecDNA copies to the wrong allele even with the oracle rule on
+  RCK's own structures (allele copy-number recall 0.95 → 0.82, ecDNA BAF error 0.01 → 0.13); in the 18
+  single-allele cases post-hoc phasing equals RCK's own.
+- Fixed while building it: a column swap written as `t.loc[rows, [A, B]] = t.loc[rows, [B, A]].values`
+  zeroed both columns on a table read back from a TSV (pandas copy-on-write); now swapped from copies.
+
 ### Changed (2026-11-15): `docs/ecDNA.md` checked against the code; RCK's published notation
 
 Documentation only; no code changed. Every section was re-read against the code it describes.

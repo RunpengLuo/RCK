@@ -157,7 +157,7 @@ Sources (DOIs checked against Crossref on 2026-11-16; Aganezov 2020 also read in
 | 4 | ablation: RCK with the alleles collapsed (allele-blind graph) | idea | small array |
 | 5 | clone-level results of the multi-clone route (ψ per clone; Eq. 11 per clone), and estimated clone profiles | idea (bench_IW NEXT_STEPS item 2) | local scoring; profile perturbation runs |
 | 6 | when phasing fails: phased − blind scores vs SNP density / phase-block length | idea | local on existing runs; a SNP-density sweep needs seeds |
-| 7 | one worked example figure: truth vs each method, segments coloured by allele | idea | local |
+| 7 | one worked example figure: truth vs each method, segments coloured by allele | candidates drawn 2026-11-16 (`topology_plots/`, 8 cases simple → hard, rck-ecdna-plot + CoRAL's plot); Yubi to choose | local / one CPU Slurm job |
 | 8 | explain or fix the multi-clone weak spots (hard_S4_s16003; extra split cycles) | open (bench_IW NEXT_STEPS item 6) | local |
 
 Order: A (in RCK's own terms, on what exists), then B (completes RCK's simulation design on the
@@ -521,6 +521,7 @@ rephasing leaves every haplotype-blind CoRAL / CE score unchanged (difference 0 
 | RCK-style metrics (Part A: adjacency FNR / FDR / FPR, Eq. 11, generalized-IS violations) | `rck/ecdna/rck_eval.py`; tests `tests/ecdna/test_rck_eval.py` |
 | Part B inputs (CHIL, averaging, errors) | `rck/ecdna/rck_inputs.py` (tests `tests/ecdna/test_rck_inputs.py`); driver `make_rck_inputs.py` → `/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/<case>/<variant>/rck_input/`; counts `rck_inputs_summary.tsv` |
 | Part B runs (multi-clone on the degraded inputs) | `rck_partB.py`, `rck_partB.sbatch`, `submit_partB.sh` → `<case>/<variant>/rck_mc/`; logs `/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/logs/slurm/` (`submitted.txt` lists the arrays) |
+| topology figures for the presentation (item 7) | `make_topology_plots.py` → `topology_plots/<k>_<case>/` (README.md lists the cases; rck-ecdna-plot pages of RCK bulk, coloured by allele; CoRAL 3.1.1 cycles of RCK bulk and multi-clone, graph of RCK bulk, from species-only / trimmed plotting copies); ran as Slurm job 32365923 |
 | Part B scoring, Figure 10, Table 4 | `score_partB.py` (→ `<run>/score/partB.json`, `partB_table.tsv`), `make_partB_figures.py` (→ `figures/fig10_partB.*`, `figures/table4.*`) |
 | driver, items 2–3 (phase, score, collect) | `allele_bench.py` |
 | driver, Part A (score the item 2–3 answers and the truth, collect) | `rck_style.py` |

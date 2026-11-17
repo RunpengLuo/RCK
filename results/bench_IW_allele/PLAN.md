@@ -13,20 +13,46 @@ cases, and the bulk route kept only as the graph CoRAL / CE decompose.*
 
 ## Resume here
 
-1. **Items 2 and 3 are done** (below, "Results"): `allele_bench.py run` / `collect`, then
-   `make_allele_figures.py` (figures 7, 8 and Table 2 in `figures/`). All local, no Gurobi, no Slurm.
-   To redo from scratch: delete `/n/fs/yubi-iw/runs/bench_IW_intpsi_allele/` (finished tasks are skipped).
-2. **Part A is done** (below, "Part A results"; Figure 9, Table 3): `rck_style.py run` / `collect`, then
-   `make_rck_style_figures.py`. Local, no Gurobi; seconds. To redo: delete the `rck_style/` folders under
-   `/n/fs/yubi-iw/runs/bench_IW_intpsi_allele/` (finished tasks are skipped).
-3. **Part B steps 1–2 are done** ("Part B status"): the 72 degraded inputs are built and load with RCK's
-   readers (`make_rck_inputs.py`); per-clone Eq. 11, state agreement, input use and linear walks are in
-   `rck_eval` and scored on the existing runs. The 3-task pilot ran clean (array 32364762). **Next, waiting
-   for Yubi's go-ahead (Gurobi):** the 72-task array `./submit_partB.sh --submit`; then `rck_partB.py export`
-   and scoring (step 4, scoring script not written yet). Then item 1 (allelic siblings: simulator option first, local and cheap; method runs need
-   arrays and Yubi's go-ahead).
-4. Write-up: the paragraph under "Results" is ready to adapt; RESULTS.md-style captions are in the
-   figure scripts' docstrings.
+**State at hand-off (2026-11-16, ~21:20 EST).** Part B's 72-task array **32364902** (`0-71%1`, submitted
+21:10 EST with Yubi's go-ahead) was running: 11 of 72 runs done, all optimal (the 3 pilot runs, array
+32364762, included), about one task per minute, expected to finish ~22:20–22:30 EST. Everything else from the
+session is committed on `yubi_CNP_ionic` (RCK `ec5284a` … this commit; amplicon-allele-analysis unchanged),
+not pushed. Partial Part B tables / Figure 10 were deliberately not committed; step 4 below regenerates them.
+
+**Pick up here, in `results/bench_IW_allele/`** (`/n/fs/yubi-iw/conda/envs/gurobi-env` python):
+
+1. **Check the array.** `python rck_partB.py status` reads the run folders (no Slurm calls): every variant
+   should show `'done (optimal)': 24`. If needed, `sacct -j 32364902 --format=JobID,State,Elapsed,MaxRSS`
+   (≥ 60 s between `squeue` / `sacct` calls). Logs: `/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/logs/slurm/
+   iwa-partB_32364902_<task>.out` (task index → variant / case: `python rck_partB.py list`).
+2. **If any task failed or is `done (status ≠ 2)`:** read its log and `<case>/<variant>/rck_mc/run.json`,
+   diagnose before anything else (licence waits are retried 15 × 2 min inside a task; a Slurm TIMEOUT at
+   30 min means the MILP needed longer than the 600 s limit allows end to end). Resubmitting
+   (`./submit_partB.sh --submit`; finished runs are skipped) is a new Gurobi submission: **ask Yubi first**.
+3. **Export the answers (no Gurobi, seconds):** `python rck_partB.py export --jobs 8` → `<case>/<variant>/
+   rck_mc/score/answer/<case>_rck_mc_cycles.txt`.
+4. **Score, collect, plot (local, seconds):** `python score_partB.py run --jobs 16 && python score_partB.py
+   collect && python make_partB_figures.py` → `partB_table.tsv`, `figures/fig10_partB.{pdf,png}`,
+   `figures/table4.{md,tsv}`, `figures/figure_data/fig10_partB.tsv`. Finished rows are cached in
+   `<run>/score/partB.json` (the labelled reference's in `<case>/labelled/score/partB.json`); delete those to
+   rescore after a scorer change. 30 rows (24 labelled + 6 Part B) were already scored at hand-off.
+5. **Look before writing:** open Figure 10 (layout and values); check every run optimal (Table 4 "runs
+   (optimal)"); RCK's FPR over spurious inputs (Table 4 footer); and the pilot observation below.
+6. **Write "Part B results"** under "Part B status" (RCK's Fig. 2 reading: what CHIL alone, averaging, and
+   the full errors each cost against the labelled reference, single vs mixed cases; descriptive, n = 6
+   mixed), update this list, commit `partB_table.tsv`, Figure 10 and Table 4 with the text.
+7. **Then, waiting for Yubi:** item 1 (allelic siblings): the simulator option first (local, cheap; amp repo
+   `simulations/src/structures.py`), method runs need arrays and Yubi's go-ahead.
+
+**Observation to check across all cases (from the pilot case only):** on hard_S4_s16003 (the known weak
+multi-clone case, item 8) the label-free `chil` input gave near-exact clone copy numbers (Eq. 11 over clones,
+ecDNA bases, relative ~0 vs 0.25 labelled; allele CN recall 0.96 vs 0.71) but worse junction phasing
+(labelled adjacency FNR 0.37 vs 0.26, FDR 0.25 vs 0.00). The hard junction labels may push that case to a
+wrong copy-number solution. If it holds on other cases it belongs in the results (and in item 8).
+
+**Done before this point:** items 2 and 3 (figures 7, 8, Table 2), Part A (Figure 9, Table 3), Part B steps
+1–2 and the pilot (sections below). To redo any of them from scratch, see the Files table; every driver
+skips finished tasks.
 
 Rules for this line of work (Yubi's, carried over): keep everything in `results/bench_IW_allele/` and
 separate from `results/bench_IW/` and the bench_IW_intpsi runs (only read); new Slurm arrays and new Gurobi
@@ -124,7 +150,7 @@ Sources (DOIs checked against Crossref on 2026-11-16; Aganezov 2020 also read in
 | # | analysis | status | cost |
 |---|---|---|---|
 | A | **RCK-style evaluation of the existing runs**: haplotype-specific adjacency FNR / FDR / FPR, Eq. 11 CN distance, generalized-IS violations | **done 2026-11-16** | local, seconds |
-| B | **RCK's simulation inputs on the multi-clone route**: CHIL, 50 kb averaging, full errors; P = 0.9; all 24 cases | decided 2026-11-16; steps 1–2 local, array needs go-ahead | 72 `rck_mc` runs (array, `%1`) |
+| B | **RCK's simulation inputs on the multi-clone route**: CHIL, 50 kb averaging, full errors; P = 0.9; all 24 cases | steps 1–2 + pilot done; array 32364902 submitted 2026-11-16; scoring scripts ready; results pending ("Resume here") | 72 `rck_mc` runs (array, `%1`) |
 | 1 | **allelic-sibling cases**: a second species on the other allele of the same locus, own breakpoints | designed (below), not started | simulator option + seeds; method arrays |
 | 2 | **post-hoc phasing baseline**: CoRAL / CE (and RCK's own structures) phased afterwards by a rule | **done 2026-11-16** | local, minutes |
 | 3 | **allele-specific copy numbers** per segment: true vs inferred CN_A / CN_B, BAF error | **done 2026-11-16** | local, minutes |
@@ -364,7 +390,12 @@ variant; submitted 21:07 EST with no other array holding the licence, finished b
 (model solve 5.0 / 10.6 / 26.3 s; reference 4.9 s), far under the 600 s limit. Real-valued averaged copy
 numbers pass through the solve, the decomposition and `rck_partB.py export`. Every true junction used; the 2
 spurious ones in `chil_err` not used. Cycles in the decomposition: 3 / 7 / 8 (reference 7). Not scored yet.
-Next: the 72-task array (the 3 pilot runs are skipped as done), after Yubi's go-ahead.
+**Array submitted 2026-11-16 21:10 EST** with Yubi's go-ahead: 32364902, `0-71%1` (the 3 pilot runs skip as
+done). **Step 4 scripts written** (`score_partB.py`, `make_partB_figures.py`; committed `ba4a6f5`), run end
+to end on the 30 rows available at hand-off. Scoring frame: within phase blocks for every variant (CHIL
+flips A/B per fragment, so swapping per fragment to match the truth would forgive exactly the phasing errors
+CHIL tests; phase across blocks is unknowable from any data); Eq. 11 also in each variant's own fragments
+(RCK's definition as written). Remaining: "Resume here" steps 1–6.
 
 ### Steps
 1. **Local, seconds:** `make_rck_inputs.py` (copy-number transforms; adjacency transforms + DIAG rebuild,
@@ -489,7 +520,8 @@ rephasing leaves every haplotype-blind CoRAL / CE score unchanged (difference 0 
 | allele-specific scorer and post-hoc phasing | `rck/ecdna/allele_metrics.py` (docstring has the definitions); tests `tests/ecdna/test_allele_metrics.py` |
 | RCK-style metrics (Part A: adjacency FNR / FDR / FPR, Eq. 11, generalized-IS violations) | `rck/ecdna/rck_eval.py`; tests `tests/ecdna/test_rck_eval.py` |
 | Part B inputs (CHIL, averaging, errors) | `rck/ecdna/rck_inputs.py` (tests `tests/ecdna/test_rck_inputs.py`); driver `make_rck_inputs.py` → `/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/<case>/<variant>/rck_input/`; counts `rck_inputs_summary.tsv` |
-| Part B runs (multi-clone on the degraded inputs) | `rck_partB.py`, `rck_partB.sbatch`, `submit_partB.sh` → `<case>/<variant>/rck_mc/`; logs `/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/logs/slurm/` |
+| Part B runs (multi-clone on the degraded inputs) | `rck_partB.py`, `rck_partB.sbatch`, `submit_partB.sh` → `<case>/<variant>/rck_mc/`; logs `/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/logs/slurm/` (`submitted.txt` lists the arrays) |
+| Part B scoring, Figure 10, Table 4 | `score_partB.py` (→ `<run>/score/partB.json`, `partB_table.tsv`), `make_partB_figures.py` (→ `figures/fig10_partB.*`, `figures/table4.*`) |
 | driver, items 2–3 (phase, score, collect) | `allele_bench.py` |
 | driver, Part A (score the item 2–3 answers and the truth, collect) | `rck_style.py` |
 | figures 7, 8, Table 2 | `make_allele_figures.py` → `figures/` (`figure_data/` has the plotted numbers) |

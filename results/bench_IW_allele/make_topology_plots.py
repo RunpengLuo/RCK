@@ -7,8 +7,11 @@ alleles amplified), writes into topology_plots/<k>_<case>/:
   rck_bulk_<page>.png        rck-ecdna-plot (rck.ecdna.plot) of the RCK bulk run: per species, the walk
                              coloured by haplotype (A blue, B orange) with the matched truth species, the
                              junction arcs, allele-specific copy numbers (A up, B mirrored) and a ring view;
-                             plus the recovery matrix. rck-ecdna-plot needs a bulk run (flow_segments.tsv);
-                             it does not draw multi-clone runs.
+                             plus the recovery matrix.
+  rck_mc_<page>.png          rck-ecdna-plot of the multi-clone run (the method under test), same layout:
+                             walks coloured by haplotype, copy-number tracks in bulk terms (sum_k u_k x clone
+                             profile + normal), psi per clone in the title; chromosomal background paths left
+                             out (rck.ecdna.plot docstring).
   coral_rck_bulk_cycles.png  CoRAL 3.1.1 `coral plot` of the same answer (its AA cycles file): CoRAL's own
   coral_rck_mc_cycles.png    figure style, haplotype-blind (CoRAL ignores Haplotypes=); and of the multi-clone
                              route's answer (the method under test)
@@ -176,6 +179,14 @@ def plot_case(rank, case, description):
                        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=RCK_ROOT)
         for png in sorted(glob.glob(os.path.join(run, "plots", "*.png"))):
             shutil.copy(png, os.path.join(folder, "rck_bulk_" + os.path.basename(png).replace("union_", "")))
+        # rck-ecdna-plot on a copy of the multi-clone run (reads its input DIAG from summary.json, read only)
+        run = os.path.join(work, "rck_mc")
+        shutil.copytree(bi.run_dir(case, "rck_mc"), run, ignore=shutil.ignore_patterns("score"))
+        subprocess.run([sys.executable, "-m", "rck.ecdna.plot", "--outdir", run, "--cnplot-path", CNPLOT,
+                        "--rck-input", case["rck_input"]],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=RCK_ROOT)
+        for png in sorted(glob.glob(os.path.join(run, "plots", "*.png"))):
+            shutil.copy(png, os.path.join(folder, "rck_mc_" + os.path.basename(png).replace("union_", "")))
         # CoRAL: cycles of both RCK routes (no --graph: compact axis), graph of RCK bulk (trimmed copy)
         for method in ("rck_bulk", "rck_mc"):
             cycles, _ = answer_files(case, method)
@@ -204,8 +215,8 @@ def main():
         print(plot_case(rank, by_name[name], description), flush=True)
     with open(os.path.join(OUT, "README.md"), "w") as handle:
         handle.write("# Topology figures (make_topology_plots.py)\n\nSimple → hard; the script's docstring says what "
-                     "each file is. RCK bulk pages: haplotype A blue, B orange. CoRAL figures: CoRAL 3.1.1's own "
-                     "style, which does not show alleles.\n\n| folder | case |\n|---|---|\n")
+                     "each file is. rck_bulk_* / rck_mc_* pages (rck-ecdna-plot, RCK bulk and multi-clone routes): "
+                     "haplotype A blue, B orange. coral_* figures: CoRAL 3.1.1's own style, which does not show alleles.\n\n| folder | case |\n|---|---|\n")
         for rank, (name, description) in enumerate(CASES, start=1):
             handle.write("| `{k}_{n}` | {d} |\n".format(k=rank, n=name, d=description))
 

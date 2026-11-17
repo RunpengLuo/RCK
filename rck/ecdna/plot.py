@@ -21,6 +21,14 @@ its matched truth species) uses:
 and, beside them, the walk as a ring, step lengths to scale except that every step gets at least
 ``MIN_ARC_FRACTION`` of the circle. A linear species is drawn as an open ring.
 
+Multi-clone runs (``rck-ecdna --model multiclone``, no ``flow_segments.tsv``) are drawn the same way, with
+the copy-number tracks in bulk terms so they read like a bulk page (:func:`multiclone_segments`): per
+allele, observed = sum_k u_k x the input clone profile (the run's ``--rck-input`` ``rck.scnt.tsv``) +
+u_normal, inferred = the same over the run's inferred clone karyotypes (its ``rck.scnt.tsv``), and a
+species' shaded copies are its bulk weight sum_k u_k psi_k; the title gives psi per clone. The input
+profiles are in the observed phase frame, so each input fragment (phase block) is drawn in the
+orientation, A/B as given or swapped, that matches the inferred karyotype best: RCK's fragment flip.
+
 cnplot (amplicon-allele-analysis ``third_party/cnplot``) and matplotlib are optional: without
 them the figures are skipped with a warning. cnplot is looked up on the normal import path,
 then under ``--cnplot-path`` / ``$CNPLOT_PATH`` (the cnplot checkout or its ``src`` folder).
@@ -79,6 +87,7 @@ class PSpecies:
     call: str
     steps: List[PStep]
     joins: List[str]  # kind:aid:phasing after each step (end:<extremity>:<hap> closes a linear walk)
+    psi: Optional[Dict[str, float]] = None  # multi-clone runs: copies per cell of each clone (psi_<clone> columns)
 
 
 # ---------------------------------------------------------------------------------------- #
@@ -120,24 +129,30 @@ def _parse_step(token: str) -> PStep:
     return PStep(chrom, int(start), int(end), hap, strand)
 
 
-def read_species(decompositions_tsv: str, ranks: int = 1, include_low_weight: bool = False) -> List[PSpecies]:
-    """Top ordering of every species in the first ``ranks`` decompositions."""
+def read_species(decompositions_tsv: str, ranks: int = 1, include_low_weight: bool = False,
+                 include_chromosomal: bool = False) -> List[PSpecies]:
+    """Top ordering of every species in the first ``ranks`` decompositions; walks with status ``low_weight``
+    and (multi-clone runs) ``chromosomal`` are left out unless asked for."""
     frame = pd.read_csv(decompositions_tsv, sep="\t")
     if not len(frame):
         return []
     frame = frame[frame["decomposition_rank"] <= frame["decomposition_rank"].min() + ranks - 1]
     if "status" in frame and not include_low_weight:
         frame = frame[frame["status"] != "low_weight"]
+    if "status" in frame and not include_chromosomal:
+        frame = frame[frame["status"] != "chromosomal"]
     result = []
     for (rank, name), group in frame.groupby(["decomposition_rank", "species"], sort=True):
         row = group.sort_values("ordering_rank").iloc[0]
         weight_int = row.get("weight_int")
+        psi = {c[len("psi_"):]: float(row[c]) for c in frame.columns if c.startswith("psi_") and pd.notna(row[c])} or None
         result.append(PSpecies(rank=int(rank), name=str(name), topology=str(row.get("topology", "circular")),
                                status=str(row.get("status", "species")), weight=float(row["weight"]),
                                weight_int=None if weight_int is None or pd.isna(weight_int) else float(weight_int),
                                length_bp=int(row["length_bp"]), call=str(row.get("amplicon_call", "")),
                                steps=[_parse_step(t) for t in str(row["walk"]).split(",")],
-                               joins=str(row["joins"]).split(",") if "joins" in row and pd.notna(row["joins"]) else []))
+                               joins=str(row["joins"]).split(",") if "joins" in row and pd.notna(row["joins"]) else [],
+                               psi=psi))
     return result
 
 
@@ -480,6 +495,9 @@ def species_page(plt, cnplot, species: PSpecies, segments: pd.DataFrame, name: s
     draw_ring(fig.add_subplot(grid[:, 1]), species)
 
     weight = "{w:.2f} copies".format(w=species.weight) + ("" if species.weight_int is None else " (integer {i:g})".format(i=species.weight_int))
+    if species.psi:
+        weight = "{w:.2f} bulk copies (psi {p})".format(w=species.weight, p=", ".join(
+            "{c} {v:g}".format(c=c, v=v) for c, v in sorted(species.psi.items())))
     title = "{n}  |  decomposition {r} ({c})  |  {s}: {t}, {w}, {l:,} bp, {k} steps{f}".format(
         n=name, r=species.rank, c=species.call, s=species.name, t=species.topology, w=weight, l=species.length_bp, k=n,
         f=", low_weight" if species.status == "low_weight" else "")
@@ -550,8 +568,64 @@ def read_pieces(observations_json: str, segments: pd.DataFrame) -> Optional[pd.D
         {"obs_A": float, "obs_B": float, "obs_total": float})
 
 
+def _read_rck_segments(path: str) -> List[Tuple[str, int, int, Dict[str, Dict[str, float]]]]:
+    """[(chrom, start, end, {clone: {A, B}})] of an RCK segments file (``cn=`` in the extra column)."""
+    import ast
+    rows = []
+    with open(path) as handle:
+        handle.readline()
+        for line in handle:
+            f = line.rstrip("\n").split("\t")
+            extra = dict(part.split("=", 1) for part in (f[3] if len(f) > 3 else "").split(";") if "=" in part)
+            rows.append((f[0], int(f[1]), int(f[2]), ast.literal_eval(extra["cn"]) if "cn" in extra else {}))
+    return rows
+
+
+def multiclone_segments(outdir: str, rck_input: Optional[str] = None) -> pd.DataFrame:
+    """A multi-clone run's segments in ``flow_segments.tsv``'s columns, in bulk terms (module docstring):
+    ``obs_*`` from the input clone profiles, ``ecdna_*`` the inferred bulk copy number (``bg_*`` 0)."""
+    with open(os.path.join(outdir, "summary.json")) as handle:
+        summary = json.load(handle)
+    rck_input = rck_input or summary.get("rck_input")
+    props = {str(k): float(v) for k, v in (summary.get("clone_proportions") or {}).items()}
+    normal = max(0.0, 1.0 - sum(props.values()))
+    inferred = _read_rck_segments(os.path.join(outdir, "rck.scnt.tsv"))
+    given = {(c, a, b): cn for c, a, b, cn in _read_rck_segments(os.path.join(rck_input, "rck.scnt.tsv"))}
+    fragments = [(c, a, b) for c, a, b, _ in _read_rck_segments(os.path.join(rck_input, "rck.fragments.tsv"))] \
+        if os.path.exists(os.path.join(rck_input, "rck.fragments.tsv")) else []
+
+    def bulk(cn, hap):
+        return sum(props.get(k, 0.0) * float(v.get(hap, 0.0)) for k, v in cn.items()) + normal
+
+    def fragment_of(chrom, start):
+        return next((f for f in fragments if f[0] == chrom and f[1] <= start <= f[2]), (chrom, start, start))
+
+    # orientation of each input fragment: the one closer to the inferred karyotype (RCK's fragment flip)
+    cost: Dict[Tuple[str, int, int], List[float]] = {}
+    for chrom, a, b, cn in inferred:
+        obs = given.get((chrom, a, b), {})
+        frag = fragment_of(chrom, a)
+        keep_swap = cost.setdefault(frag, [0.0, 0.0])
+        for k, v in cn.items():
+            o = obs.get(k, {})
+            keep_swap[0] += (abs(v.get("A", 0) - o.get("A", 0)) + abs(v.get("B", 0) - o.get("B", 0))) * (b - a + 1)
+            keep_swap[1] += (abs(v.get("A", 0) - o.get("B", 0)) + abs(v.get("B", 0) - o.get("A", 0))) * (b - a + 1)
+    rows = []
+    for i, (chrom, a, b, cn) in enumerate(inferred, start=1):
+        obs = given.get((chrom, a, b))
+        swap = cost.get(fragment_of(chrom, a), [0.0, 0.0])
+        swap = swap[1] < swap[0]
+        obs_a = bulk(obs, "B" if swap else "A") if obs else np.nan
+        obs_b = bulk(obs, "A" if swap else "B") if obs else np.nan
+        inf_a, inf_b = bulk(cn, "A"), bulk(cn, "B")
+        rows.append({"sid": "s{i:04d}".format(i=i), "chrom": chrom, "start": a, "end": b, "length": b - a + 1,
+                     "obs_total": obs_a + obs_b, "obs_A": obs_a, "obs_B": obs_b, "obs_source": "clone_profiles",
+                     "ecdna_A": inf_a, "ecdna_B": inf_b, "bg_A": 0.0, "bg_B": 0.0, "inferred_total": inf_a + inf_b})
+    return pd.DataFrame(rows)
+
+
 def plot_run(outdir: str, ranks: int = 1, include_low_weight: bool = False, cnplot_path: Optional[str] = None,
-             png: bool = True) -> Dict[str, object]:
+             png: bool = True, rck_input: Optional[str] = None, include_chromosomal: bool = False) -> Dict[str, object]:
     """Write ``plots/<name>_ecdna.pdf`` (one page per species, then the recovery matrix when there is
     one) and, with ``png``, one PNG per page. Returns {"pdf": path, "png": [paths]}, or {} when
     plotting is unavailable."""
@@ -564,9 +638,14 @@ def plot_run(outdir: str, ranks: int = 1, include_low_weight: bool = False, cnpl
     if os.path.exists(summary_path):
         with open(summary_path) as handle:
             name = json.load(handle).get("graph", {}).get("name", name)
-    species = read_species(os.path.join(outdir, "decompositions.tsv"), ranks=ranks, include_low_weight=include_low_weight)
-    segments = pd.read_csv(os.path.join(outdir, "flow_segments.tsv"), sep="\t")
-    pieces = read_pieces(os.path.join(outdir, "observations.json"), segments)
+    species = read_species(os.path.join(outdir, "decompositions.tsv"), ranks=ranks, include_low_weight=include_low_weight,
+                           include_chromosomal=include_chromosomal)
+    if os.path.exists(os.path.join(outdir, "flow_segments.tsv")):
+        segments = pd.read_csv(os.path.join(outdir, "flow_segments.tsv"), sep="\t")
+        pieces = read_pieces(os.path.join(outdir, "observations.json"), segments)
+    else:  # a multi-clone run: bulk-terms copy numbers from the clone profiles (module docstring)
+        segments = multiclone_segments(outdir, rck_input)
+        pieces = None
     evaluation = _read_optional(os.path.join(outdir, "evaluation.tsv"))
     truth_path = os.path.join(outdir, "truth_cycles.tsv")
     truth = read_truth_steps(truth_path) if os.path.exists(truth_path) else {}
@@ -608,15 +687,19 @@ def plot_run(outdir: str, ranks: int = 1, include_low_weight: bool = False, cnpl
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="rck-ecdna-plot", description="Draw the species and recovery matrix of an rck-ecdna run.")
-    parser.add_argument("--outdir", required=True, help="rck-ecdna output folder (with decompositions.tsv and flow_segments.tsv)")
+    parser.add_argument("--outdir", required=True, help="rck-ecdna output folder (decompositions.tsv, and flow_segments.tsv for a bulk run "
+                                                        "or rck.scnt.tsv + summary.json for a multi-clone run)")
+    parser.add_argument("--rck-input", default=None, help="multi-clone run: its input DIAG folder (default: summary.json's rck_input)")
     parser.add_argument("--plot-ranks", type=int, default=1, help="Draw the species of this many top decompositions")
     parser.add_argument("--plot-low-weight", action="store_true", help="Also draw species flagged low_weight")
+    parser.add_argument("--plot-chromosomal", action="store_true",
+                        help="Multi-clone runs: also draw the chromosomal walks (background paths), not only ecDNA species")
     parser.add_argument("--cnplot-path", default=None, help="cnplot checkout (or its src/) when cnplot is not installed")
     parser.add_argument("--no-png", action="store_true", help="Write only the PDF")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     written = plot_run(args.outdir, ranks=args.plot_ranks, include_low_weight=args.plot_low_weight, cnplot_path=args.cnplot_path,
-                       png=not args.no_png)
+                       png=not args.no_png, rck_input=args.rck_input, include_chromosomal=args.plot_chromosomal)
     return 0 if written else 1
 
 

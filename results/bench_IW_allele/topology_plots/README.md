@@ -1,6 +1,6 @@
 # Topology figures (make_topology_plots.py)
 
-Simple → hard; the script's docstring says what each file is. RCK bulk pages: haplotype A blue, B orange. CoRAL figures: CoRAL 3.1.1's own style, which does not show alleles.
+Simple → hard; the script's docstring says what each file is. rck_bulk_* / rck_mc_* pages (rck-ecdna-plot, RCK bulk and multi-clone routes): haplotype A blue, B orange. coral_* figures: CoRAL 3.1.1's own style, which does not show alleles.
 
 | folder | case |
 |---|---|

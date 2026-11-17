@@ -167,17 +167,26 @@ def _block_of(chrom: str, start: int, end: int, blocks: Sequence[ev.Block]) -> O
     return None
 
 
+def swapped_blocks(table: pd.DataFrame, blocks: Sequence[ev.Block]) -> set:
+    """Names of the phase blocks where swapping the answer's A and B lowers the allele error
+    sum (|c_A - t_A| + |c_B - t_B|) x bp (the choice ``within_block`` applies)."""
+    if table.empty or not blocks:
+        return set()
+    names = pd.Series([_block_of(r.chrom, r.start, r.end, blocks) for r in table.itertuples()], index=table.index)
+    w = table["end"] - table["start"] + 1
+    keep = ((table["c_A"] - table["t_A"]).abs() + (table["c_B"] - table["t_B"]).abs()) * w
+    swap = ((table["c_B"] - table["t_A"]).abs() + (table["c_A"] - table["t_B"]).abs()) * w
+    gain = (keep - swap).groupby(names).sum()
+    return set(gain[gain > 1e-9].index)
+
+
 def within_block(table: pd.DataFrame, blocks: Sequence[ev.Block]) -> Tuple[pd.DataFrame, int]:
     """(table with c_A / c_B swapped in the blocks where that lowers the allele error, n swapped)."""
     if table.empty or not blocks:
         return table, 0
     t = table.copy()
     t["block"] = [_block_of(r.chrom, r.start, r.end, blocks) for r in t.itertuples()]
-    w = t["end"] - t["start"] + 1
-    keep = ((t["c_A"] - t["t_A"]).abs() + (t["c_B"] - t["t_B"]).abs()) * w
-    swap = ((t["c_B"] - t["t_A"]).abs() + (t["c_A"] - t["t_B"]).abs()) * w
-    gain = (keep - swap).groupby(t["block"]).sum()
-    swapped = set(gain[gain > 1e-9].index)
+    swapped = swapped_blocks(table, blocks)
     rows = t["block"].isin(swapped).to_numpy()
     c_a, c_b = t["c_A"].to_numpy(copy=True), t["c_B"].to_numpy(copy=True)
     # NB: not t.loc[rows, [A, B]] = t.loc[rows, [B, A]].values: on a table read from a TSV (pandas

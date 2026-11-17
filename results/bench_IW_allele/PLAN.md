@@ -13,8 +13,9 @@ blocked on the purity / ploidy fit.*
 1. **Items 2 and 3 are done** (below, "Results"): `allele_bench.py run` / `collect`, then
    `make_allele_figures.py` (figures 7, 8 and Table 2 in `figures/`). All local, no Gurobi, no Slurm.
    To redo from scratch: delete `/n/fs/yubi-iw/runs/bench_IW_intpsi_allele/` (finished tasks are skipped).
-2. **Part A (RCK-style evaluation of the existing runs)**: see "Part A" below for its status and results.
-   Local, no Gurobi.
+2. **Part A is done** (below, "Part A results"; Figure 9, Table 3): `rck_style.py run` / `collect`, then
+   `make_rck_style_figures.py`. Local, no Gurobi; seconds. To redo: delete the `rck_style/` folders under
+   `/n/fs/yubi-iw/runs/bench_IW_intpsi_allele/` (finished tasks are skipped).
 3. **Next, waiting for Yubi:** Part B (RCK-style perturbed and label-free inputs; RCK runs, so Gurobi and
    an array, which need Yubi's go-ahead), then item 1 (allelic siblings: simulator option first, local and
    cheap; method runs need arrays and Yubi's go-ahead).
@@ -113,7 +114,7 @@ Sources (DOIs checked against Crossref on 2026-11-16; Aganezov 2020 also read in
 
 | # | analysis | status | cost |
 |---|---|---|---|
-| A | **RCK-style evaluation of the existing runs**: haplotype-specific adjacency FNR / FDR / FPR, Eq. 11 CN distance, generalized-IS violations | see "Part A" | local, no Gurobi |
+| A | **RCK-style evaluation of the existing runs**: haplotype-specific adjacency FNR / FDR / FPR, Eq. 11 CN distance, generalized-IS violations | **done 2026-11-16** | local, seconds |
 | B | **RCK-style inputs**: label-free junctions (CHIL) and perturbed inputs, on the 6 mixed-allele cases | planned, needs go-ahead | 36 new RCK runs (array, `%1`) |
 | 1 | **allelic-sibling cases**: a second species on the other allele of the same locus, own breakpoints | designed (below), not started | simulator option + seeds; method arrays |
 | 2 | **post-hoc phasing baseline**: CoRAL / CE (and RCK's own structures) phased afterwards by a rule | **done 2026-11-16** | local, minutes |
@@ -170,11 +171,63 @@ and every method × post-hoc rule), plus the truth itself as a control, in RCK's
    Within phase blocks after the same swaps. The truth is scored too: violations there are properties of
    the simulator (e.g. two species breaking the same bin), to be reported, not hidden.
 
-Expected, and to be said plainly when writing up: post-hoc phasing gives each segment one haplotype for
-every cycle, so it creates IS violations only where neighbouring-step filling or a segment boundary
-splits differently; its cost shows up in items 2–3 (copies on the wrong allele), not in implausible
-junctions. RCK-ecDNA runs without `--enforce-is` (per-haplotype extremity exclusivity is off by default),
-so its own answers may show violations too. Either result is reported as it comes out.
+Within-block frame, two scoring details (both in `rck_eval`'s docstring, both with unit tests): the block
+swap is applied per junction end (the block holding that breakend), because a bulk-graph segment may cross
+a block boundary; and a join of reference-contiguous steps is dropped when it lies on a block boundary or
+carries one haplotype after the swaps. Without these, within-block scoring alone manufactured
+homologous-reciprocal "violations" in RCK's own answers (6 multi-clone and 1 bulk answer, all at block
+boundaries, 0 in the absolute frame). With them the within-block counts never exceed the absolute ones
+(+1 at most, 2 of 336 answers, the other direction).
+
+### Part A results (done 2026-11-16)
+
+`python rck_style.py run && python rck_style.py collect && python make_rck_style_figures.py`: 360 rows
+(336 answers + 24 truths), all ok, seconds with 16 processes; Figure 9 (`figures/fig9_rck_style.{pdf,png}`)
+and Table 3 (`figures/table3.md`, `table3.tsv`). Means over cases, within phase blocks (Eq. 11: median):
+
+| case group | method, phasing | labelled adj. FNR | labelled adj. FDR | Eq. 11 (rel.) | homologous | homologous-reciprocal |
+|---|---|---|---|---|---|---|
+| both alleles (6) | truth | – | – | – | 0.50 | 0.00 |
+| | RCK bulk, own | **0.00** | **0.01** | **0.068** | 0.50 | **0.00** |
+| | RCK bulk, oracle post-hoc | 0.35 | 0.48 | 0.340 | 0.00 | 4.00 |
+| | RCK multi-clone\*, own | 0.21 | 0.05 | 0.000 | 0.17 | **0.00** |
+| | RCK multi-clone\*, oracle post-hoc | 0.44 | 0.48 | 0.305 | 0.00 | 4.00 |
+| | CoRAL†, BAF post-hoc | 0.40 | 0.41 | 2.651 | 0.50 | 4.33 |
+| | CE†, BAF post-hoc | 0.41 | 0.40 | 1.587 | 0.00 | 3.50 |
+| single allele (18) | RCK bulk, own / oracle | 0.01 / 0.00 | 0.01 / 0.00 | 0.049 / 0.049 | 0 / 0 | 0 / 0 |
+| | CoRAL†, BAF post-hoc | 0.08 | 0.21 | 2.383 | 0.06 | 1.56 |
+
+Reading, in RCK's terms:
+- **Fig. 2A analogue.** Where both alleles are amplified, RCK-ecDNA bulk recovers every labelled novel
+  adjacency (FNR 0.00, FDR 0.01). Phasing the *same* structures after the fact, even with the oracle rule,
+  misses a third of them and a half of what it reports is wrongly labelled (0.35 / 0.48); CoRAL / CE land at
+  ~0.40 / 0.40. Unlabelled FNR is 0.00 for RCK bulk in both cases, so the whole difference is phasing.
+- **Fig. 2B analogue.** Eq. 11 distance rises five-fold when RCK bulk's structures are phased post hoc
+  (0.068 → 0.340); the multi-clone route is exact (0.000) with its own phasing and 0.305 post hoc. CoRAL /
+  CE are dominated by over-counted copies (median 1.6–2.7 in both groups, the same in single-allele cases),
+  so Eq. 11 separates them from RCK by structure, not by phasing.
+- **Fig. 4 analogue (the ReMixT argument, carried over).** Post-hoc phasing produces 3–4.5 homologous-
+  reciprocal violations per mixed case, on every method's structures: it gives two reference-contiguous
+  segments of one walk different alleles, i.e. an A-to-B join at a single position (e.g. hard_S2_s15003,
+  chr16:85,415,999 A → 85,416,000 B), which needs breaks at homologous positions on both chromosomes, what
+  RCK calls "highly unlikely". RCK-ecDNA has **0** in all 24 cases although it runs without `--enforce-is`;
+  its homologous violations (0.50) are exactly the truth's own (below). In single-allele cases the BAF rule
+  still produces 0.7–1.6 per case (wrong major-allele calls on noisy segments), the oracle rule none.
+- My earlier expectation (this plan, first version of Part A: "post-hoc phasing ... creates IS violations
+  only where neighbouring-step filling or a segment boundary splits differently") was wrong for mixed
+  cases: a segment boundary where the major allele changes is common there, and each one is a violation.
+- **Input-level FPR is not measurable on these inputs**: the union subgraphs hold 9 candidate junctions per
+  case (median) and **none is spurious** in any of the 24 (the subgraph keeps junctions with ≥ 20 reads;
+  the clone background's have ≤ 8). RCK's 10%-spurious condition needs Part B.
+- **The truth is not IS-clean in 10 of 24 cases**, a simulator property to state in the methods:
+  extremity reuse in 10 (within one species, from ecSimulator's duplication / translocation loop, e.g.
+  hard_S1, and between nested species that break at the same 1 kb bin boundary), homologous reuse in 2
+  (hard_S4_s16003: 2, s16005: 1; nested species on opposite alleles breaking at the same bin). RCK bulk's
+  own homologous violations are exactly these two cases. Item 1's `is_clean` seed check prevents this for
+  siblings; for bench_IW it is a known limit, not a scoring error.
+
+Limits: n = 6 mixed cases, descriptive only; the multi-clone route has the true clone profiles; CoRAL / CE
+are decomposition-only on RCK bulk's graph; Eq. 11 is bulk-level (per clone: item 5).
 
 ## Part B in detail: RCK-style inputs (needs Yubi's go-ahead; Gurobi)
 
@@ -193,7 +246,9 @@ subgraph under `/n/fs/yubi-iw/runs/bench_IW_intpsi_allele_partB/` by a seeded sc
 Part A metrics plus items 2–3. Open questions before building: how `rck_mc`'s DIAG input
 (`rck_input/`) carries junction labels (labelling groups, `--diag-labeling-groups block`) and how to strip
 them there; whether spurious adjacencies should be ecDNA-region-only (as here) or also reach the flanks.
-Part B does not need Part A's results to run, only its scorer to be scored.
+Part B does not need Part A's results to run, only its scorer to be scored (done). Part A showed
+the clean inputs have no spurious candidates at all, so the noisy variant is the only place RCK's FPR
+can be measured.
 
 ## Item 1 in detail: the allelic-sibling benchmark (design, not started)
 

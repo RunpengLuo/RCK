@@ -21,9 +21,9 @@ cases, and the bulk route kept only as the graph CoRAL / CE decompose.*
    `/n/fs/yubi-iw/runs/bench_IW_intpsi_allele/` (finished tasks are skipped).
 3. **Part B steps 1–2 are done** ("Part B status"): the 72 degraded inputs are built and load with RCK's
    readers (`make_rck_inputs.py`); per-clone Eq. 11, state agreement, input use and linear walks are in
-   `rck_eval` and scored on the existing runs. **Next, waiting for Yubi's go-ahead (Gurobi):** the 3-task
-   pilot `./submit_partB.sh --submit --pilot`, then the 72-task array `./submit_partB.sh --submit`; then
-   `rck_partB.py export` and scoring (step 4). Then item 1 (allelic siblings: simulator option first, local and cheap; method runs need
+   `rck_eval` and scored on the existing runs. The 3-task pilot ran clean (array 32364762). **Next, waiting
+   for Yubi's go-ahead (Gurobi):** the 72-task array `./submit_partB.sh --submit`; then `rck_partB.py export`
+   and scoring (step 4, scoring script not written yet). Then item 1 (allelic siblings: simulator option first, local and cheap; method runs need
    arrays and Yubi's go-ahead).
 4. Write-up: the paragraph under "Results" is ready to adapt; RESULTS.md-style captions are in the
    figure scripts' docstrings.
@@ -357,6 +357,14 @@ are kept.
 may need longer; each run records its solver status). Array `0-71%1`, 30 min, 2G. Proposed first: a pilot
 of 3 tasks (21, 45, 69 = hard_S4_s16003, the largest DIAG, in each variant) to check real-valued copy
 numbers and solve times before the full array.
+
+**Pilot done 2026-11-16** (array 32364762, tasks 21 / 45 / 69 = hard_S4_s16003, the largest DIAG, in each
+variant; submitted 21:07 EST with no other array holding the licence, finished by ~21:09): all three optimal
+(status 2, gap 0) on the first attempt, 8.8 s (`chil`), 16.6 s (`chil_avg`), 34.0 s (`chil_err`) per task
+(model solve 5.0 / 10.6 / 26.3 s; reference 4.9 s), far under the 600 s limit. Real-valued averaged copy
+numbers pass through the solve, the decomposition and `rck_partB.py export`. Every true junction used; the 2
+spurious ones in `chil_err` not used. Cycles in the decomposition: 3 / 7 / 8 (reference 7). Not scored yet.
+Next: the 72-task array (the 3 pilot runs are skipped as done), after Yubi's go-ahead.
 
 ### Steps
 1. **Local, seconds:** `make_rck_inputs.py` (copy-number transforms; adjacency transforms + DIAG rebuild,

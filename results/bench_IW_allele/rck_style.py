@@ -45,6 +45,15 @@ def candidate_graph(case):
     return path
 
 
+def decomposed_graph(case):
+    """The graph CoRAL / CE decompose (bench_iw.bulk_graph's path: RCK bulk's graph + path constraints); read
+    only, never built here."""
+    path = os.path.join(bi.OUT, case["name"], "graph_bulk", "{c}_amplicon1_graph.txt".format(c=case["name"]))
+    if not os.path.exists(path):
+        raise FileNotFoundError(path)
+    return path
+
+
 def out_dir(task):
     case, method, variant, phasing = task
     if method is None:
@@ -81,6 +90,16 @@ def run_one(task):
             graph = aaf.read_graph(candidate_graph(case))
             result = rck_eval.score(strict, truth, blocks, graph)
             result["cycles"] = cycles
+            # RCK's Fig. 3B (input adjacencies used, FPR over spurious ones) and, for the multi-clone route,
+            # Eq. 11 summed over clones with copy-number states (rck_eval docstring, 4-5)
+            if method == "rck_mc":
+                run = bi.run_dir(case, method)
+                result["input"] = rck_eval.multiclone_input_use(run, case["rck_input"], truth)
+                result["clone_cn"] = rck_eval.clone_cn_scores(
+                    os.path.join(run, "rck.scnt.tsv"), os.path.join(case["truth"], "truth", "rck", "rck.scnt.tsv"),
+                    os.path.join(case["rck_input"], "rck.fragments.tsv"), rck_eval.ecdna_regions(truth))
+            elif method in ("coral", "ce"):
+                result["input"] = rck_eval.graph_input_use(aaf.read_graph(decomposed_graph(case)), strict, truth)
         os.makedirs(folder, exist_ok=True)
         with open(os.path.join(folder, "rck_eval.json"), "w") as handle:
             json.dump(result, handle, indent=2)
@@ -120,6 +139,7 @@ def collect():
                 result = json.load(handle)
             result.pop("cycles", None)
             row["status"] = "ok"
+            result.get("clone_cn", {}).pop("clones", None)
             row.update(rck_eval.flatten(result))
         rows.append(row)
     frame = pd.DataFrame(rows)

@@ -19,9 +19,11 @@ cases, and the bulk route kept only as the graph CoRAL / CE decompose.*
 2. **Part A is done** (below, "Part A results"; Figure 9, Table 3): `rck_style.py run` / `collect`, then
    `make_rck_style_figures.py`. Local, no Gurobi; seconds. To redo: delete the `rck_style/` folders under
    `/n/fs/yubi-iw/runs/bench_IW_intpsi_allele/` (finished tasks are skipped).
-3. **Next: Part B** (decided 2026-11-16: multi-clone route, RCK's CHIL and error inputs, P = 0.9, no S′
-   cases; "Part B in detail"). Steps 1–2 are local and need no Gurobi; the 72-run array needs Yubi's
-   go-ahead. Then item 1 (allelic siblings: simulator option first, local and cheap; method runs need
+3. **Part B steps 1–2 are done** ("Part B status"): the 72 degraded inputs are built and load with RCK's
+   readers (`make_rck_inputs.py`); per-clone Eq. 11, state agreement, input use and linear walks are in
+   `rck_eval` and scored on the existing runs. **Next, waiting for Yubi's go-ahead (Gurobi):** the 3-task
+   pilot `./submit_partB.sh --submit --pilot`, then the 72-task array `./submit_partB.sh --submit`; then
+   `rck_partB.py export` and scoring (step 4). Then item 1 (allelic siblings: simulator option first, local and cheap; method runs need
    arrays and Yubi's go-ahead).
 4. Write-up: the paragraph under "Results" is ready to adapt; RESULTS.md-style captions are in the
    figure scripts' docstrings.
@@ -313,6 +315,49 @@ karyotypes; 24 cases instead of 100; RCK's simulation compared RCK with no other
 real data), so CoRAL / CE stand in for ReMixT's role on simulated data; long-read junction tags (`labelled`)
 have no RCK counterpart and are reported as our setting next to RCK's `chil`.
 
+### Part B status (2026-11-16)
+
+**Step 1 done** (`make_rck_inputs.py`, transforms in `rck/ecdna/rck_inputs.py`, 8 unit tests): 72 inputs under
+`/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/<case>/<variant>/rck_input/` (+ `transforms.json`), all loading
+with `multiclone.load_rck_input` (RCK's readers and alignment checks); counts in `rck_inputs_summary.tsv`.
+Built in 3 s locally. Choices made while building, each recorded in the module docstring:
+- **No subgraph rebuild.** Moved and spurious breakends are aligned by splitting the segment they fall in
+  (copy numbers copied), as RCK aligns segment extremities to novel adjacency positions (Methods "Deriving
+  extremities and novel adjacencies from data"). Simpler than the rebuild planned above and stays in RCK's
+  input format; the amp repo is untouched.
+- **50 kb windows only where they change something.** The DIAGs span up to ~150 Mb (median segment 1 Mb;
+  99.7% of the bases in segments > 50 kb), so cutting everything into 50 kb fragments would make the model
+  ~15x larger (hard_S4_s16003: 214 → 3,138 segments) with no change in copy numbers. A window overlapping two
+  or more segments is cut and averaged; one segment alone over whole windows stays one fragment. Result:
+  214 → 242 (`chil_avg`) / 267 (`chil_err`) segments for hard_S4_s16003; medians 71 → 92 / 111.
+- **Averaged copy numbers stay real-valued** (3 decimals; RCK's readers accept them; whether the solve and
+  the decomposition do is what the pilot checks).
+- **CHIL flips are per fragment** (= per segment in `chil`), one swap shared by both clones; RCK flips the
+  fragment-level profile the same way.
+- **Spurious adjacencies: max(1, round(10% of n))**, so 1–2 per case (3–19 true junctions); above 10% in the
+  smallest cases. Breakends at random positions of the DIAG's non-flank segments (mostly non-amplified
+  background, like RCK's random spurious adjacencies), ≥ 1 kb from other breakends, read support copied from
+  a true junction.
+- **Labels:** the multi-clone ILP takes junction haplotype information only through labelling groups
+  (`agt=L`, 1–9 per case, all dropped); the `junction_hap` / `hap_obs_end*` tags are dropped too. Molecule
+  groups (`agt=M`, 0–13 per case) are kept.
+
+**Step 2 done** (`rck_eval`: `clone_cn_scores`, `multiclone_input_use`, `graph_input_use`, `linear_walks`; 4 new
+unit tests; `rck_style.py` re-run, seconds). On the existing (`labelled`) multi-clone runs: per-clone Eq. 11
+is 0 in all 18 single-allele cases and 0.042 relative on the ecDNA bases in the 6 mixed ones (max 0.25),
+state agreement ≥ 0.875 on ecDNA bases (mean 0.98), every input junction used, no linear walks. That is
+RCK's clean-input finding ("karyotypes that use all input novel adjacencies and whose haplotype-labeled copy
+numbers agree with the simulated copy numbers") and Part B's baseline. CoRAL / CE use 77–96% of the
+junctions in the graph they decompose and leave 0.7 (CoRAL) / 1.2 (CE) linear walks per case when walks
+are kept.
+
+**Steps 3–4 prepared, not run:** `rck_partB.py` (list / run / status / export), `rck_partB.sbatch`,
+`submit_partB.sh` (prints the command unless `--submit`). Settings as bench_IW_intpsi's rck_mc
+(`bench_iw.rck_argv`) except 600 s per MILP instead of 60 (the reference solved in ≤ 5 s; label-free inputs
+may need longer; each run records its solver status). Array `0-71%1`, 30 min, 2G. Proposed first: a pilot
+of 3 tasks (21, 45, 69 = hard_S4_s16003, the largest DIAG, in each variant) to check real-valued copy
+numbers and solve times before the full array.
+
 ### Steps
 1. **Local, seconds:** `make_rck_inputs.py` (copy-number transforms; adjacency transforms + DIAG rebuild,
    as a Slurm job if over a few minutes) and its tests; check one case of each variant by hand.
@@ -435,7 +480,8 @@ rephasing leaves every haplotype-blind CoRAL / CE score unchanged (difference 0 
 |---|---|
 | allele-specific scorer and post-hoc phasing | `rck/ecdna/allele_metrics.py` (docstring has the definitions); tests `tests/ecdna/test_allele_metrics.py` |
 | RCK-style metrics (Part A: adjacency FNR / FDR / FPR, Eq. 11, generalized-IS violations) | `rck/ecdna/rck_eval.py`; tests `tests/ecdna/test_rck_eval.py` |
-| Part B inputs (CHIL, averaging, errors), planned | `make_rck_inputs.py` → `/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/<case>/<variant>/rck_input/` |
+| Part B inputs (CHIL, averaging, errors) | `rck/ecdna/rck_inputs.py` (tests `tests/ecdna/test_rck_inputs.py`); driver `make_rck_inputs.py` → `/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/<case>/<variant>/rck_input/`; counts `rck_inputs_summary.tsv` |
+| Part B runs (multi-clone on the degraded inputs) | `rck_partB.py`, `rck_partB.sbatch`, `submit_partB.sh` → `<case>/<variant>/rck_mc/`; logs `/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/logs/slurm/` |
 | driver, items 2–3 (phase, score, collect) | `allele_bench.py` |
 | driver, Part A (score the item 2–3 answers and the truth, collect) | `rck_style.py` |
 | figures 7, 8, Table 2 | `make_allele_figures.py` → `figures/` (`figure_data/` has the plotted numbers) |

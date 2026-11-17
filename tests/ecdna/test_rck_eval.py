@@ -113,5 +113,39 @@ class Scores(unittest.TestCase):
         self.assertAlmostEqual(got["cand_fpr"], 0.5)
 
 
+class CloneScores(unittest.TestCase):
+    def _write(self, path, rows):
+        with open(path, "w") as h:
+            h.write("chr\tstart\tend\textra\n")
+            for chrom, a, b, extra in rows:
+                h.write("{c}\t{a}\t{b}\t{e}\n".format(c=chrom, a=a, b=b, e=extra))
+
+    def test_eq11_over_clones_with_fragment_swap(self):
+        """Fragment 1 inferred with A/B swapped in both clones: distance 0 after the swap; fragment 2 off by 1 copy
+        in clone2 over 100 bp."""
+        import os, tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            t, i, f = (os.path.join(tmp, n) for n in ("t.tsv", "i.tsv", "f.tsv"))
+            self._write(t, [("chr1", 1, 200, "cn={'normal': {'A': 1, 'B': 1}, 'c1': {'A': 5, 'B': 1}, 'c2': {'A': 3, 'B': 0}}")])
+            self._write(i, [("chr1", 1, 100, "cn={'c1': {'A': 1, 'B': 5}, 'c2': {'A': 0, 'B': 3}}"),
+                            ("chr1", 101, 200, "cn={'c1': {'A': 5, 'B': 1}, 'c2': {'A': 4, 'B': 0}}")])
+            self._write(f, [("chr1", 1, 100, "x=1"), ("chr1", 101, 200, "x=2")])
+            got = re_.clone_cn_scores(i, t, f, regions=[("chr1", 101, 150)])
+        self.assertEqual(got["clones"], ["c1", "c2"])
+        self.assertAlmostEqual(got["dist_all"], 100.0)            # |4 - 3| x 100 bp
+        self.assertAlmostEqual(got["dist_rel_all"], 100.0 / (9 * 200))
+        self.assertAlmostEqual(got["dist_ecdna"], 50.0)            # only bases 101-150
+        self.assertAlmostEqual(got["state_agree_all"], 1.0)        # 4 and 3 are both "gain"
+
+    def test_input_use_and_fpr(self):
+        truth = [cyc("t", 5, (0, 99, "A"), (300, 399, "A"))]
+        inputs = [(("chr1", 99, "+"), ("chr1", 300, "-"), ".", "."), (("chr1", 399, "+"), ("chr1", 0, "-"), ".", "."),
+                  (("chr1", 5000, "+"), ("chr1", 9000, "-"), ".", "."), (("chr1", 7000, "+"), ("chr1", 8000, "+"), ".", ".")]
+        got = re_.input_use(inputs, [True, True, True, False], truth)
+        self.assertEqual((got["n_input"], got["n_used"], got["n_spurious"], got["n_spurious_used"]), (4, 3, 2, 1))
+        self.assertAlmostEqual(got["input_fpr"], 0.5)
+        self.assertAlmostEqual(got["input_used"], 0.75)
+
+
 if __name__ == "__main__":
     unittest.main()

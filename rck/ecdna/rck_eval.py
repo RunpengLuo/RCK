@@ -55,6 +55,24 @@ per breakend (``relabel_junctions``), since a bulk-graph segment may cross a blo
 
    Unphased steps (``.``) count for ``is_ext`` only.
 
+4. Per-clone copy numbers (multi-clone route; RCK Eq. 11 as defined, summed over clones, and Supplemental
+   Fig. S2B,C). The inferred per-clone karyotype (the run's ``rck.scnt.tsv``) against the truth's clone
+   karyotypes (``truth/rck/rck.scnt.tsv``), over the run's input fragments F:
+
+       clone_cn_dist = sum_{f in F} min over swapping A and B in f (every clone alike) of
+                       sum_i sum_{x in f} (|a_i(x) - t^A_i(x)| + |b_i(x) - t^B_i(x)|)      [copies x bp]
+
+   over the whole input region (``_all``) and over the truth's ecDNA bases (``_ecdna``), each also relative
+   to sum_i sum_x (t^A_i + t^B_i). ``clone_state_agree``: share of (clone, allele, bp) whose state (0 loss,
+   1 neutral, >= 2 gain) matches the truth's, after the same per-fragment swaps.
+
+5. Input use (RCK Fig. 3B) and linear walks. ``input_used``: input novel adjacencies the answer uses / all
+   input novel adjacencies (multi-clone: the run's ``novel_used``; CoRAL / CE: their answer's adjacencies
+   matched to the graph they decompose). ``input_fpr``: input adjacencies matching no truth adjacency
+   (``tol``) that are used / all such (RCK's FPR; defined only when the input holds spurious ones).
+   ``linear_walks``: the answer's strict walks that are not cycles (open paths), the ecDNA analogue of RCK's
+   novel telomeres (Supplemental Figs. S6, S9).
+
     python -m rck.ecdna.rck_eval --cycles ANSWER_cycles.txt --truth-dir SIM_RUN --outdir OUT
         [--graph GRAPH.txt] [--phase-blocks rck_input/rck.fragments.tsv]
         [--weights-from-multiclone RUN_DIR --clone-proportions DIAG/clone_proportions.tsv]
@@ -241,6 +259,141 @@ def is_violations(junctions: Sequence[Junction], tol: int = EXT_TOL) -> Dict[str
 
 
 # ---------------------------------------------------------------------------------------------- #
+# per-clone copy numbers (Eq. 11 over clones; copy-number states)
+# ---------------------------------------------------------------------------------------------- #
+
+def _intervals(path: str):
+    """[(chrom, start, end, {clone: {A, B}})] of an RCK segments file (1-based inclusive, cn= in extra)."""
+    from rck.ecdna.rck_inputs import read_segments
+    return [(s.chrom, s.start, s.end, s.extra.get("cn", {})) for s in read_segments(path)]
+
+
+def _state(x: float) -> int:
+    return 0 if x < 0.5 else 1 if x < 1.5 else 2
+
+
+def ecdna_regions(truth: Sequence[Cycle]) -> List[Tuple[str, int, int]]:
+    """The truth's ecDNA bases as merged 1-based inclusive intervals (walk positions are 0-based)."""
+    by: Dict[str, List[Tuple[int, int]]] = defaultdict(list)
+    for c in truth:
+        for x in c.steps:
+            by[x.chrom].append((min(x.start, x.end) + 1, max(x.start, x.end) + 1))
+    out = []
+    for chrom, ivs in by.items():
+        ivs.sort()
+        cur = list(ivs[0])
+        for a, b in ivs[1:]:
+            if a <= cur[1] + 1:
+                cur[1] = max(cur[1], b)
+            else:
+                out.append((chrom, cur[0], cur[1]))
+                cur = [a, b]
+        out.append((chrom, cur[0], cur[1]))
+    return out
+
+
+def clone_cn_scores(inferred_scnt: str, truth_scnt: str, fragments_path: str,
+                    regions: Sequence[Tuple[str, int, int]] = ()) -> Dict[str, object]:
+    """The module docstring's per-clone Eq. 11 and copy-number state agreement (4)."""
+    inferred, truth = _intervals(inferred_scnt), _intervals(truth_scnt)
+    frags = [(f[0], f[1], f[2]) for f in _intervals(fragments_path)]
+    clones = sorted({c for _, _, _, cn in inferred for c in cn})
+    by_chrom: Dict[str, list] = defaultdict(list)
+    for t in truth:
+        by_chrom[t[0]].append(t)
+
+    def frag_of(chrom, start, end):
+        mid = (start + end) // 2
+        return next((k for k, (c, a, b) in enumerate(frags) if c == chrom and a <= mid <= b), None)
+
+    def in_regions(chrom, a, b):
+        return sum(max(0, min(b, y) - max(a, x) + 1) for c, x, y in regions if c == chrom)
+
+    # pieces: (fragment, bp, bp on ecDNA, inferred cn, truth cn)
+    pieces = []
+    for chrom, a, b, cn in inferred:
+        for tc, ta, tb, tcn in by_chrom.get(chrom, []):
+            lo, hi = max(a, ta), min(b, tb)
+            if lo <= hi:
+                pieces.append((frag_of(chrom, a, b), hi - lo + 1, in_regions(chrom, lo, hi), cn, tcn))
+
+    def cost(cn, tcn, swap):
+        total = 0.0
+        for c in clones:
+            x, y = (cn[c]["B"], cn[c]["A"]) if swap else (cn[c]["A"], cn[c]["B"])
+            total += abs(x - tcn.get(c, {}).get("A", 0)) + abs(y - tcn.get(c, {}).get("B", 0))
+        return total
+
+    out: Dict[str, object] = {"clones": clones}
+    for scope, w_index in (("all", 1), ("ecdna", 2)):
+        keep: Dict[object, float] = defaultdict(float)
+        swap: Dict[object, float] = defaultdict(float)
+        mass = 0.0
+        for p in pieces:
+            w = p[w_index]
+            if not w:
+                continue
+            keep[p[0]] += cost(p[3], p[4], False) * w
+            swap[p[0]] += cost(p[3], p[4], True) * w
+            mass += sum(p[4].get(c, {}).get("A", 0) + p[4].get(c, {}).get("B", 0) for c in clones) * w
+        swapped = {f for f in keep if swap[f] < keep[f] - 1e-9}
+        dist = sum(min(keep[f], swap[f]) for f in keep)
+        agree = total = 0.0
+        for f, bp, bp_ec, cn, tcn in pieces:
+            w = bp if scope == "all" else bp_ec
+            if not w:
+                continue
+            for c in clones:
+                x, y = (cn[c]["B"], cn[c]["A"]) if f in swapped else (cn[c]["A"], cn[c]["B"])
+                for got, want in ((x, tcn.get(c, {}).get("A", 0)), (y, tcn.get(c, {}).get("B", 0))):
+                    agree += w * (_state(got) == _state(want))
+                    total += w
+        out.update({"dist_" + scope: dist, "mass_" + scope: mass, "dist_rel_" + scope: dist / mass if mass else None,
+                    "state_agree_" + scope: agree / total if total else None})
+    return out
+
+
+# ---------------------------------------------------------------------------------------------- #
+# input use and linear walks
+# ---------------------------------------------------------------------------------------------- #
+
+def rck_adjacencies(path: str) -> Dict[str, Junction]:
+    """aid -> unlabelled junction (walk frame: RCK coordinate - 1, as AA graph positions) of an rck.adj.tsv."""
+    from rck.ecdna.rck_inputs import read_adjacencies
+    return {a.aid: ((a.chrom1, a.coord1 - 1, a.strand1), (a.chrom2, a.coord2 - 1, a.strand2), ".", ".")
+            for a in read_adjacencies(path)}
+
+
+def input_use(inputs: Sequence[Junction], used: Sequence[bool], truth: Sequence[Cycle], tol: int = ADJ_TOL) -> Dict[str, object]:
+    """Share of the input novel adjacencies used, and RCK's FPR over the spurious ones (module docstring, 5)."""
+    t_js = novel_adjacencies(truth, phased=False)
+    spurious = [not any((d := aa_eval.junction_distance(j, k, False)) is not None and d <= tol for k in t_js) for j in inputs]
+    n_sp = sum(spurious)
+    n_sp_used = sum(1 for s, u in zip(spurious, used) if s and u)
+    return {"n_input": len(inputs), "n_used": int(sum(used)), "input_used": sum(used) / len(inputs) if inputs else None,
+            "n_spurious": n_sp, "n_spurious_used": n_sp_used, "input_fpr": n_sp_used / n_sp if n_sp else None}
+
+
+def multiclone_input_use(run_dir: str, rck_input: str, truth: Sequence[Cycle], tol: int = ADJ_TOL) -> Dict[str, object]:
+    with open(os.path.join(run_dir, "summary.json")) as handle:
+        used_aids = {u["aid"] for u in json.load(handle).get("novel_used", []) if not u.get("imputed")}
+    adj = rck_adjacencies(os.path.join(rck_input, "rck.adj.tsv"))
+    aids = sorted(adj)
+    return input_use([adj[a] for a in aids], [a in used_aids for a in aids], truth, tol)
+
+
+def graph_input_use(graph: aaf.AAGraph, strict: Sequence[Cycle], truth: Sequence[Cycle], tol: int = ADJ_TOL) -> Dict[str, object]:
+    inputs = aa_eval._distinct(aa_eval.graph_adjacencies(graph), False)
+    a_js = novel_adjacencies(strict, phased=False)
+    used = [any((d := aa_eval.junction_distance(j, k, False)) is not None and d <= tol for k in a_js) for j in inputs]
+    return input_use(inputs, used, truth, tol)
+
+
+def linear_walks(strict: Sequence[Cycle]) -> int:
+    return sum(1 for c in strict if not c.circular)
+
+
+# ---------------------------------------------------------------------------------------------- #
 # one answer
 # ---------------------------------------------------------------------------------------------- #
 
@@ -272,6 +425,7 @@ def score(strict: Sequence[Cycle], truth: Sequence[Cycle], blocks: Optional[Sequ
     }
     if graph is not None:
         out["candidates"] = candidate_fpr(truth, strict, graph, tol)
+    out["linear_walks"] = linear_walks(strict)
     return out
 
 

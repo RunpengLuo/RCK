@@ -960,7 +960,7 @@ The weighted misfit replaces CoRAL’s covered-fraction term and its 90% constra
 | | CoRAL 3.1.1 | `rck-ecdna` |
 |---|---|---|
 | graph | decomposes the copy numbers on AA’s breakpoint graph, with total copy number per edge | decomposes a haplotype-resolved flow, so each species comes out with a haplotype on every segment and adjacency. decomposes the fitted integer flow rather than raw copy numbers because the flow MILP has already reconciled the observations, so the decomposition only has to split a balanced flow. Only edges with positive ecDNA flow are in the model |
-| weights $w$ | continuous, in $[0,\texttt{max\_cn}]$ | integer in the MILP in $[0,W]$; fractional after the refit (§6) |
+| weights $w$ | continuous, in $`[0,\text{max\_cn}]`$ | integer in the MILP in $[0,W]$; fractional after the refit (§6) |
 | multiplicity $x$ | integer variable, 0–10; discordant edges also capped by their inferred multiplicity | integer, times species $k$ traverses edge $e$, 0–`--max-multiplicity` (3), written with $n_{\mathrm{bit}}$ binary bits. 3 was set at the start of setting up the simulations because it is the largest cap at 2 bits, the smallest that allows a segment traversed more than twice, like in a tandem duplication inside a circle. CoRAL allows 10 (which would need 4 bits here), but CoRAL solves on a smaller, unphased graph. |
 | fit | $\sum_i w_i x_{ei}\le \mathrm{CN}_e$ (quadratic); cover ≥ `p_total_weight` (0.9) of length-weighted copy number and ≥ `p_bp_cn` (0.9) of every discordant edge's | $\lvert\sum_k w_k x_{ke}-F_e\rvert$ penalised; exact linearisation |
 | objective | number of cycles minus the covered length-weighted fraction | residual + $\kappa_{\mathrm{sp}}$ × species + tie-break (+ reads) |

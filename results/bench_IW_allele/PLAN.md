@@ -20,9 +20,14 @@ detail"):
 1. PLAN.md rewritten for the decided design — **done** (RCK `4ac2990`).
 2. Simulator options + unit tests — **done** (amp `13ae73b`: 26 new tests, 116 / 116 simulator tests
    pass; defaults byte-identical, checked end to end on bench_IW_intpsi hard_S2_s15003).
-3. Dry run — **done** (amp `cdb9e0f`; "Item 1 dry run" below): 5 of 24 accepted. **Stopped here, waiting
-   for Yubi** on the `is_clean` strictness and the candidate budget for step 4.
-4. After the go-ahead: all 12 cases, both subgraphs per case, `check-shared`. **Stop again** before any Gurobi
+3. Dry run — **done** (amp `cdb9e0f`; "Item 1 dry run" below): 5 of 24 accepted under the first rules.
+   **Yubi's decisions (2026-11-20):** `is_clean` counts cross-species violations only; per scenario 2 `clean`
+   (fully IS-clean truth) + 2 `reuse` (extremity reuse inside one species: harder outer walks) cases; `mixed`
+   needs each relation on ≥ 20% of the shared bases (amp `331f133`; 11 of the 24 dry-run seeds pass). Gurobi
+   is allowed for the later steps; the WLS academic licence still has **2 sessions** (`%1` per array).
+4. **Running:** CPU job **32461273** (`simulations/bench_IW_allelic.sbatch`, submitted 2026-11-20 with
+   Yubi's go-ahead; log `simulations/logs/iw-allelic_32461273.out`): all 12 cases, both subgraphs per case,
+   `check-shared --reference` bench_IW_intpsi hard_S2_s15003. Then **stop again** before any Gurobi
    work: propose a 2-case local `rck_mc` pilot, then arrays (`rck_mc`, `rck_bulk`, CoRAL / CE on `rck_bulk`'s
    graph), each `%1`, with sizes and commands; nothing submitted without the go-ahead.
 5. Scoring (`allele_bench.py`, `rck_style.py`, species matrix extended to the set; phased species matching;
@@ -536,7 +541,7 @@ local, 1.5 min wall, ~2 GB and ~105 s per simulation): the first 8 seeds of each
   `topology_plots/item1_dryrun/{sib_opp_mirror_s17004, sib_opp_shared_s18002, sib_mixed_mirror_s19006}/`
   (`truth_topology.png`: both species, haplotype-coloured, ψ per clone; `coral_truth_*_cycles.png`).
 
-**Open for Yubi:**
+**Decided 2026-11-20** (the options as put to Yubi, kept for the record; the answers are in "Resume here"):
 1. `is_clean` as specified (truth `is_*` all 0) accepts ~20% (mixed ~12%): 4 accepted per scenario needs
    ~16–32 candidates, and it drops outer species whose own rearrangement reuses an extremity (a selection
    toward simpler outer walks than hard_S2's). Alternative: count only cross-species violations

@@ -38,14 +38,16 @@ detail"):
    **32462473** (60 min/task), both `aftercorr` on 32462470. Logs `/n/fs/yubi-iw/runs/bench_IW_allelic/logs/
    slurm/iwa-<method>_<job>_<task>.out`; runs `/n/fs/yubi-iw/runs/bench_IW_allelic/methods/<case>/<method>/`.
    Expected: rck_mc minutes; the rest a few hours in all (bench_IW_intpsi: ~1–2 h per baseline array).
-6. **Pick up here next session** (gurobi-env python, in this folder):
+6. **Pick up here next session** (gurobi-env python, in this folder; the step-by-step how-to, including failure
+   handling and what the tables hold, is [`NEXT_STEPS.md`](NEXT_STEPS.md)):
    - `python allelic_bench.py status` (reads run folders, no Slurm calls): every run `done`. Only if needed,
      `sacct -j 32462470,32462471,32462472,32462473 --format=JobID,State,Elapsed,MaxRSS` (≥ 60 s between
      `squeue` / `sacct` calls). A coral / ce task left `DependencyNeverSatisfied` means its case's rck_bulk task
      failed: read that log first. Failed tasks: diagnose from the log and `<run>/run.json` before resubmitting
      (`./submit_allelic.sh --submit` skips finished runs; a resubmission is a new Gurobi array: ask Yubi).
    - Check the 4 licence holders did not exhaust the licence retries (15 × 2 min) when CoRAL / CE joined.
-   - Then scoring: `python allelic_bench.py score --jobs 8 && python allelic_bench.py collect`, and step 7.
+   - Then scoring: `python allelic_bench.py score --jobs 8 && python allelic_bench.py collect && python
+     sibling_relation.py` (the per-base sibling-vs-outer check, written 2026-11-20), and step 7.
 7. Scoring for item 1 ("Scoring" under "Item 1 in detail"): `allele_bench.py`, `rck_style.py`, species matrix
    extended to the set; phased species matching; per-clone ψ; `sib_opp_mirror` vs `sib_opp_shared`; clean vs
    reuse. Check the sibling-vs-outer relation per base directly (as the pilot did), not only through

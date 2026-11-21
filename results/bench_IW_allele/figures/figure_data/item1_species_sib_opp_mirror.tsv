@@ -1,0 +1,25 @@
+scenario	case	stratum	method	variant	haplotype_aware	truth	role	truth_len_bp	paired	j_seg	j_adj	shares
+sib_opp_mirror	sib_opp_mirror_s17003	reuse	rck_mc		True	ecdna1	outer	3565000	ec1	0.999998316970547	1.0	ec1=1.0000; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17003	reuse	rck_mc		True	ecdna2	sibling	1501000	ec2	0.999998001332445	1.0	ec2=1.0000; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17004	clean	rck_mc		True	ecdna1	outer	2270000	ec2	0.9999982378854626	1.0	ec2=1.0000; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17004	clean	rck_mc		True	ecdna2	sibling	680000	ec1	0.9999911764705882	1.0	ec1=1.0000; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17006	reuse	rck_mc		True	ecdna1	outer	1592000	ec1	0.9999962311557788	0.625	ec1=0.5000; ec3=0.5000; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17006	reuse	rck_mc		True	ecdna2	sibling	1064000	ec2	0.9999915413533834	1.0	ec2=1.0000; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17008	clean	rck_mc		True	ecdna1	outer	1521000	ec2	0.9999980276134124	0.6	ec2=1.0000; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17008	clean	rck_mc		True	ecdna2	sibling	845000	ec1	0.9999976331360948	1.0	ec1=1.0000; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17003	reuse	coral	walks_kept	False	ecdna1	outer	3565000	cycle1	0.9999994389901824	1.0	cycle1=0.5869; cycle2=0.1403; cycle3=0.2727; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17003	reuse	coral	walks_kept	False	ecdna2	sibling	1501000	cycle2	0.9999986675549634	1.0	cycle1=0.3333; cycle2=0.3333; cycle3=0.3333
+sib_opp_mirror	sib_opp_mirror_s17004	clean	coral	walks_kept	False	ecdna1	outer	2270000	cycle3	0.933387280746119	0.5	cycle3=0.4501; cycle1=0.0999; cycle2=0.4501
+sib_opp_mirror	sib_opp_mirror_s17004	clean	coral	walks_kept	False	ecdna2	sibling	680000	cycle1	0.999995588235294	1.0	cycle3=0.3333; cycle1=0.3333; cycle2=0.3333
+sib_opp_mirror	sib_opp_mirror_s17006	reuse	coral	walks_kept	False	ecdna1	outer	1592000	cycle3	0.5039556846822948	0.5333333333333333	cycle3=0.8995; cycle1=0.0440; cycle2=0.0565; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17006	reuse	coral	walks_kept	False	ecdna2	sibling	1064000	cycle1	0.1210438743425273	0.0	cycle3=0.9389; cycle1=0.0611; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17008	clean	coral	walks_kept	False	ecdna1	outer	1521000	cycle1	0.4736841777442264	0.7142857142857143	cycle1=0.5000; cycle2=0.5000
+sib_opp_mirror	sib_opp_mirror_s17008	clean	coral	walks_kept	False	ecdna2	sibling	845000	cycle2	0.0321036507967746	0.2857142857142857	cycle1=0.5000; cycle2=0.5000
+sib_opp_mirror	sib_opp_mirror_s17003	reuse	ce	walks_kept	False	ecdna1	outer	3565000	cycle1	0.9999994389901824	1.0	cycle1=0.5869; cycle2=0.1403; cycle3=0.2727; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17003	reuse	ce	walks_kept	False	ecdna2	sibling	1501000	cycle2	0.9999986675549634	1.0	cycle1=0.3333; cycle2=0.3333; cycle3=0.3333
+sib_opp_mirror	sib_opp_mirror_s17004	clean	ce	walks_kept	False	ecdna1	outer	2270000	cycle1	0.933387280746119	0.5	cycle1=0.3961; cycle3=0.0749; cycle2=0.3961; cycle4=0.1329
+sib_opp_mirror	sib_opp_mirror_s17004	clean	ce	walks_kept	False	ecdna2	sibling	680000	cycle3	0.999995588235294	1.0	cycle1=0.2500; cycle3=0.2500; cycle2=0.2500; cycle4=0.2500
+sib_opp_mirror	sib_opp_mirror_s17006	reuse	ce	walks_kept	False	ecdna1	outer	1592000	cycle3	0.6953670522854958	0.3846153846153846	cycle3=0.6154; cycle10=0.0675; cycle1=0.0304; cycle2=0.0479; cycle4=0.1232; cycle9=0.1024; uncovered=0.0132
+sib_opp_mirror	sib_opp_mirror_s17006	reuse	ce	walks_kept	False	ecdna2	sibling	1064000	cycle10	0.244755458702324	0.3333333333333333	cycle3=0.5854; cycle10=0.0760; cycle1=0.0407; cycle4=0.0836; cycle9=0.0583; uncovered=0.1560
+sib_opp_mirror	sib_opp_mirror_s17008	clean	ce	walks_kept	False	ecdna1	outer	1521000	cycle1	0.4736841777442264	0.7142857142857143	cycle1=0.2870; cycle4=0.1587; cycle2=0.2870; cycle3=0.1389; cycle5=0.1284; uncovered=0.0000
+sib_opp_mirror	sib_opp_mirror_s17008	clean	ce	walks_kept	False	ecdna2	sibling	845000	cycle4	0.8721174004192872	0.25	cycle1=0.2500; cycle4=0.2462; cycle2=0.2500; cycle3=0.2500; cycle5=0.0038

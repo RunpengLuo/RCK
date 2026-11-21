@@ -1,0 +1,13 @@
+scenario	truth_role	clone	n	exact	mae	max_err	family_exact	family_mae
+sib_opp_mirror	outer	clone1	4	4	0.0	0.0	4	0.0
+sib_opp_mirror	outer	clone2	4	2	4.0	14.0	4	0.0
+sib_opp_mirror	sibling	clone1	4	4	0.0	0.0	4	0.0
+sib_opp_mirror	sibling	clone2	4	4	0.0	0.0	4	0.0
+sib_opp_shared	outer	clone1	4	4	0.0	0.0	4	0.0
+sib_opp_shared	outer	clone2	4	3	2.75	11.0	4	0.0
+sib_opp_shared	sibling	clone1	4	4	0.0	0.0	4	0.0
+sib_opp_shared	sibling	clone2	4	4	0.0	0.0	4	0.0
+sib_mixed_mirror	outer	clone1	4	4	0.0	0.0	4	0.0
+sib_mixed_mirror	outer	clone2	4	3	1.25	5.0	4	0.0
+sib_mixed_mirror	sibling	clone1	4	4	0.0	0.0	4	0.0
+sib_mixed_mirror	sibling	clone2	4	4	0.0	0.0	4	0.0

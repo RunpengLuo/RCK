@@ -29,9 +29,6 @@ import bench_iw as bi  # noqa: E402
 SET, FOLDER, PREFIX = "iw_allelic", "bench_IW_allelic", "bench_iw_allelic"
 bi.SETS[SET] = (FOLDER, PREFIX)
 bi.GRAPH_SOURCES[SET] = "bulk+paths"  # as iw_intpsi: CoRAL / CE decompose rck_bulk's graph (+ path constraints)
-bi.configure(SET)
-bi.TABLE, bi.POOLED, bi.PROPORTIONS = (os.path.join(HERE, PREFIX + suffix) for suffix in
-                                       ("_table.tsv", "_pooled.tsv", "_proportions.tsv"))
 
 
 def cases():
@@ -51,7 +48,72 @@ def cases():
              "rck_input": os.path.join(bi.SUBGRAPHS_CNP, r.run, "union", "rck_input")} for r in seeds.itertuples()]
 
 
-bi.cases = cases  # bench_iw's runs(), runs_of(), status(), score() and collect() look it up at call time
+
+# INPUT PATCH for CoRAL / CE (Yubi, 2026-11-21). CoRAL 3.1.1 and CycleExtractor cannot take a discordant
+# edge with 0 reads: infer_discordant_edge_multiplicities takes log2 of the read counts, every partition
+# score becomes NaN and it fails with IndexError before any solve. rck_bulk's graph can carry such edges
+# (imputed adjacencies it used, from copy-number change points with no split reads): 4 of them on
+# sib_opp_mirror_s17006, none on the other 11 cases. For a case with any, CoRAL / CE get a copy of the graph
+# with those read counts set to ZERO_READ_PSEUDOCOUNT (copy numbers and everything else unchanged), in
+# <case>/graph_bulk_reads1/; scoring uses the same copy. rck_bulk's own graph (graph_bulk/) is not changed,
+# and neither are CoRAL / CE. The patched edges are listed in the copy's .json ("zero_read_patch") and so in
+# each run.json (input_graph_counts.zero_read_patch).
+ZERO_READ_PSEUDOCOUNT = 1.0
+_bulk_inferred_graph = bi.inferred_graph
+
+
+def zero_read_discordant(graph):
+    """The discordant lines of an AA graph whose read count (4th column) is 0."""
+    with open(graph) as handle:
+        return [line.rstrip("\n") for line in handle
+                if line.startswith("discordant") and float(line.split("\t")[3]) == 0]
+
+
+def patched_graph(case):
+    """bench_iw's inferred graph, or for a case with zero-read discordant edges the patched copy (above)."""
+    import json
+    import shutil
+
+    graph = _bulk_inferred_graph(case)
+    zeros = zero_read_discordant(graph)
+    if not zeros:
+        return graph
+    folder = os.path.join(bi.OUT, case["name"], "graph_bulk_reads1")
+    out = os.path.join(folder, os.path.basename(graph))
+    if os.path.exists(out):
+        return out
+    os.makedirs(folder, exist_ok=True)
+    with open(graph) as src, open(out + ".tmp", "w") as dst:
+        for line in src:
+            fields = line.rstrip("\n").split("\t")
+            if fields[0] == "discordant" and float(fields[3]) == 0:
+                fields[3] = str(ZERO_READ_PSEUDOCOUNT)
+            dst.write("\t".join(fields) + "\n")
+    with open(os.path.splitext(graph)[0] + ".json") as handle:
+        meta = json.load(handle)
+    meta["counts"]["zero_read_patch"] = {
+        "note": "INPUT PATCH: CoRAL / CE cannot take 0-read discordant edges (log2(0) in "
+                "infer_discordant_edge_multiplicities); read count set to {p:g} on these edges, nothing else "
+                "changed".format(p=ZERO_READ_PSEUDOCOUNT),
+        "source_graph": graph, "pseudocount": ZERO_READ_PSEUDOCOUNT, "edges": zeros}
+    with open(os.path.splitext(out)[0] + ".json", "w") as handle:
+        json.dump(meta, handle, indent=2)
+    shutil.move(out + ".tmp", out)
+    return out
+
+
+def configure():
+    """Point bench_iw at iw_allelic: paths, tables, cases() and the zero-read-patched CoRAL / CE graph (bench_iw's
+    runs(), status(), run(), answer(), score() and collect() look these up at call time). Called on import, and
+    again by allele_bench.use_set, since importing allele_bench configures bench_iw for iw_intpsi."""
+    bi.configure(SET)
+    bi.TABLE, bi.POOLED, bi.PROPORTIONS = (os.path.join(HERE, PREFIX + suffix) for suffix in
+                                           ("_table.tsv", "_pooled.tsv", "_proportions.tsv"))
+    bi.cases = cases
+    bi.inferred_graph = patched_graph
+
+
+configure()
 
 
 def main():

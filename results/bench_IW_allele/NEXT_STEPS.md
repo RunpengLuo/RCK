@@ -4,12 +4,21 @@
 [`PLAN.md`](PLAN.md) ("Item 1 in detail", "Resume here"). This file is the how-to: check the arrays, fix
 failures, score, and what is still to be written.*
 
-**State 2026-11-21: §2–§4 done.** 46 / 48 runs ok. CoRAL and CE failed on sib_opp_mirror_s17006 (zero-read
-discordant edges in rck_bulk's graph crash CoRAL's multiplicity inference; diagnosis and options in PLAN.md
-"Item 1 arrays: status and first read"). That case waits for Yubi's decision and was not resubmitted.
-Scored and collected. `sibling_relation.tsv`: 0 bp disagreeing on all 12 `rck_mc` cases. §5 waits for
-Yubi's go-ahead. For §5 step 3, don't use the runs' own `evaluation_psi.tsv` pairing (absolute frame; it
-mispairs s17008 and s19006).
+**State 2026-11-21: §2–§5 done; item 1 finished.** All 48 runs ok. CoRAL and CE on sib_opp_mirror_s17006 were
+rerun (jobs 32468001 / 32468002) on an **input patch**: a copy of rck_bulk's graph with its 4 zero-read
+discordant edges set to 1 read, because CoRAL and CE cannot take in 0 reads (`allelic_bench.py`,
+`patched_graph`; PLAN.md "Item 1 arrays: status and first read"). §5 compared rck_mc, CoRAL and CE only
+(Yubi, 2026-11-21). Results in PLAN.md "Item 1 results"; tables in `item1/`; figures
+`figures/item1_species_*`. To redo §5 from the scored runs (local, seconds, no Gurobi):
+
+```bash
+python allele_bench.py --set iw_allelic run --jobs 16 && python allele_bench.py --set iw_allelic collect
+python rck_style.py --set iw_allelic run --jobs 16 && python rck_style.py --set iw_allelic collect
+python item1_results.py && python make_item1_figures.py
+```
+
+Use the within-block pairing (`item1_results.py`), not the runs' own `evaluation_psi.tsv` (absolute frame; it
+mispairs s17008 and s19006). The text below is the original how-to for §1–§5.
 
 Everything below runs from this folder with the gurobi-env python, and nothing in it uses Gurobi unless it
 says so:
@@ -126,6 +135,9 @@ Not done yet; worth asking Claude to do once the runs are scored ("resume item 1
 | `allelic_bench.py` | bench_iw pointed at set `iw_allelic`: `list`, `run`, `status`, `score`, `collect` |
 | `allelic_method.sbatch`, `submit_allelic.sh` | the arrays (one method per array, `%1`) |
 | `sibling_relation.py` | the per-base sibling-vs-outer relation check |
+| `item1_results.py` | §5 tables (`item1/`): by scenario / stratum, mirror vs shared, ψ per clone, haplotype-matched proportions, post-hoc and Part A summaries (rck_mc, CoRAL, CE) |
+| `make_item1_figures.py` | species-coverage figure per scenario (`figures/item1_species_*`) |
+| `allele_bench.py --set iw_allelic`, `rck_style.py --set iw_allelic` | post-hoc phasing and Part A metrics on the item 1 set (`*_allelic.tsv`) |
 | `make_topology_plots.py --truth RUN_DIR ...` | truth figures of simulator runs |
 | amp `simulations/configs/bench_IW_allelic/` | configs, `seeds.tsv` (accepted cases, `ext_stratum`), `dryrun.tsv` |
 | amp `simulations/subgraphs/bench_IW_allelic{,_cnp}/` | the bulk and multi-clone subgraphs of the 12 cases |

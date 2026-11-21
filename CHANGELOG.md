@@ -13,6 +13,24 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Added (2026-11-21): item 1 (allelic siblings) scored; input patch for CoRAL / CE on one case
+
+In `results/bench_IW_allele/` (results in its `PLAN.md`, "Item 1 results"). Compares rck_mc with CoRAL and CE
+only. All local, no Gurobi, except the 2-task rerun below.
+- **Input patch (Yubi's decision):** CoRAL 3.1.1 and CycleExtractor cannot take a discordant edge with 0 reads
+  (`log2(0)` in `infer_discordant_edge_multiplicities`, then `IndexError`). rck_bulk's graph for
+  sib_opp_mirror_s17006 has 4 (imputed adjacencies it used). `allelic_bench.py` now gives CoRAL / CE, for any case
+  with such edges, a copy of the graph with those read counts set to 1 (`graph_bulk_reads1/`, listed in its
+  `.json` and in `run.json`); nothing else in the graph, and neither tool, is changed. Rerun as jobs
+  32468001 / 32468002.
+- `allele_bench.py` and `rck_style.py` take `--set iw_allelic` (default `iw_intpsi`, whose outputs are unchanged:
+  re-collected byte for byte). `allelic_bench.configure()` re-points bench_iw at the set.
+- `item1_results.py` (§5 tables in `item1/`) and `make_item1_figures.py` (species-coverage figure per scenario).
+- Result: rck_mc keeps every sibling on the right allele relative to its outer species (0 bp disagreeing, 12 of
+  12), ψ per clone exact for every species once split answers are summed; phasing CoRAL / CE (or rck_mc's own
+  structures) after the decomposition puts 21–27% of the ecDNA copies on the wrong allele in the
+  opposite-allele scenarios.
+
 ### Added (2026-11-16): allele-specific analyses of bench_IW_intpsi (`results/bench_IW_allele/`)
 
 Yubi asked which analyses would show that the allele-specific reconstructions are right, for them to be

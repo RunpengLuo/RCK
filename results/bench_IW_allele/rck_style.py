@@ -9,6 +9,7 @@ truth of each case is scored too (``truth`` rows: its violations, a property of 
 
     python rck_style.py run [--jobs 16]     # finished tasks are skipped
     python rck_style.py collect             # rck_style_table.tsv here
+    python rck_style.py --set iw_allelic run|collect   # item 1 cases -> rck_style_table_allelic.tsv
 
 Outputs: /n/fs/yubi-iw/runs/bench_IW_intpsi_allele/<case>/<method_variant>/<phasing>/rck_style/rck_eval.json
 and <case>/truth/rck_style/rck_eval.json. Local, no Gurobi; reads allele_bench.py's outputs only.
@@ -47,8 +48,12 @@ def candidate_graph(case):
 
 def decomposed_graph(case):
     """The graph CoRAL / CE decompose (bench_iw.bulk_graph's path: RCK bulk's graph + path constraints); read
-    only, never built here."""
-    path = os.path.join(bi.OUT, case["name"], "graph_bulk", "{c}_amplicon1_graph.txt".format(c=case["name"]))
+    only, never built here. iw_allelic: the zero-read-patched copy where allelic_bench.py made one."""
+    name = "{c}_amplicon1_graph.txt".format(c=case["name"])
+    patched = os.path.join(bi.OUT, case["name"], "graph_bulk_reads1", name)
+    if ab.SET == "iw_allelic" and os.path.exists(patched):
+        return patched
+    path = os.path.join(bi.OUT, case["name"], "graph_bulk", name)
     if not os.path.exists(path):
         raise FileNotFoundError(path)
     return path
@@ -154,10 +159,15 @@ def collect():
 def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = p.add_subparsers(dest="cmd", required=True)
+    p.add_argument("--set", choices=["iw_intpsi", "iw_allelic"], default="iw_intpsi")
     r = sub.add_parser("run")
     r.add_argument("--jobs", type=int, default=16)
     sub.add_parser("collect")
     a = p.parse_args()
+    global TABLE
+    ab.use_set(a.set)
+    if a.set == "iw_allelic":
+        TABLE = os.path.join(HERE, "rck_style_table_allelic.tsv")
     if a.cmd == "run":
         run(a.jobs)
     else:

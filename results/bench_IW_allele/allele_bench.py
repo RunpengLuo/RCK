@@ -14,6 +14,7 @@ For each case, method variant and phasing:
 
     python allele_bench.py run [--jobs 16]     # phase + score every (case, variant, phasing); finished ones skipped
     python allele_bench.py collect             # allele_table.tsv, allele_segments.tsv here
+    python allele_bench.py --set iw_allelic run|collect   # item 1 cases (use_set); rck_mc, CoRAL, CE only
 
 Outputs: /n/fs/yubi-iw/runs/bench_IW_intpsi_allele/<case>/<method_variant>/<phasing>/
   cycles.txt (+ alt<k>_cycles.txt), aa_eval/, aa_eval_block/, allele/ (allele_metrics.json, allele_segments.tsv)
@@ -40,6 +41,27 @@ SEGMENTS = os.path.join(HERE, "allele_segments.tsv")
 VARIANTS = [("rck_bulk", ""), ("rck_mc", ""), ("coral", "walks_kept"), ("coral", "walks_dropped"),
             ("ce", "walks_kept"), ("ce", "walks_dropped")]
 PHASINGS = ["native", "baf_major", "truth_major"]
+SET = "iw_intpsi"
+
+
+def use_set(name):
+    """Point this module at a case set: iw_intpsi (default, items 2-3 and Part A) or iw_allelic (item 1: the
+    allelic-sibling cases through allelic_bench.py, its outputs in /n/fs/yubi-iw/runs/bench_IW_allelic_allele/
+    and *_allelic.tsv here; rck_mc, CoRAL and CE only, as Yubi asked on 2026-11-21). Call before run/collect."""
+    global OUT, TABLE, SEGMENTS, VARIANTS, SET
+    if name == "iw_intpsi":
+        return
+    if name != "iw_allelic":
+        raise ValueError(name)
+    import allelic_bench
+
+    allelic_bench.configure()  # bench_iw -> iw_allelic (cases, zero-read-patched CoRAL / CE graph)
+
+    SET = name
+    OUT = os.environ.get("BENCH_IW_ALLELE_OUT", "/n/fs/yubi-iw/runs/bench_IW_allelic_allele")
+    TABLE = os.path.join(HERE, "allele_table_allelic.tsv")
+    SEGMENTS = os.path.join(HERE, "allele_segments_allelic.tsv")
+    VARIANTS = [v for v in VARIANTS if v[0] != "rck_bulk"]
 
 
 def answer_files(case, method, variant):
@@ -179,10 +201,12 @@ def collect():
 def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = p.add_subparsers(dest="cmd", required=True)
+    p.add_argument("--set", choices=["iw_intpsi", "iw_allelic"], default="iw_intpsi")
     r = sub.add_parser("run")
     r.add_argument("--jobs", type=int, default=16)
     sub.add_parser("collect")
     a = p.parse_args()
+    use_set(a.set)
     if a.cmd == "run":
         run(a.jobs)
     else:

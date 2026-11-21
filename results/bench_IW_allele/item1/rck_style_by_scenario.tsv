@@ -1,0 +1,37 @@
+scenario	method_variant	phasing	n	adj_phased_fnr	adj_phased_fdr	adj_blind_fnr	adj_blind_fdr	cn_dist_rel	is_is_ext	is_is_hom_same	is_is_hom	is_is_recip	input_input_fpr	clone_cn_dist_rel_ecdna
+sib_opp_mirror	truth	truth	4						0.75	0.0	0.0	0.0		
+sib_opp_mirror	rck_mc	baf_major	4	0.351	0.477	0.071	0.0	0.405	2.75	0.0	0.0	2.75		0.0
+sib_opp_mirror	rck_mc	native	4	0.099	0.028	0.071	0.0	0.012	0.75	0.0	0.0	0.0		0.0
+sib_opp_mirror	rck_mc	truth_major	4	0.333	0.451	0.071	0.0	0.402	3.25	0.0	0.0	2.5		0.0
+sib_opp_mirror	coral:walks_kept	baf_major	4	0.351	0.519	0.054	0.067	1.15	3.0	0.0	0.0	3.5	1.0	
+sib_opp_mirror	coral:walks_kept	truth_major	4	0.333	0.476	0.054	0.067	1.147	3.0	0.0	0.0	2.5	1.0	
+sib_opp_mirror	coral:walks_dropped	baf_major	4	0.351	0.5	0.054	0.067	0.475	2.75	0.0	0.0	2.75	1.0	
+sib_opp_mirror	coral:walks_dropped	truth_major	4	0.333	0.476	0.054	0.067	0.474	3.0	0.0	0.0	2.5	1.0	
+sib_opp_mirror	ce:walks_kept	baf_major	4	0.387	0.55	0.054	0.067	1.172	3.0	0.0	0.0	3.5	1.0	
+sib_opp_mirror	ce:walks_kept	truth_major	4	0.369	0.509	0.054	0.067	1.17	3.0	0.0	0.0	2.5	1.0	
+sib_opp_mirror	ce:walks_dropped	baf_major	4	0.387	0.53	0.089	0.077	1.147	2.75	0.0	0.0	3.25	1.0	
+sib_opp_mirror	ce:walks_dropped	truth_major	4	0.369	0.494	0.089	0.077	1.145	3.0	0.0	0.0	2.5	1.0	
+sib_opp_shared	truth	truth	4						1.25	0.0	0.0	0.0		
+sib_opp_shared	rck_mc	baf_major	4	0.366	0.566	0.125	0.0	0.539	3.5	0.0	0.0	5.25		0.0
+sib_opp_shared	rck_mc	native	4	0.146	0.021	0.125	0.0	0.0	0.25	0.0	0.0	0.0		0.0
+sib_opp_shared	rck_mc	truth_major	4	0.253	0.458	0.125	0.0	0.535	5.0	0.0	0.0	4.5		0.0
+sib_opp_shared	coral:walks_kept	baf_major	4	0.366	0.609	0.0	0.0	1.676	4.75	0.0	0.0	5.5		
+sib_opp_shared	coral:walks_kept	truth_major	4	0.232	0.49	0.0	0.0	1.673	6.0	0.0	0.0	4.5		
+sib_opp_shared	coral:walks_dropped	baf_major	4	0.366	0.597	0.0	0.0	0.455	4.5	0.0	0.0	5.0		
+sib_opp_shared	coral:walks_dropped	truth_major	4	0.232	0.49	0.0	0.0	0.451	6.0	0.0	0.0	4.5		
+sib_opp_shared	ce:walks_kept	baf_major	4	0.366	0.609	0.0	0.0	1.739	4.75	0.0	0.0	5.5		
+sib_opp_shared	ce:walks_kept	truth_major	4	0.232	0.49	0.0	0.0	1.736	6.0	0.0	0.0	4.5		
+sib_opp_shared	ce:walks_dropped	baf_major	4	0.366	0.609	0.0	0.0	1.727	4.75	0.0	0.0	5.5		
+sib_opp_shared	ce:walks_dropped	truth_major	4	0.232	0.49	0.0	0.0	1.723	6.0	0.0	0.0	4.5		
+sib_mixed_mirror	truth	truth	4						1.0	0.0	0.0	0.0		
+sib_mixed_mirror	rck_mc	baf_major	4	0.34	0.372	0.05	0.0	0.11	1.25	0.0	0.0	0.75		0.0
+sib_mixed_mirror	rck_mc	native	4	0.05	0.0	0.05	0.0	0.01	1.0	0.0	0.0	0.0		0.0
+sib_mixed_mirror	rck_mc	truth_major	4	0.288	0.308	0.05	0.0	0.106	1.5	0.0	0.0	0.5		0.0
+sib_mixed_mirror	coral:walks_kept	baf_major	4	0.322	0.243	0.194	0.0	0.383	1.75	0.0	0.0	1.25		
+sib_mixed_mirror	coral:walks_kept	truth_major	4	0.269	0.12	0.194	0.0	0.379	1.5	0.0	0.0	0.5		
+sib_mixed_mirror	coral:walks_dropped	baf_major	4	0.322	0.215	0.194	0.0	0.236	1.25	0.0	0.0	0.75		
+sib_mixed_mirror	coral:walks_dropped	truth_major	4	0.269	0.12	0.194	0.0	0.232	1.5	0.0	0.0	0.5		
+sib_mixed_mirror	ce:walks_kept	baf_major	4	0.29	0.399	0.0	0.0	0.552	2.0	0.0	0.0	1.75		
+sib_mixed_mirror	ce:walks_kept	truth_major	4	0.238	0.283	0.0	0.0	0.548	1.5	0.0	0.0	0.5		
+sib_mixed_mirror	ce:walks_dropped	baf_major	4	0.29	0.399	0.0	0.0	0.512	2.0	0.0	0.0	1.75		
+sib_mixed_mirror	ce:walks_dropped	truth_major	4	0.238	0.283	0.0	0.0	0.508	1.5	0.0	0.0	0.5		

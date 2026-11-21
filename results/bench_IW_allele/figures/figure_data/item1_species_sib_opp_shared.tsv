@@ -1,0 +1,25 @@
+scenario	case	stratum	method	variant	haplotype_aware	truth	role	truth_len_bp	paired	j_seg	j_adj	shares
+sib_opp_shared	sib_opp_shared_s18002	clean	rck_mc		True	ecdna1	outer	1409000	ec2	0.9999978708303762	0.6	ec2=0.5000; ec3=0.5000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18002	clean	rck_mc		True	ecdna2	sibling	439000	ec1	0.999995444191344	1.0	ec1=1.0000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18004	clean	rck_mc		True	ecdna1	outer	2178000	ec2	0.9999958677685952	1.0	ec2=1.0000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18004	clean	rck_mc		True	ecdna2	sibling	496000	ec1	0.9999899193548388	1.0	ec1=1.0000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18006	reuse	rck_mc		True	ecdna1	outer	1778000	ec2	0.9999971878515186	1.0	ec2=1.0000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18006	reuse	rck_mc		True	ecdna2	sibling	848000	ec1	0.999997641509434	1.0	ec1=1.0000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18007	reuse	rck_mc		True	ecdna1	outer	1640000	ec2	0.8597548780487805	0.2222222222222222	ec2=0.7896; ec3=0.0701; uncovered=0.1402
+sib_opp_shared	sib_opp_shared_s18007	reuse	rck_mc		True	ecdna2	sibling	893000	ec1	0.999996640537514	1.0	ec1=1.0000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18002	clean	coral	walks_kept	False	ecdna1	outer	1409000	cycle1	0.6160911518865796	0.7142857142857143	cycle1=1.0000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18002	clean	coral	walks_kept	False	ecdna2	sibling	439000				cycle1=1.0000
+sib_opp_shared	sib_opp_shared_s18004	clean	coral	walks_kept	False	ecdna1	outer	2178000	cycle1	0.6870653382940157	0.5833333333333334	cycle1=1.0000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18004	clean	coral	walks_kept	False	ecdna2	sibling	496000				cycle1=1.0000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18006	reuse	coral	walks_kept	False	ecdna1	outer	1778000	cycle1	0.6770750309311092	0.7142857142857143	cycle1=0.5000; cycle2=0.5000
+sib_opp_shared	sib_opp_shared_s18006	reuse	coral	walks_kept	False	ecdna2	sibling	848000	cycle2	0.0139862458137129	0.4	cycle1=0.5000; cycle2=0.5000
+sib_opp_shared	sib_opp_shared_s18007	reuse	coral	walks_kept	False	ecdna1	outer	1640000	cycle1	0.6474529391653685	0.75	cycle1=1.0000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18007	reuse	coral	walks_kept	False	ecdna2	sibling	893000				cycle1=1.0000
+sib_opp_shared	sib_opp_shared_s18002	clean	ce	walks_kept	False	ecdna1	outer	1409000	cycle1	0.6160911518865796	0.7142857142857143	cycle1=1.0000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18002	clean	ce	walks_kept	False	ecdna2	sibling	439000				cycle1=1.0000
+sib_opp_shared	sib_opp_shared_s18004	clean	ce	walks_kept	False	ecdna1	outer	2178000	cycle1	0.6870653382940157	0.5833333333333334	cycle1=0.8104; cycle2=0.1896; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18004	clean	ce	walks_kept	False	ecdna2	sibling	496000	cycle2	0.4999984878986529	1.0	cycle1=0.5000; cycle2=0.5000; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18006	reuse	ce	walks_kept	False	ecdna1	outer	1778000	cycle1	0.6770750309311092	0.7142857142857143	cycle1=0.3567; cycle3=0.2012; cycle2=0.3567; cycle4=0.0853; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18006	reuse	ce	walks_kept	False	ecdna2	sibling	848000	cycle3	0.5828191849456528	0.3333333333333333	cycle1=0.3107; cycle3=0.3107; cycle2=0.3107; cycle4=0.0678
+sib_opp_shared	sib_opp_shared_s18007	reuse	ce	walks_kept	False	ecdna1	outer	1640000	cycle1	0.6474529391653685	0.75	cycle1=0.7277; cycle2=0.2723; uncovered=0.0000
+sib_opp_shared	sib_opp_shared_s18007	reuse	ce	walks_kept	False	ecdna2	sibling	893000	cycle2	0.9999977603583426	1.0	cycle1=0.5000; cycle2=0.5000

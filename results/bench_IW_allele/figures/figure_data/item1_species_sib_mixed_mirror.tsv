@@ -1,0 +1,25 @@
+scenario	case	stratum	method	variant	haplotype_aware	truth	role	truth_len_bp	paired	j_seg	j_adj	shares
+sib_mixed_mirror	sib_mixed_mirror_s19002	reuse	rck_mc		True	ecdna1	outer	1022000	ec1	0.999995107632094	1.0	ec1=0.9129; ec2=0.0871; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19002	reuse	rck_mc		True	ecdna2	sibling	411000	ec2	0.9999878345498784	1.0	ec1=0.2165; ec2=0.7834; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19006	clean	rck_mc		True	ecdna1	outer	612000	ec1	0.9999934640522876	0.6666666666666666	ec1=0.9379; ec2=0.0621; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19006	clean	rck_mc		True	ecdna2	sibling	233000	ec2	0.9999828326180258	1.0	ec1=0.1631; ec2=0.8369; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19008	reuse	rck_mc		True	ecdna1	outer	1798000	ec2	0.9999972191323692	1.0	ec2=0.7925; ec1=0.2075; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19008	reuse	rck_mc		True	ecdna2	sibling	1612000	ec1	0.9999968982630272	1.0	ec2=0.2314; ec1=0.7686; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19012	clean	rck_mc		True	ecdna1	outer	961000	ec1	0.9999927159209158	1.0	ec1=0.8184; ec2=0.1816; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19012	clean	rck_mc		True	ecdna2	sibling	516000	ec2	0.9999941860465116	1.0	ec1=0.3382; ec2=0.6618; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19002	reuse	coral	walks_kept	False	ecdna1	outer	1022000	cycle1	0.9999970645792564	1.0	cycle1=0.8209; cycle2=0.1791; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19002	reuse	coral	walks_kept	False	ecdna2	sibling	411000	cycle2	0.999992700729927	1.0	cycle1=0.4453; cycle2=0.5547
+sib_mixed_mirror	sib_mixed_mirror_s19006	clean	coral	walks_kept	False	ecdna1	outer	612000	cycle1	0.9999950980392156	1.0	cycle1=1.0000; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19006	clean	coral	walks_kept	False	ecdna2	sibling	233000				cycle1=1.0000
+sib_mixed_mirror	sib_mixed_mirror_s19008	reuse	coral	walks_kept	False	ecdna1	outer	1798000	cycle2	0.9866490545050056	0.8333333333333334	cycle2=0.3938; cycle1=0.1991; cycle3=0.4071; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19008	reuse	coral	walks_kept	False	ecdna2	sibling	1612000	cycle1	0.9999968982630272	1.0	cycle2=0.2221; cycle1=0.3890; cycle3=0.3890
+sib_mixed_mirror	sib_mixed_mirror_s19012	clean	coral	walks_kept	False	ecdna1	outer	961000	cycle1	0.9999958376690948	1.0	cycle1=1.0000; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19012	clean	coral	walks_kept	False	ecdna2	sibling	516000				cycle1=1.0000
+sib_mixed_mirror	sib_mixed_mirror_s19002	reuse	ce	walks_kept	False	ecdna1	outer	1022000	cycle5	0.6202127185424706	0.5	cycle5=0.2312; cycle2=0.0640; cycle1=0.2478; cycle3=0.2478; cycle4=0.0732; cycle6=0.0576; cycle7=0.0783; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19002	reuse	ce	walks_kept	False	ecdna2	sibling	411000	cycle2	0.8905036496350365	0.8	cycle5=0.1957; cycle2=0.1592; cycle1=0.1957; cycle3=0.1957; cycle4=0.1592; cycle6=0.0551; cycle7=0.0393
+sib_mixed_mirror	sib_mixed_mirror_s19006	clean	ce	walks_kept	False	ecdna1	outer	612000	cycle1	0.9999950980392156	1.0	cycle1=0.8096; cycle2=0.1904; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19006	clean	ce	walks_kept	False	ecdna2	sibling	233000	cycle2	0.9999871244635192	1.0	cycle1=0.5000; cycle2=0.5000
+sib_mixed_mirror	sib_mixed_mirror_s19008	reuse	ce	walks_kept	False	ecdna1	outer	1798000	cycle2	0.9866490545050056	0.8333333333333334	cycle2=0.2600; cycle1=0.1272; cycle3=0.2734; cycle4=0.2316; cycle5=0.1079; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19008	reuse	ce	walks_kept	False	ecdna2	sibling	1612000	cycle1	0.9999968982630272	1.0	cycle2=0.1419; cycle1=0.3087; cycle3=0.3087; cycle4=0.1203; cycle5=0.1203
+sib_mixed_mirror	sib_mixed_mirror_s19012	clean	ce	walks_kept	False	ecdna1	outer	961000	cycle1	0.9999958376690948	1.0	cycle1=0.7315; cycle2=0.2685; uncovered=0.0000
+sib_mixed_mirror	sib_mixed_mirror_s19012	clean	ce	walks_kept	False	ecdna2	sibling	516000	cycle2	0.9999941860465116	1.0	cycle1=0.5000; cycle2=0.5000

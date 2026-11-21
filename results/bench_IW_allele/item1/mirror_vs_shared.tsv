@@ -1,0 +1,76 @@
+method_variant	metric	sib_opp_mirror	sib_opp_shared	mirror_minus_shared
+rck_mc	n_cycles	2.5	2.5	0.0
+rck_mc	n_strict	2.25	2.5	-0.25
+rck_mc	n_missed	0.0	0.0	0.0
+rck_mc	n_false	0.25	0.5	-0.25
+rck_mc	blind_exact_cycles	1.75	1.75	0.0
+rck_mc	blind_jseg_best_mean	1.0	0.982	0.018
+rck_mc	blind_jadj_best_mean	0.95	0.903	0.047
+rck_mc	species_detection_strict_blind_f1	0.725	0.7	0.025
+rck_mc	phased_exact_cycles	1.75	1.75	0.0
+rck_mc	phased_jseg_best_mean	1.0	0.982	0.018
+rck_mc	phased_jadj_best_mean	0.95	0.903	0.047
+rck_mc	species_detection_strict_phased_f1	0.725	0.7	0.025
+rck_mc	cn_recall	0.988	1.0	-0.012
+rck_mc	cn_precision	1.0	1.0	0.0
+rck_mc	proportion_tv	0.031	0.096	-0.065
+coral:walks_kept	n_cycles	4.25	2.0	2.25
+coral:walks_kept	n_strict	2.75	1.25	1.5
+coral:walks_kept	n_missed	0.0	0.75	-0.75
+coral:walks_kept	n_false	0.75	0.0	0.75
+coral:walks_kept	blind_exact_cycles	0.75	0.0	0.75
+coral:walks_kept	blind_jseg_best_mean	0.689	0.456	0.233
+coral:walks_kept	blind_jadj_best_mean	0.65	0.514	0.136
+coral:walks_kept	species_detection_strict_blind_f1	0.3	0.0	0.3
+coral:walks_kept	phased_exact_cycles			
+coral:walks_kept	phased_jseg_best_mean			
+coral:walks_kept	phased_jadj_best_mean			
+coral:walks_kept	species_detection_strict_phased_f1			
+coral:walks_kept	cn_recall	0.818	0.837	-0.019
+coral:walks_kept	cn_precision	0.698	0.788	-0.09
+coral:walks_kept	proportion_tv	0.414	0.534	-0.12
+coral:walks_dropped	n_cycles	3.0	1.25	1.75
+coral:walks_dropped	n_strict	2.25	1.0	1.25
+coral:walks_dropped	n_missed	0.25	1.0	-0.75
+coral:walks_dropped	n_false	0.5	0.0	0.5
+coral:walks_dropped	blind_exact_cycles	0.75	0.0	0.75
+coral:walks_dropped	blind_jseg_best_mean	0.689	0.456	0.233
+coral:walks_dropped	blind_jadj_best_mean	0.65	0.5	0.15
+coral:walks_dropped	species_detection_strict_blind_f1	0.325	0.0	0.325
+coral:walks_dropped	phased_exact_cycles			
+coral:walks_dropped	phased_jseg_best_mean			
+coral:walks_dropped	phased_jadj_best_mean			
+coral:walks_dropped	species_detection_strict_phased_f1			
+coral:walks_dropped	cn_recall	0.614	0.732	-0.118
+coral:walks_dropped	cn_precision	0.999	1.0	-0.001
+coral:walks_dropped	proportion_tv	0.45	0.617	-0.167
+ce:walks_kept	n_cycles	7.5	4.75	2.75
+ce:walks_kept	n_strict	4.5	2.25	2.25
+ce:walks_kept	n_missed	0.0	0.25	-0.25
+ce:walks_kept	n_false	2.5	0.5	2.0
+ce:walks_kept	blind_exact_cycles	0.75	0.25	0.5
+ce:walks_kept	blind_jseg_best_mean	0.815	0.613	0.202
+ce:walks_kept	blind_jadj_best_mean	0.75	0.693	0.057
+ce:walks_kept	species_detection_strict_blind_f1	0.283	0.125	0.158
+ce:walks_kept	phased_exact_cycles			
+ce:walks_kept	phased_jseg_best_mean			
+ce:walks_kept	phased_jadj_best_mean			
+ce:walks_kept	species_detection_strict_phased_f1			
+ce:walks_kept	cn_recall	0.896	0.898	-0.002
+ce:walks_kept	cn_precision	0.703	0.792	-0.089
+ce:walks_kept	proportion_tv	0.484	0.505	-0.021
+ce:walks_dropped	n_cycles	4.5	3.25	1.25
+ce:walks_dropped	n_strict	3.25	2.0	1.25
+ce:walks_dropped	n_missed	0.0	0.25	-0.25
+ce:walks_dropped	n_false	1.25	0.25	1.0
+ce:walks_dropped	blind_exact_cycles	0.75	0.25	0.5
+ce:walks_dropped	blind_jseg_best_mean	0.751	0.613	0.138
+ce:walks_dropped	blind_jadj_best_mean	0.734	0.693	0.041
+ce:walks_dropped	species_detection_strict_blind_f1	0.3	0.125	0.175
+ce:walks_dropped	phased_exact_cycles			
+ce:walks_dropped	phased_jseg_best_mean			
+ce:walks_dropped	phased_jadj_best_mean			
+ce:walks_dropped	species_detection_strict_phased_f1			
+ce:walks_dropped	cn_recall	0.85	0.897	-0.047
+ce:walks_dropped	cn_precision	0.704	0.792	-0.088
+ce:walks_dropped	proportion_tv	0.433	0.5	-0.067

@@ -50,14 +50,19 @@ detail"):
      sibling_relation.py` (the per-base sibling-vs-outer check, written 2026-11-20), and step 7.
    - **Done 2026-11-21** (details in "Item 1 arrays: status and first read" under "Item 1 in detail"): 46 of 48
      runs ok; CoRAL and CE both **failed on sib_opp_mirror_s17006** (a CoRAL bug on 4 zero-read discordant
-     edges in rck_bulk's graph; deterministic, not resubmitted, **waiting for Yubi's decision**). Scored and
-     collected (`bench_iw_allelic_table.tsv`, `_pooled.tsv`, `_proportions.tsv`, `sibling_relation.tsv`):
-     **`rck_mc` sibling-vs-outer relation: 0 bp disagreeing, `matched` True on all 12 cases.**
-     **Stopped before step 7 (NEXT_STEPS §5), waiting for Yubi's go-ahead.**
-7. Scoring for item 1 ("Scoring" under "Item 1 in detail"): `allele_bench.py`, `rck_style.py`, species matrix
-   extended to the set; phased species matching; per-clone ψ; `sib_opp_mirror` vs `sib_opp_shared`; clean vs
-   reuse. Check the sibling-vs-outer relation per base directly (as the pilot did), not only through
-   per-species block swaps. rck_bulk is not scored or reported (Yubi, 2026-11-20).
+     edges in rck_bulk's graph). Scored and collected (`bench_iw_allelic_table.tsv`, `_pooled.tsv`,
+     `_proportions.tsv`, `sibling_relation.tsv`): **`rck_mc` sibling-vs-outer relation: 0 bp disagreeing,
+     `matched` True on all 12 cases.**
+   - **s17006 rerun with an INPUT PATCH, 2026-11-21** (Yubi: "fix the input and rerun just those two runs"):
+     CoRAL / CE got a copy of the graph with the 4 zero-read discordant edges set to 1 read, because CoRAL and
+     CE cannot take in 0 reads; nothing else changed (details and caveat in "Item 1 arrays: status and first
+     read"). Jobs 32468001 / 32468002, both ok. All 48 runs done and scored.
+7. **Item 1 scoring: done 2026-11-21** ("Item 1 results" under "Item 1 in detail"). Compared rck_mc, CoRAL and
+   CE only (Yubi, 2026-11-21; rck_bulk not scored or reported). Tables by scenario and stratum, mirror vs
+   shared, ψ per clone, haplotype-matched proportions, post-hoc phasing and Part A metrics, species-coverage
+   figures per scenario. Scripts: `item1_results.py`, `make_item1_figures.py`, `allele_bench.py --set
+   iw_allelic`, `rck_style.py --set iw_allelic`. **Item 1 is finished unless Yubi asks for more**; open
+   questions for Yubi are at the end of "Item 1 results".
 
 **Part B: array finished, results not yet exported, scored or written (state checked 2026-11-20, nothing
 re-run).** `rck_partB.py status`: `chil` 24 / 24 optimal, `chil_avg` 24 / 24, `chil_err` 23 optimal + 1
@@ -584,7 +589,20 @@ CoRAL / CE decompose (as bench_IW_intpsi), and its own answers are not scored or
 `rck_bulk` 12 / 12 (graph builder only); CoRAL and CE 11 / 12 each. Licence retries at most 5 of 15; no
 baseline reached its MILP time limit (longest CoRAL 503 s against 1800 s).
 
-**Failed: CoRAL and CE on sib_opp_mirror_s17006 (reuse), both in seconds, before any solve.** Both crash in
+**INPUT PATCH (Yubi's decision, 2026-11-21): CoRAL and CE on sib_opp_mirror_s17006 were rerun on a patched
+copy of their input graph, because CoRAL and CE cannot take in a discordant edge with 0 reads.** The copy
+(`methods/sib_opp_mirror_s17006/graph_bulk_reads1/`) differs from rck_bulk's graph only in the read count of
+the 4 zero-read discordant edges, set to 1. Copy numbers and everything else are unchanged, and so are CoRAL and CE.
+`allelic_bench.py` (`patched_graph`, `ZERO_READ_PSEUDOCOUNT`) makes it for any case with such edges (only
+s17006); the patched edges are listed in the copy's `.json` and in each `run.json`
+(`input_graph_counts.zero_read_patch`), and scoring uses the same copy. Jobs 32468001 (CoRAL, 19 s) and
+32468002 (CE, 7.6 s), one task each, both ok on the first attempt. The failed runs are kept in
+`methods/sib_opp_mirror_s17006/failed_zero_reads_2026-11-20/`. **Caveat for the text:** those 4 edges are
+not in the truth (rck_bulk's spurious imputed adjacencies, CN 19–54), and CoRAL / CE use all 4 (input FPR 1.0,
+the only case with a spurious input), so on s17006 the baselines decompose a graph that is wrong before they
+start (blind J_seg 0.42 / 0.55, no exact species). The diagnosis of the original failure:
+
+**Failed (original arrays): CoRAL and CE on sib_opp_mirror_s17006 (reuse), both in seconds, before any solve.** Both crash in
 `infer_discordant_edge_multiplicities` (CE copies CoRAL's function; `IndexError: list index out of range`).
 rck_bulk's graph for this case (`graph_bulk/..._amplicon1_graph.txt`) has 4 discordant edges with CN 19–54 and
 **0 reads**: imputed adjacencies (from copy-number change points with no split reads, `imputed_ext_chr3_{4,8,10,11}`
@@ -617,6 +635,103 @@ exact, ψ per clone exact, proportion TV 0). The other 5:
   match in the absolute frame. On s17008 and s19006 they pair the truth outer with the inferred sibling
   (phase blocks oriented the other way), so their ψ errors (up to 53) are pairing errors. ψ per clone needs
   the within-block matching.
+
+### Item 1 results (2026-11-21): rck_mc vs CoRAL vs CE
+
+**Scope (Yubi, 2026-11-21): rck_mc, CoRAL and CE only.** rck_bulk is left out everywhere. All 12 cases for every
+method; CoRAL / CE on s17006 ran on the zero-read-patched graph (INPUT PATCH above). n = 4 per scenario,
+2 per stratum: **descriptive only, no significance claimed.** CoRAL / CE are haplotype-blind, so their
+species scores are blind; rck_mc's phased scores are within phase blocks and equal its blind ones here.
+Tables: `item1/` (`item1_results.py`); post-hoc phasing `allele_table_allelic.tsv` (`allele_bench.py --set
+iw_allelic`); Part A `rck_style_table_allelic.tsv` (`rck_style.py --set iw_allelic`); figures
+`figures/item1_species_<scenario>.{png,pdf}` (`make_item1_figures.py`).
+
+**1. By scenario** (`item1/table_by_scenario.tsv`; mean over 4 cases; CoRAL / CE with linear walks kept,
+walks dropped in the TSV):
+
+| scenario | method | exact species (of 2) | J_seg | J_adj | missed | false | ecDNA CN recall / precision | proportion TV |
+|---|---|---|---|---|---|---|---|---|
+| opp_mirror | rck_mc | 1.75 | 1.00 | 0.95 | 0 | 0.25 | 0.99 / 1.00 | 0.03 |
+| | CoRAL | 0.75 | 0.69 | 0.65 | 0 | 0.75 | 0.82 / 0.70 | 0.41 |
+| | CE | 0.75 | 0.82 | 0.75 | 0 | 2.5 | 0.90 / 0.70 | 0.48 |
+| opp_shared | rck_mc | 1.75 | 0.98 | 0.90 | 0 | 0.5 | 1.00 / 1.00 | 0.10 |
+| | CoRAL | 0 | 0.46 | 0.51 | 0.75 | 0 | 0.84 / 0.79 | 0.53 |
+| | CE | 0.25 | 0.61 | 0.69 | 0.25 | 0.5 | 0.90 / 0.79 | 0.51 |
+| mixed_mirror | rck_mc | 1.75 | 1.00 | 0.96 | 0 | 0 | 0.99 / 1.00 | 0.002 |
+| | CoRAL | 1.25 | 0.86 | 0.73 | 0.5 | 0.25 | 0.85 / 0.89 | 0.15 |
+| | CE | 1.25 | 0.94 | 0.92 | 0 | 2.0 | 0.98 / 0.77 | 0.28 |
+
+- rck_mc keeps the sibling on the right allele relative to the outer on every shared base of all 12 cases
+  (`sibling_relation.tsv`: 0 bp disagreeing) and never misses a species. Its imperfect cases are the outer
+  splits described above (4 around a balanced rearrangement, s18007 at a reused extremity).
+- CoRAL misses the sibling in 3 of 4 `sib_opp_shared` cases and 2 of 4 `sib_mixed_mirror` cases: one cycle
+  covers both species' bases (figures). CE reports more species than exist (up to 7 for 2 truth species in
+  s19002).
+- **By stratum** (`item1/table_by_stratum.tsv`, n = 2): no consistent clean vs reuse difference for rck_mc
+  (3 of its 4 balanced-rearrangement splits are in clean cases, s18007's split in a reuse case). CoRAL / CE are
+  better on `sib_mixed_mirror` reuse (J_seg 0.87–1.00) than on the `opp` scenarios' cases of either stratum;
+  with 2 cases per cell this is not interpreted further.
+
+**2. `sib_opp_mirror` vs `sib_opp_shared`** (`item1/mirror_vs_shared.tsv`). For rck_mc the two scenarios look
+the same: 1.75 exact species, 0 bp of wrong sibling-vs-outer relation, 0 missed, in both; proportion TV 0.03
+vs 0.10, the difference from s18007's split (TV 0.31) and s18002's (0.08). So rck_mc's allele separation does
+not depend on the clone-wise allele signal that mirroring puts in the true clone profiles. The baselines do
+worse without mirroring (CoRAL exact 0.75 → 0, J_seg 0.69 → 0.46, missed 0 → 0.75; CE exact 0.75 → 0.25,
+J_seg 0.82 → 0.61). They see only bulk copy numbers, so this reflects how the scenarios differ in bulk
+(e.g. relative copy numbers of the two species), not anything about alleles; not examined further.
+
+**3. ψ per clone (rck_mc)** (`item1/psi.tsv`, `psi_summary.tsv`; species paired within phase blocks, as the
+scorer does, not with the runs' absolute-frame `evaluation_psi.tsv`). 44 of 48 (species, clone) ψ values are
+exact on the one-to-one pair; the 4 others are the outer in clone 2 of the 4 balanced-rearrangement splits
+(errors 14, 2, 11, 5 copies), where the rest sits on the split-off species. Counting both parts of a split
+(the "family": inferred species with haplotype Jaccard ≥ 0.9 to the truth species, plus the pair), **all 48
+are exact**. Every sibling ψ is exact in both clones.
+
+**4. Proportions with species matched with haplotypes** (`item1/proportions_hap{,_summary}.tsv`; within phase
+blocks; CoRAL / CE phased post hoc). rck_mc: TV 0.031 / 0.096 / 0.002 (opp_mirror / opp_shared /
+mixed_mirror), the same as haplotype-blind matching, 2 of 2 species matched in every case. CoRAL / CE: TV
+0.45–0.64 / 0.50–0.62 / 0.12–0.28, 1.0–2.0 species matched. `baf_major` and the `truth_major` upper bound give
+identical proportions in every row.
+
+**5a. Post-hoc phasing comparison** (`item1/allele_by_scenario.tsv`; within phase blocks). ecDNA bases with both
+alleles amplified (`mixed_bp_frac`): 0.50 / 0.45 / 0.22.
+
+| scenario | answer | allele CN recall | allele CN precision | ecDNA BAF error |
+|---|---|---|---|---|
+| opp_mirror | rck_mc, own phasing | 0.99 | 1.00 | 0.003 |
+| | rck_mc structures, phased post hoc (baf_major / truth_major) | 0.79 | 0.80 | 0.16 |
+| | CoRAL / CE, phased post hoc | 0.57–0.74 | 0.61–0.95 | 0.16 |
+| opp_shared | rck_mc, own phasing | 1.00 | 1.00 | 0.000 |
+| | rck_mc structures, post hoc | 0.73 | 0.73 | 0.20 |
+| | CoRAL / CE, post hoc | 0.64–0.70 | 0.64–0.89 | 0.20 |
+| mixed_mirror | rck_mc, own phasing | 0.99 | 1.00 | 0.001 |
+| | rck_mc structures, post hoc | 0.94 | 0.95 | 0.05 |
+| | CoRAL / CE, post hoc | 0.77–0.94 | 0.73–1.00 | 0.05 |
+
+Phasing after the decomposition puts 21–27% of the ecDNA copies on the wrong allele in the `opp` scenarios even
+on rck_mc's own (correct) structures, and with the oracle rule (`truth_major` ≈ `baf_major`); 6% in
+`mixed_mirror`, where less of the ecDNA has both alleles. This is items 2–3's finding, now on cases built so the
+allele model is needed: one allele per segment cannot describe two species on opposite alleles of one locus.
+
+**5b. Part A metrics** (`item1/rck_style_by_scenario.tsv`; within phase blocks): labelled-adjacency FNR / FDR
+rck_mc own phasing 0.10 / 0.03, 0.15 / 0.02, 0.05 / 0.00; post hoc (rck_mc's structures or CoRAL / CE) FNR
+0.23–0.39, FDR 0.12–0.61. Eq. 11 relative allele CN distance: rck_mc 0.01 / 0.00 / 0.01; rck_mc post hoc 0.41 /
+0.54 / 0.11; CoRAL / CE 0.47–1.17 / 0.45–1.74 / 0.23–0.55. Generalized IS: reciprocal violations (`is_recip`)
+0 for rck_mc and the truth in every case, 0.5–5.5 per case after post-hoc phasing. rck_mc's `is_ext` matches
+the truth's (0.75 / 1.0) except in `opp_shared` (0.25 vs 1.25: s18007's split). Per-clone Eq. 11 over ecDNA
+bases is 0 for rck_mc (it is given the true clone profiles).
+
+**6. Figures** (`figures/item1_species_<scenario>.{png,pdf}`, data in `figures/figure_data/`): per scenario,
+each truth species as a bar coloured by the inferred species covering it (rck_mc haplotype-aware, CoRAL / CE
+blind), with J_seg / J_adj of the pair. They show the outer splits of rck_mc, CoRAL's single cycle over both
+siblings, and CE's many overlapping cycles. The colour list (Paul Tol "muted", as the existing species-matrix
+figures) was not run through the dataviz validator (no Node.js on ionic); every bar is also labelled.
+
+**Open questions for Yubi (nothing started):**
+- rck_mc's outer splits around balanced rearrangements (4 of 12 here, 3 of 24 in bench_IW_intpsi) are a
+  model behaviour: the rearranged form gets fewer copies than its junction reads support. Worth looking at in
+  the model, or report as is?
+- Which CoRAL / CE variant goes in the text: linear walks kept (shown above) or dropped (both in the TSVs)?
 
 ### Item 1 dry run (2026-11-20)
 

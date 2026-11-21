@@ -1,0 +1,16 @@
+scenario	method_variant	n	n_cycles	n_strict	n_missed	n_false	blind_exact_cycles	blind_jseg_best_mean	blind_jadj_best_mean	species_detection_strict_blind_f1	phased_exact_cycles	phased_jseg_best_mean	phased_jadj_best_mean	species_detection_strict_phased_f1	cn_recall	cn_precision	proportion_tv	sibling_matched	disagree_bp
+sib_opp_mirror	rck_mc	4	2.5	2.25	0.0	0.25	1.75	1.0	0.95	0.725	1.75	1.0	0.95	0.725	0.988	1.0	0.031	1.0	0.0
+sib_opp_mirror	coral:walks_kept	4	4.25	2.75	0.0	0.75	0.75	0.689	0.65	0.3					0.818	0.698	0.414		
+sib_opp_mirror	coral:walks_dropped	4	3.0	2.25	0.25	0.5	0.75	0.689	0.65	0.325					0.614	0.999	0.45		
+sib_opp_mirror	ce:walks_kept	4	7.5	4.5	0.0	2.5	0.75	0.815	0.75	0.283					0.896	0.703	0.484		
+sib_opp_mirror	ce:walks_dropped	4	4.5	3.25	0.0	1.25	0.75	0.751	0.734	0.3					0.85	0.704	0.433		
+sib_opp_shared	rck_mc	4	2.5	2.5	0.0	0.5	1.75	0.982	0.903	0.7	1.75	0.982	0.903	0.7	1.0	1.0	0.096	1.0	0.0
+sib_opp_shared	coral:walks_kept	4	2.0	1.25	0.75	0.0	0.0	0.456	0.514	0.0					0.837	0.788	0.534		
+sib_opp_shared	coral:walks_dropped	4	1.25	1.0	1.0	0.0	0.0	0.456	0.5	0.0					0.732	1.0	0.617		
+sib_opp_shared	ce:walks_kept	4	4.75	2.25	0.25	0.5	0.25	0.613	0.693	0.125					0.898	0.792	0.505		
+sib_opp_shared	ce:walks_dropped	4	3.25	2.0	0.25	0.25	0.25	0.613	0.693	0.125					0.897	0.792	0.5		
+sib_mixed_mirror	rck_mc	4	2.25	2.0	0.0	0.0	1.75	1.0	0.958	0.875	1.75	1.0	0.958	0.875	0.99	1.0	0.002	1.0	0.0
+sib_mixed_mirror	coral:walks_kept	4	2.5	1.75	0.5	0.25	1.25	0.863	0.729	0.683					0.854	0.888	0.149		
+sib_mixed_mirror	coral:walks_dropped	4	1.5	1.5	0.5	0.0	1.25	0.863	0.729	0.708					0.768	1.0	0.119		
+sib_mixed_mirror	ce:walks_kept	4	6.75	4.0	0.0	2.0	1.25	0.937	0.918	0.571					0.982	0.766	0.283		
+sib_mixed_mirror	ce:walks_dropped	4	4.0	3.0	0.0	1.0	1.25	0.937	0.918	0.6					0.977	0.777	0.235		

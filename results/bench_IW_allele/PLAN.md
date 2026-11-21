@@ -48,6 +48,12 @@ detail"):
    - Check the 4 licence holders did not exhaust the licence retries (15 × 2 min) when CoRAL / CE joined.
    - Then scoring: `python allelic_bench.py score --jobs 8 && python allelic_bench.py collect && python
      sibling_relation.py` (the per-base sibling-vs-outer check, written 2026-11-20), and step 7.
+   - **Done 2026-11-21** (details in "Item 1 arrays: status and first read" under "Item 1 in detail"): 46 of 48
+     runs ok; CoRAL and CE both **failed on sib_opp_mirror_s17006** (a CoRAL bug on 4 zero-read discordant
+     edges in rck_bulk's graph; deterministic, not resubmitted, **waiting for Yubi's decision**). Scored and
+     collected (`bench_iw_allelic_table.tsv`, `_pooled.tsv`, `_proportions.tsv`, `sibling_relation.tsv`):
+     **`rck_mc` sibling-vs-outer relation: 0 bp disagreeing, `matched` True on all 12 cases.**
+     **Stopped before step 7 (NEXT_STEPS §5), waiting for Yubi's go-ahead.**
 7. Scoring for item 1 ("Scoring" under "Item 1 in detail"): `allele_bench.py`, `rck_style.py`, species matrix
    extended to the set; phased species matching; per-clone ψ; `sib_opp_mirror` vs `sib_opp_shared`; clean vs
    reuse. Check the sibling-vs-outer relation per base directly (as the pilot did), not only through
@@ -571,6 +577,46 @@ CoRAL / CE decompose (as bench_IW_intpsi), and its own answers are not scored or
    15 min), CoRAL and CE (12 each, `%1`, 90 / 60 min, `aftercorr` on rck_bulk), sized from bench_IW_intpsi's
    arrays. Expected compute ~1–2 h per baseline array, minutes for rck_mc.
 3. Then `allelic_bench.py score`, `collect`, and the item 1 scoring above.
+
+### Item 1 arrays: status and first read (2026-11-21)
+
+**Arrays 32462470–32462473: 46 / 48 runs ok.** `rck_mc` 12 / 12 optimal (status 2, gap 0, ≤ 4.0 s per solve);
+`rck_bulk` 12 / 12 (graph builder only); CoRAL and CE 11 / 12 each. Licence retries at most 5 of 15; no
+baseline reached its MILP time limit (longest CoRAL 503 s against 1800 s).
+
+**Failed: CoRAL and CE on sib_opp_mirror_s17006 (reuse), both in seconds, before any solve.** Both crash in
+`infer_discordant_edge_multiplicities` (CE copies CoRAL's function; `IndexError: list index out of range`).
+rck_bulk's graph for this case (`graph_bulk/..._amplicon1_graph.txt`) has 4 discordant edges with CN 19–54 and
+**0 reads**: imputed adjacencies (from copy-number change points with no split reads, `imputed_ext_chr3_{4,8,10,11}`
+in the union subgraph) that rck_bulk used. `log2(0)` makes every partition score NaN, so no partition is chosen.
+No other item 1 case has a zero-read discordant edge; bench_IW_intpsi had one (hard_S4_s16003, a single edge),
+where CoRAL / CE ran. Checked on a scratch copy (parsing only, no solve): the original graph raises the error;
+the same graph with those 4 read counts set to 1 parses (multiplicities inferred). So resubmitting unchanged
+fails again. Options for Yubi: (a) report the baselines as failed on this case (CoRAL / CE n = 11, scenario
+`sib_opp_mirror` n = 3 for them); (b) give CoRAL / CE a graph with a pseudo-count of 1 read on zero-read
+discordant edges (an input change, CoRAL / CE not patched; a new 2-task Gurobi run).
+
+**`rck_mc`, the check that matters most (`sibling_relation.tsv`): 0 bp disagreeing and `matched` True on all
+12 cases**, on 413–1501 kb of shared bases per case, including the 4 `mixed` cases (opposite 157–328 kb,
+same 76–642 kb).
+
+**`rck_mc` species: exact on 7 of 12** (s17003, s17004, s18004, s18006, s19002, s19008, s19012: 2 species, both
+exact, ψ per clone exact, proportion TV 0). The other 5:
+- **4 cases split the outer species around a balanced rearrangement** (s17006, s17008, s18002, s19006).
+  The extra species has the outer's segments, minus 2–3 one-base segments, and uses a copy-number-neutral
+  junction set: a reciprocal inversion pair (s17008 `sim00005/06`, s18002 `sim00008/09`, s19006
+  `sim00012/13`) or a 3-way reciprocal chain (s17006 `sim00006/07/10`). `rck_mc` gives the rearranged form
+  only a few copies, mostly in clone 2 (s17006 ψ (0, 14); s17008 (0, 2); s18002 (0, 11); s19006 (0, 5)).
+  The rest of the outer's copies go to the same walk joined through the reference there. The two add up to
+  the outer's ψ per clone. The junction reads (33–262 per junction) support more copies than it gives the
+  rearranged form. bench_IW_intpsi's `rck_mc` has the same split in 3 of 24 cases (simple_S2_s12002,
+  simple_S2_s12005, simple_S4_s13004), so it is not specific to siblings.
+- **s18007 (reuse):** the outer (1640 kb) is returned as two cycles, 1410 kb and 230 kb, that meet at a
+  reused extremity, with ψ (40, 20) and (40, 19); truth (40, 20).
+- **Scorer caveat for §5 step 3 (ψ per clone):** the run's own `recovery_matrix.tsv` / `evaluation_psi.tsv`
+  match in the absolute frame. On s17008 and s19006 they pair the truth outer with the inferred sibling
+  (phase blocks oriented the other way), so their ψ errors (up to 53) are pairing errors. ψ per clone needs
+  the within-block matching.
 
 ### Item 1 dry run (2026-11-20)
 

@@ -1,0 +1,13 @@
+case	scenario	stratum	truth_opp_bp	truth_same_bp	matched	inferred_opp_bp	inferred_same_bp	agree_bp	disagree_bp	note
+sib_opp_mirror_s17003	sib_opp_mirror	reuse	1501000	0	True	1500996	0	1500996	0	
+sib_opp_mirror_s17004	sib_opp_mirror	clean	680000	0	True	679994	0	679994	0	
+sib_opp_mirror_s17006	sib_opp_mirror	reuse	695000	0	True	694994	0	694994	0	
+sib_opp_mirror_s17008	sib_opp_mirror	clean	845000	0	True	844997	0	844997	0	
+sib_opp_shared_s18002	sib_opp_shared	clean	439000	0	True	438997	0	438997	0	
+sib_opp_shared_s18004	sib_opp_shared	clean	413000	0	True	412996	0	412996	0	
+sib_opp_shared_s18006	sib_opp_shared	reuse	848000	0	True	847997	0	847997	0	
+sib_opp_shared_s18007	sib_opp_shared	reuse	893000	0	True	892997	0	892997	0	
+sib_mixed_mirror_s19002	sib_mixed_mirror	reuse	188000	178000	True	187998	177998	365996	0	
+sib_mixed_mirror_s19006	sib_mixed_mirror	clean	157000	76000	True	156997	75999	232996	0	
+sib_mixed_mirror_s19008	sib_mixed_mirror	reuse	328000	642000	True	327999	641998	969997	0	
+sib_mixed_mirror_s19012	sib_mixed_mirror	clean	167000	190000	True	166998	189998	356996	0	

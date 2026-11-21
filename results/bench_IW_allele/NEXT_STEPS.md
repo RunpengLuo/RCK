@@ -4,6 +4,13 @@
 [`PLAN.md`](PLAN.md) ("Item 1 in detail", "Resume here"). This file is the how-to: check the arrays, fix
 failures, score, and what is still to be written.*
 
+**State 2026-11-21: §2–§4 done.** 46 / 48 runs ok. CoRAL and CE failed on sib_opp_mirror_s17006 (zero-read
+discordant edges in rck_bulk's graph crash CoRAL's multiplicity inference; diagnosis and options in PLAN.md
+"Item 1 arrays: status and first read"). That case waits for Yubi's decision and was not resubmitted.
+Scored and collected. `sibling_relation.tsv`: 0 bp disagreeing on all 12 `rck_mc` cases. §5 waits for
+Yubi's go-ahead. For §5 step 3, don't use the runs' own `evaluation_psi.tsv` pairing (absolute frame; it
+mispairs s17008 and s19006).
+
 Everything below runs from this folder with the gurobi-env python, and nothing in it uses Gurobi unless it
 says so:
 

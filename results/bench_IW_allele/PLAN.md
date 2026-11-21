@@ -25,10 +25,12 @@ detail"):
    (fully IS-clean truth) + 2 `reuse` (extremity reuse inside one species: harder outer walks) cases; `mixed`
    needs each relation on ≥ 20% of the shared bases (amp `331f133`; 11 of the 24 dry-run seeds pass). Gurobi
    is allowed for the later steps; the WLS academic licence still has **2 sessions** (`%1` per array).
-4. **Running:** CPU job **32461273** (`simulations/bench_IW_allelic.sbatch`, submitted 2026-11-20 with
-   Yubi's go-ahead; log `simulations/logs/iw-allelic_32461273.out`): all 12 cases, both subgraphs per case,
-   `check-shared --reference` bench_IW_intpsi hard_S2_s15003. Then **stop again** before any Gurobi
-   work: propose a 2-case local `rck_mc` pilot, then arrays (`rck_mc`, `rck_bulk`, CoRAL / CE on `rck_bulk`'s
+4. **Done 2026-11-20:** CPU job 32461273 (`simulations/bench_IW_allelic.sbatch`, 9.6 min, MaxRSS 27 GB;
+   amp `f9b6f7f`): 12 cases (below), both subgraphs, every truth junction and segment in both,
+   `check-shared --reference` bench_IW_intpsi hard_S2_s15003: identical clones in all 12. Method driver
+   `allelic_bench.py` (bench_iw pointed at set `iw_allelic`; outputs `/n/fs/yubi-iw/runs/bench_IW_allelic/
+   methods/`), `allelic_method.sbatch`, `submit_allelic.sh` written and dry-checked (`list`, printed commands).
+   **Stopped before any Gurobi work, waiting for Yubi**: propose a 2-case local `rck_mc` pilot, then arrays (`rck_mc`, `rck_bulk`, CoRAL / CE on `rck_bulk`'s
    graph), each `%1`, with sizes and commands; nothing submitted without the go-ahead.
 5. Scoring (`allele_bench.py`, `rck_style.py`, species matrix extended to the set; phased species matching;
    per-clone ψ; `sib_opp_mirror` vs `sib_opp_shared`).
@@ -514,6 +516,29 @@ an observed ecDNA phenomenon, unless a citation turns up.
 - **Mirroring** (mirror scenarios): each species' larger ψ is in its intended tumour clone (outer: clone 1;
   sibling: clone 2).
 - The existing checks: bulk ratio within 10% of the target, footprint ≤ 8 Mb, `placed`, traversal cap 3.
+
+### Item 1 cases (2026-11-20)
+
+| scenario | clean (truth fully IS-clean) | reuse (extremity reused inside one species) |
+|---|---|---|
+| `sib_opp_mirror` | s17004, s17008 | s17003, s17006 |
+| `sib_opp_shared` | s18002, s18004 | s18006, s18007 |
+| `sib_mixed_mirror` | s19006, s19012 | s19002, s19008 |
+
+37 candidates simulated (seeds 17001–17008, 18001–18007, 19001–19012 plus the dry run's; `seeds.tsv`,
+`dryrun.tsv` in `simulations/configs/bench_IW_allelic/`). Subgraph verify: PASS on 11; CHECK on
+sib_opp_mirror_s17006 only, where the observed phasing orients 2 of 4 phase blocks the other way (absolute
+frame; scoring is within blocks, both species swapped alike), as bench_IW_intpsi hard_S4_s16003.
+
+**Proposed next (Gurobi, needs Yubi's go-ahead; licence 2 sessions):**
+1. Local pilot, `rck_mc` on 2 cases, one at a time: `python allelic_bench.py run --method rck_mc 1`
+   (sib_opp_mirror_s17004, clean) and `... 8` (sib_mixed_mirror_s19002, reuse; the hardest kind). Seconds to
+   minutes each (bench_IW_intpsi rck_mc solves ≤ 4 s; 60 s MILP limit). Read: does it return two species with
+   the right relative haplotypes and ψ per clone, or one species carrying both alleles.
+2. Arrays, `./submit_allelic.sh --submit`: `rck_bulk` (12 tasks, `%1`, 90 min, 2G), `rck_mc` (12, `%1`,
+   15 min), CoRAL and CE (12 each, `%1`, 90 / 60 min, `aftercorr` on rck_bulk), sized from bench_IW_intpsi's
+   arrays. Expected compute ~1–2 h per baseline array, minutes for rck_mc.
+3. Then `allelic_bench.py score`, `collect`, and the item 1 scoring above.
 
 ### Item 1 dry run (2026-11-20)
 

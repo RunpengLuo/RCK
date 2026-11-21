@@ -4,6 +4,26 @@
 [`PLAN.md`](PLAN.md) ("Item 1 in detail", "Resume here"). This file is the how-to: check the arrays, fix
 failures, score, and what is still to be written.*
 
+## Within-block recovery matrices and J_seg / J_adj matrices (2026-11-21): DONE, waiting for Yubi to look
+
+`make_block_figures.py` (local, ~25 s in all, no Gurobi). Details and results: PLAN.md "Figures: within-block recovery
+and J matrices"; file list: `topology_plots/species_matrix/README.md`.
+
+1. **Redo:** `python make_block_figures.py run --jobs 8 && python make_block_figures.py reasons && python
+   make_block_figures.py compare`. `run` prints "recovery matrix vs table: 36 of 36 cases agree"; anything else
+   means the table or the runs changed, so look before anything else.
+2. **What to look at:**
+   - `topology_plots/compare/<case>/rck_mc_recovery_matrix_block.png` next to `rck_mc_recovery_matrix_absolute.png`.
+     s18004, s18006 and hard_S4_s16005 go from crossed pairs (equal low J_seg in both rows) to 1.00.
+   - `rck_mc_species_matrix_block.png` (two panels) next to `*_onepanel.png`.
+   - `topology_plots/species_matrix/<set>/<case>/` for all 36 cases.
+3. **Read the misses** in `topology_plots/species_matrix/jmatrix_not_1_1.tsv` (22 rows, `kind` and `reason`, plus
+   the missing / extra adjacencies).
+4. **Open for Yubi:**
+   - the opt-in `--phase-frame within_block` for `rck/ecdna/evaluate.py` (proposal and tests in PLAN.md; not made);
+   - the balanced-rearrangement-through-reference behaviour, now seen on 16 species in 14 of 36 cases, 9 of them
+     without the rearranged form at all. It joins the earlier open question on rck_mc's outer splits.
+
 ## RCK MC vs CoRAL topology figures (Slurm array 32468172, 2026-11-21): DONE, waiting for Yubi to look
 
 **Status (checked 2026-11-21, same session):** all 8 tasks finished, every figure is in place, committed

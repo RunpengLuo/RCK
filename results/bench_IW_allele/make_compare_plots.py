@@ -14,7 +14,10 @@ For each case in CASES, writes topology_plots/compare/<k>_<case>/:
   truth_topology.png,          the truth alone (make_topology_plots.plot_truth), and CoRAL's figure of each truth
   coral_truth_<sp>_cycles.png  species
   rck_mc_rank1_ec<k>.png,      rck-ecdna-plot of the RCK MC run (walk by haplotype, junction arcs, allele copy
-  rck_mc_recovery_matrix.png   numbers, ring; make_topology_plots.plot_case's RCK MC part)
+  rck_mc_recovery_matrix_      numbers, ring; make_topology_plots.plot_case's RCK MC part). The run's recovery
+    absolute.png               matrix pairs and phases in the absolute frame, so it is renamed *_absolute
+  rck_mc_recovery_matrix_      the recovery matrix within phase blocks, paired as the benchmark table's scorer pairs
+    block.{png,tsv}            (make_block_figures.py; its mean composite equals the table's on every case)
   coral_rck_mc_cycles.png      CoRAL's own figure style drawing RCK MC's species (haplotype-blind)
   coral_cycles.png             CoRAL's own figure of CoRAL's own answer (its cycles file, all walks)
   coral_graph.png              CoRAL's figure of the graph CoRAL decomposed, trimmed to the region its walks use
@@ -22,7 +25,8 @@ For each case in CASES, writes topology_plots/compare/<k>_<case>/:
   rck_mc_species_matrix_block, J_seg / J_adj of every truth x inferred species pair and the coverage of each truth
   rck_mc_species_coverage_block species by the inferred ones (make_species_matrix_figure.py): RCK MC within phase
   rck_mc_species_*_blind,      blocks (alleles must match) and haplotype-blind; CoRAL haplotype-blind. Species are
-  coral_species_*_blind        paired as the scorer pairs them (--match score).
+  coral_species_*_blind        paired as the scorer pairs them (--match score). The *_matrix_* files are two panels,
+                               J_seg | J_adj (--layout pair); the earlier one-panel versions are *_onepanel.
   README.txt                   the case, why it was chosen, and its scores (RCK MC vs CoRAL)
 
 CoRAL here is CoRAL 3.1.1 as benchmarked: decomposition-only, linear walks kept (`coral:walks_kept`); on
@@ -213,12 +217,40 @@ def coral_figures(case, folder, work):
 
 
 def matrices(set_name, case, folder):
+    """Species matrices and coverage. One-panel matrices go to *_onepanel (kept for comparison); the matrices under
+    the plain names are the two-panel J_seg | J_adj figures (--layout pair, 2026-11-21)."""
     base = [sys.executable, os.path.join(HERE, "make_species_matrix_figure.py"), "--set", set_name, "--case", case["name"],
-            "--match", "score", "--plot-dir", folder]
-    for extra in (["--method", "rck_mc", "--block"], ["--method", "rck_mc", "--blind"],
-                  ["--method", "coral", "--blind", "--variant", CORAL_VARIANT]):
+            "--match", "score"]
+    runs = (["--method", "rck_mc", "--block"], ["--method", "rck_mc", "--blind"],
+            ["--method", "coral", "--blind", "--variant", CORAL_VARIANT])
+    tmp = tempfile.mkdtemp(prefix="matrices_")
+    try:
         with open(os.path.join(folder, "species_matrix.log"), "a") as log:
-            subprocess.run(base + extra, check=True, stdout=log, stderr=subprocess.STDOUT, cwd=HERE)
+            for extra in runs:
+                subprocess.run(base + extra + ["--plot-dir", tmp], check=True, stdout=log, stderr=subprocess.STDOUT, cwd=HERE)
+                subprocess.run(base + extra + ["--plot-dir", folder, "--layout", "pair"], check=True, stdout=log,
+                               stderr=subprocess.STDOUT, cwd=HERE)
+        for f in os.listdir(tmp):
+            stem, ext = os.path.splitext(f)
+            shutil.copy(os.path.join(tmp, f), os.path.join(folder, stem + "_onepanel" + ext if "_matrix_" in f else f))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def recovery_block(set_name, case, folder):
+    """rck_mc_recovery_matrix_block.{tsv,png}: the recovery matrix within phase blocks (make_block_figures.py); the
+    run's own (absolute-frame) page is kept as rck_mc_recovery_matrix_absolute.png."""
+    import pandas as pd
+    import make_block_figures as mbf
+
+    absolute = os.path.join(folder, "rck_mc_recovery_matrix.png")
+    if os.path.exists(absolute):
+        os.replace(absolute, os.path.join(folder, "rck_mc_recovery_matrix_absolute.png"))
+    table = pd.read_csv(mbf.TABLES[set_name], sep="\t")
+    mean = float(table[(table["name"] == case["name"]) & (table["method_variant"] == "rck_mc")]["mean_composite"].iloc[0])
+    matrix = mbf.recovery_block(case)
+    matrix.to_csv(os.path.join(folder, "rck_mc_recovery_matrix_block.tsv"), sep="\t", index=False)
+    mbf.draw_recovery(matrix, case, mean, os.path.join(folder, "rck_mc_recovery_matrix_block.png"))
 
 
 def readme(set_name, case, why, folder):
@@ -270,7 +302,8 @@ def run_case(k):
              ("topology_compare", lambda: topology_compare(case, folder, work)),
              ("rck_mc pages", lambda: rck_mc_pages(case, folder, work)),
              ("coral figures", lambda: coral_figures(case, folder, work)),
-             ("species matrices", lambda: matrices(set_name, case, folder))]
+             ("species matrices", lambda: matrices(set_name, case, folder)),
+             ("recovery matrix within blocks", lambda: recovery_block(set_name, case, folder))]
     failed = []
     try:
         for label, step in steps:

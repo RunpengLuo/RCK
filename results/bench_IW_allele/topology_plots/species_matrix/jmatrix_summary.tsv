@@ -1,0 +1,183 @@
+set	case	scenario	class	S	stratum	method	frame	truth	truth_bulk_copies	paired	paired_j_seg	paired_j_adj	rowmax_j_seg_species	rowmax_j_seg	rowmax_j_seg_differs	rowmax_j_adj_species	rowmax_j_adj	rowmax_j_adj_differs	exact_cycle	is_1_1	n_inferred_drawn	n_unmatched
+iw_allelic	sib_opp_mirror_s17003	sib_opp_mirror	hard	2	reuse	RCK MC	within phase blocks	ecdna1	15.5963	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_opp_mirror_s17003	sib_opp_mirror	hard	2	reuse	RCK MC	within phase blocks	ecdna2	11.3035	ec2	0.999998	1	ec2	0.999998	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_opp_mirror_s17003	sib_opp_mirror	hard	2	reuse	RCK MC	haplotype-blind	ecdna1	15.5963	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_opp_mirror_s17003	sib_opp_mirror	hard	2	reuse	RCK MC	haplotype-blind	ecdna2	11.3035	ec2	0.999998	1	ec2	0.999998	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_opp_mirror_s17004	sib_opp_mirror	hard	2	clean	RCK MC	within phase blocks	ecdna2	6.80223	ec1	0.999991	1	ec1	0.999991	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_opp_mirror_s17004	sib_opp_mirror	hard	2	clean	RCK MC	within phase blocks	ecdna1	5.0987	ec2	0.999998	1	ec2	0.999998	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_opp_mirror_s17004	sib_opp_mirror	hard	2	clean	RCK MC	haplotype-blind	ecdna2	6.80223	ec1	0.999991	1	ec1	0.999991	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_opp_mirror_s17004	sib_opp_mirror	hard	2	clean	RCK MC	haplotype-blind	ecdna1	5.0987	ec2	0.999998	1	ec2	0.999998	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_opp_mirror_s17004	sib_opp_mirror	hard	2	clean	CoRAL	haplotype-blind	ecdna2	6.80223	cycle1	0.999996	1	cycle1	0.999996	False	cycle1	1	False	1	True	3	1
+iw_allelic	sib_opp_mirror_s17004	sib_opp_mirror	hard	2	clean	CoRAL	haplotype-blind	ecdna1	5.0987	cycle3	0.933387	0.5	cycle3	0.933387	False	cycle3	0.5	False	0	False	3	1
+iw_allelic	sib_opp_mirror_s17006	sib_opp_mirror	hard	2	reuse	RCK MC	within phase blocks	ecdna1	36.2912	ec1	0.999996	0.625	ec1	0.999996	False	ec3	1	True	0	False	3	1
+iw_allelic	sib_opp_mirror_s17006	sib_opp_mirror	hard	2	reuse	RCK MC	within phase blocks	ecdna2	6.50205	ec2	0.999992	1	ec2	0.999992	False	ec2	1	False	1	True	3	1
+iw_allelic	sib_opp_mirror_s17006	sib_opp_mirror	hard	2	reuse	RCK MC	haplotype-blind	ecdna1	36.2912	ec1	0.999996	0.625	ec1	0.999996	False	ec3	1	True	0	False	3	1
+iw_allelic	sib_opp_mirror_s17006	sib_opp_mirror	hard	2	reuse	RCK MC	haplotype-blind	ecdna2	6.50205	ec2	0.999992	1	ec2	0.999992	False	ec2	1	False	1	True	3	1
+iw_allelic	sib_opp_mirror_s17008	sib_opp_mirror	hard	2	clean	RCK MC	within phase blocks	ecdna2	12.2041	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_opp_mirror_s17008	sib_opp_mirror	hard	2	clean	RCK MC	within phase blocks	ecdna1	5.59851	ec2	0.999998	0.6	ec2	0.999998	False	ec2	0.6	False	0	False	2	0
+iw_allelic	sib_opp_mirror_s17008	sib_opp_mirror	hard	2	clean	RCK MC	haplotype-blind	ecdna2	12.2041	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_opp_mirror_s17008	sib_opp_mirror	hard	2	clean	RCK MC	haplotype-blind	ecdna1	5.59851	ec2	0.999998	0.6	ec2	0.999998	False	ec2	0.6	False	0	False	2	0
+iw_allelic	sib_opp_shared_s18002	sib_opp_shared	hard	2	clean	RCK MC	within phase blocks	ecdna2	29.8957	ec1	0.999995	1	ec1	0.999995	False	ec1	1	False	1	True	3	1
+iw_allelic	sib_opp_shared_s18002	sib_opp_shared	hard	2	clean	RCK MC	within phase blocks	ecdna1	13.7981	ec2	0.999998	0.6	ec2	0.999998	False	ec3	1	True	0	False	3	1
+iw_allelic	sib_opp_shared_s18002	sib_opp_shared	hard	2	clean	RCK MC	haplotype-blind	ecdna2	29.8957	ec1	0.999995	1	ec1	0.999995	False	ec1	1	False	1	True	3	1
+iw_allelic	sib_opp_shared_s18002	sib_opp_shared	hard	2	clean	RCK MC	haplotype-blind	ecdna1	13.7981	ec2	0.999998	0.6	ec2	0.999998	False	ec3	1	True	0	False	3	1
+iw_allelic	sib_opp_shared_s18004	sib_opp_shared	hard	2	clean	RCK MC	within phase blocks	ecdna2	33.7952	ec1	0.99999	1	ec1	0.99999	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_opp_shared_s18004	sib_opp_shared	hard	2	clean	RCK MC	within phase blocks	ecdna1	12.9981	ec2	0.999996	1	ec2	0.999996	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_opp_shared_s18004	sib_opp_shared	hard	2	clean	RCK MC	haplotype-blind	ecdna2	33.7952	ec1	0.99999	1	ec1	0.99999	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_opp_shared_s18004	sib_opp_shared	hard	2	clean	RCK MC	haplotype-blind	ecdna1	12.9981	ec2	0.999996	1	ec2	0.999996	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_opp_shared_s18004	sib_opp_shared	hard	2	clean	CoRAL	haplotype-blind	ecdna2	33.7952				cycle1	0.156467	True	cycle1	0.416667	True	0	False	1	0
+iw_allelic	sib_opp_shared_s18004	sib_opp_shared	hard	2	clean	CoRAL	haplotype-blind	ecdna1	12.9981	cycle1	0.687065	0.583333	cycle1	0.687065	False	cycle1	0.583333	False	0	False	1	0
+iw_allelic	sib_opp_shared_s18006	sib_opp_shared	hard	2	reuse	RCK MC	within phase blocks	ecdna2	9.0987	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_opp_shared_s18006	sib_opp_shared	hard	2	reuse	RCK MC	within phase blocks	ecdna1	8.59888	ec2	0.999997	1	ec2	0.999997	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_opp_shared_s18006	sib_opp_shared	hard	2	reuse	RCK MC	haplotype-blind	ecdna2	9.0987	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_opp_shared_s18006	sib_opp_shared	hard	2	reuse	RCK MC	haplotype-blind	ecdna1	8.59888	ec2	0.999997	1	ec2	0.999997	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_opp_shared_s18006	sib_opp_shared	hard	2	reuse	CoRAL	haplotype-blind	ecdna2	9.0987	cycle2	0.0139862	0.4	cycle1	0.322925	True	cycle2	0.4	False	0	False	2	0
+iw_allelic	sib_opp_shared_s18006	sib_opp_shared	hard	2	reuse	CoRAL	haplotype-blind	ecdna1	8.59888	cycle1	0.677075	0.714286	cycle1	0.677075	False	cycle1	0.714286	False	0	False	2	0
+iw_allelic	sib_opp_shared_s18007	sib_opp_shared	hard	2	reuse	RCK MC	within phase blocks	ecdna2	31.6953	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	3	1
+iw_allelic	sib_opp_shared_s18007	sib_opp_shared	hard	2	reuse	RCK MC	within phase blocks	ecdna1	25.9963	ec2	0.859755	0.222222	ec2	0.859755	False	ec2	0.222222	False	0	False	3	1
+iw_allelic	sib_opp_shared_s18007	sib_opp_shared	hard	2	reuse	RCK MC	haplotype-blind	ecdna2	31.6953	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	3	1
+iw_allelic	sib_opp_shared_s18007	sib_opp_shared	hard	2	reuse	RCK MC	haplotype-blind	ecdna1	25.9963	ec2	0.859755	0.222222	ec2	0.859755	False	ec2	0.222222	False	0	False	3	1
+iw_allelic	sib_mixed_mirror_s19002	sib_mixed_mirror	hard	2	reuse	RCK MC	within phase blocks	ecdna1	35.4912	ec1	0.999995	1	ec1	0.999995	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19002	sib_mixed_mirror	hard	2	reuse	RCK MC	within phase blocks	ecdna2	7.10242	ec2	0.999988	1	ec2	0.999988	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19002	sib_mixed_mirror	hard	2	reuse	RCK MC	haplotype-blind	ecdna1	35.4912	ec1	0.999995	1	ec1	0.999995	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19002	sib_mixed_mirror	hard	2	reuse	RCK MC	haplotype-blind	ecdna2	7.10242	ec2	0.999988	1	ec2	0.999988	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19006	sib_mixed_mirror	hard	2	clean	RCK MC	within phase blocks	ecdna1	34.4916	ec1	0.999993	0.666667	ec1	0.999993	False	ec1	0.666667	False	0	False	2	0
+iw_allelic	sib_mixed_mirror_s19006	sib_mixed_mirror	hard	2	clean	RCK MC	within phase blocks	ecdna2	12.2041	ec2	0.999983	1	ec2	0.999983	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19006	sib_mixed_mirror	hard	2	clean	RCK MC	haplotype-blind	ecdna1	34.4916	ec1	0.999993	0.666667	ec1	0.999993	False	ec1	0.666667	False	0	False	2	0
+iw_allelic	sib_mixed_mirror_s19006	sib_mixed_mirror	hard	2	clean	RCK MC	haplotype-blind	ecdna2	12.2041	ec2	0.999983	1	ec2	0.999983	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19008	sib_mixed_mirror	hard	2	reuse	RCK MC	within phase blocks	ecdna2	11.6037	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19008	sib_mixed_mirror	hard	2	reuse	RCK MC	within phase blocks	ecdna1	5.0987	ec2	0.999997	1	ec2	0.999997	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19008	sib_mixed_mirror	hard	2	reuse	RCK MC	haplotype-blind	ecdna2	11.6037	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19008	sib_mixed_mirror	hard	2	reuse	RCK MC	haplotype-blind	ecdna1	5.0987	ec2	0.999997	1	ec2	0.999997	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19012	sib_mixed_mirror	hard	2	clean	RCK MC	within phase blocks	ecdna1	25.7937	ec1	0.999993	1	ec1	0.999993	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19012	sib_mixed_mirror	hard	2	clean	RCK MC	within phase blocks	ecdna2	4.80149	ec2	0.999994	1	ec2	0.999994	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19012	sib_mixed_mirror	hard	2	clean	RCK MC	haplotype-blind	ecdna1	25.7937	ec1	0.999993	1	ec1	0.999993	False	ec1	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19012	sib_mixed_mirror	hard	2	clean	RCK MC	haplotype-blind	ecdna2	4.80149	ec2	0.999994	1	ec2	0.999994	False	ec2	1	False	1	True	2	0
+iw_allelic	sib_mixed_mirror_s19012	sib_mixed_mirror	hard	2	clean	CoRAL	haplotype-blind	ecdna1	25.7937	cycle1	0.999996	1	cycle1	0.999996	False	cycle1	1	False	1	True	1	0
+iw_allelic	sib_mixed_mirror_s19012	sib_mixed_mirror	hard	2	clean	CoRAL	haplotype-blind	ecdna2	4.80149				cycle1	0.536943	True	cycle1	0	False	0	False	1	0
+iw_intpsi	simple_S1_s11001	simple_S1	simple	1		RCK MC	within phase blocks	ecdna1	5.19926	ec1	0.999999	1	ec1	0.999999	False	ec1	1	False	1	True	1	0
+iw_intpsi	simple_S1_s11001	simple_S1	simple	1		RCK MC	haplotype-blind	ecdna1	5.19926	ec1	0.999999	1	ec1	0.999999	False	ec1	1	False	1	True	1	0
+iw_intpsi	simple_S1_s11002	simple_S1	simple	1		RCK MC	within phase blocks	ecdna1	5.69907	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	1	0
+iw_intpsi	simple_S1_s11002	simple_S1	simple	1		RCK MC	haplotype-blind	ecdna1	5.69907	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	1	0
+iw_intpsi	simple_S1_s11003	simple_S1	simple	1		RCK MC	within phase blocks	ecdna1	5.69907	ec1	0.999993	1	ec1	0.999993	False	ec1	1	False	1	True	1	0
+iw_intpsi	simple_S1_s11003	simple_S1	simple	1		RCK MC	haplotype-blind	ecdna1	5.69907	ec1	0.999993	1	ec1	0.999993	False	ec1	1	False	1	True	1	0
+iw_intpsi	simple_S1_s11004	simple_S1	simple	1		RCK MC	within phase blocks	ecdna1	7.79888	ec1	0.999991	1	ec1	0.999991	False	ec1	1	False	1	True	3	2
+iw_intpsi	simple_S1_s11004	simple_S1	simple	1		RCK MC	haplotype-blind	ecdna1	7.79888	ec1	0.999991	1	ec1	0.999991	False	ec1	1	False	1	True	3	2
+iw_intpsi	simple_S2_s12002	simple_S2	simple	2		RCK MC	within phase blocks	ecdna2	17.6976	ec1	0.999994	1	ec1	0.999994	False	ec1	1	False	1	True	2	0
+iw_intpsi	simple_S2_s12002	simple_S2	simple	2		RCK MC	within phase blocks	ecdna1	15.098	ec2	0.999999	0.25	ec2	0.999999	False	ec2	0.25	False	0	False	2	0
+iw_intpsi	simple_S2_s12002	simple_S2	simple	2		RCK MC	haplotype-blind	ecdna2	17.6976	ec1	0.999994	1	ec1	0.999994	False	ec1	1	False	1	True	2	0
+iw_intpsi	simple_S2_s12002	simple_S2	simple	2		RCK MC	haplotype-blind	ecdna1	15.098	ec2	0.999999	0.25	ec2	0.999999	False	ec2	0.25	False	0	False	2	0
+iw_intpsi	simple_S2_s12003	simple_S2	simple	2		RCK MC	within phase blocks	ecdna2	36.8946	ec1	0.999994	1	ec1	0.999994	False	ec1	1	False	1	True	2	0
+iw_intpsi	simple_S2_s12003	simple_S2	simple	2		RCK MC	within phase blocks	ecdna1	8.2987	ec2	0.999997	1	ec2	0.999997	False	ec2	1	False	1	True	2	0
+iw_intpsi	simple_S2_s12003	simple_S2	simple	2		RCK MC	haplotype-blind	ecdna2	36.8946	ec1	0.999994	1	ec1	0.999994	False	ec1	1	False	1	True	2	0
+iw_intpsi	simple_S2_s12003	simple_S2	simple	2		RCK MC	haplotype-blind	ecdna1	8.2987	ec2	0.999997	1	ec2	0.999997	False	ec2	1	False	1	True	2	0
+iw_intpsi	simple_S2_s12004	simple_S2	simple	2		RCK MC	within phase blocks	ecdna1	10.8983	ec1	0.646947	0.4	ec1	0.646947	False	ec1	0.4	False	0	False	3	1
+iw_intpsi	simple_S2_s12004	simple_S2	simple	2		RCK MC	within phase blocks	ecdna2	5.19926	ec3	0.999998	1	ec3	0.999998	False	ec3	1	False	1	True	3	1
+iw_intpsi	simple_S2_s12004	simple_S2	simple	2		RCK MC	haplotype-blind	ecdna1	10.8983	ec1	0.646947	0.4	ec1	0.646947	False	ec1	0.4	False	0	False	3	1
+iw_intpsi	simple_S2_s12004	simple_S2	simple	2		RCK MC	haplotype-blind	ecdna2	5.19926	ec3	0.999998	1	ec3	0.999998	False	ec3	1	False	1	True	3	1
+iw_intpsi	simple_S2_s12005	simple_S2	simple	2		RCK MC	within phase blocks	ecdna1	49.3929	ec1	0.999999	0.4	ec1	0.999999	False	ec1	0.4	False	0	False	2	0
+iw_intpsi	simple_S2_s12005	simple_S2	simple	2		RCK MC	within phase blocks	ecdna2	18.9974	ec2	0.999997	1	ec2	0.999997	False	ec2	1	False	1	True	2	0
+iw_intpsi	simple_S2_s12005	simple_S2	simple	2		RCK MC	haplotype-blind	ecdna1	49.3929	ec1	0.999999	0.4	ec1	0.999999	False	ec1	0.4	False	0	False	2	0
+iw_intpsi	simple_S2_s12005	simple_S2	simple	2		RCK MC	haplotype-blind	ecdna2	18.9974	ec2	0.999997	1	ec2	0.999997	False	ec2	1	False	1	True	2	0
+iw_intpsi	simple_S4_s13001	simple_S4	simple	4		RCK MC	within phase blocks	ecdna4	25.9963	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13001	simple_S4	simple	4		RCK MC	within phase blocks	ecdna1	19.997	ec2	0.999994	1	ec2	0.999994	False	ec2	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13001	simple_S4	simple	4		RCK MC	within phase blocks	ecdna3	16.0976	ec3	0.999997	0.5	ec3	0.999997	False	ec3	0.5	False	0	False	4	0
+iw_intpsi	simple_S4_s13001	simple_S4	simple	4		RCK MC	within phase blocks	ecdna2	6.99888	ec4	0.999998	1	ec4	0.999998	False	ec4	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13001	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna4	25.9963	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13001	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna1	19.997	ec2	0.999994	1	ec2	0.999994	False	ec2	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13001	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna3	16.0976	ec3	0.999997	0.5	ec3	0.999997	False	ec3	0.5	False	0	False	4	0
+iw_intpsi	simple_S4_s13001	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna2	6.99888	ec4	0.999998	1	ec4	0.999998	False	ec4	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13002	simple_S4	simple	4		RCK MC	within phase blocks	ecdna3	7.79888	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	7	3
+iw_intpsi	simple_S4_s13002	simple_S4	simple	4		RCK MC	within phase blocks	ecdna4	5.99926	ec2	0.999995	1	ec2	0.999995	False	ec2	1	False	1	True	7	3
+iw_intpsi	simple_S4_s13002	simple_S4	simple	4		RCK MC	within phase blocks	ecdna1	5.19926	ec7	0.800053	0.333333	ec7	0.800053	False	ec7	0.333333	False	0	False	7	3
+iw_intpsi	simple_S4_s13002	simple_S4	simple	4		RCK MC	within phase blocks	ecdna2	5.19926	ec4	0.999996	1	ec4	0.999996	False	ec4	1	False	1	True	7	3
+iw_intpsi	simple_S4_s13002	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna3	7.79888	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	7	3
+iw_intpsi	simple_S4_s13002	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna4	5.99926	ec2	0.999995	1	ec2	0.999995	False	ec2	1	False	1	True	7	3
+iw_intpsi	simple_S4_s13002	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna1	5.19926	ec7	0.800053	0.333333	ec7	0.800053	False	ec7	0.333333	False	0	False	7	3
+iw_intpsi	simple_S4_s13002	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna2	5.19926	ec4	0.999996	1	ec4	0.999996	False	ec4	1	False	1	True	7	3
+iw_intpsi	simple_S4_s13003	simple_S4	simple	4		RCK MC	within phase blocks	ecdna4	45.9933	ec1	0.999998	0.5	ec1	0.999998	False	ec1	0.5	False	0	False	4	0
+iw_intpsi	simple_S4_s13003	simple_S4	simple	4		RCK MC	within phase blocks	ecdna2	41.594	ec2	0.999995	1	ec2	0.999995	False	ec2	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13003	simple_S4	simple	4		RCK MC	within phase blocks	ecdna3	14.298	ec3	0.999996	1	ec3	0.999996	False	ec3	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13003	simple_S4	simple	4		RCK MC	within phase blocks	ecdna1	9.0987	ec4	0.999998	1	ec4	0.999998	False	ec4	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13003	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna4	45.9933	ec1	0.999998	0.5	ec1	0.999998	False	ec1	0.5	False	0	False	4	0
+iw_intpsi	simple_S4_s13003	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna2	41.594	ec2	0.999995	1	ec2	0.999995	False	ec2	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13003	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna3	14.298	ec3	0.999996	1	ec3	0.999996	False	ec3	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13003	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna1	9.0987	ec4	0.999998	1	ec4	0.999998	False	ec4	1	False	1	True	4	0
+iw_intpsi	simple_S4_s13004	simple_S4	simple	4		RCK MC	within phase blocks	ecdna4	29.8957	ec1	0.999996	0.6	ec1	0.999996	False	ec3	1	True	0	False	5	1
+iw_intpsi	simple_S4_s13004	simple_S4	simple	4		RCK MC	within phase blocks	ecdna2	11.6983	ec2	0.999998	0.333333	ec2	0.999998	False	ec2	0.333333	False	0	False	5	1
+iw_intpsi	simple_S4_s13004	simple_S4	simple	4		RCK MC	within phase blocks	ecdna1	8.2987	ec4	0.999997	1	ec4	0.999997	False	ec4	1	False	1	True	5	1
+iw_intpsi	simple_S4_s13004	simple_S4	simple	4		RCK MC	within phase blocks	ecdna3	6.49907	ec5	0.999997	1	ec5	0.999997	False	ec5	1	False	1	True	5	1
+iw_intpsi	simple_S4_s13004	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna4	29.8957	ec1	0.999996	0.6	ec1	0.999996	False	ec3	1	True	0	False	5	1
+iw_intpsi	simple_S4_s13004	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna2	11.6983	ec2	0.999998	0.333333	ec2	0.999998	False	ec2	0.333333	False	0	False	5	1
+iw_intpsi	simple_S4_s13004	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna1	8.2987	ec4	0.999997	1	ec4	0.999997	False	ec4	1	False	1	True	5	1
+iw_intpsi	simple_S4_s13004	simple_S4	simple	4		RCK MC	haplotype-blind	ecdna3	6.49907	ec5	0.999997	1	ec5	0.999997	False	ec5	1	False	1	True	5	1
+iw_intpsi	hard_S1_s14001	hard_S1	hard	1		RCK MC	within phase blocks	ecdna1	11.6983	ec1	0.999998	0.666667	ec1	0.999998	False	ec1	0.666667	False	0	False	1	0
+iw_intpsi	hard_S1_s14001	hard_S1	hard	1		RCK MC	haplotype-blind	ecdna1	11.6983	ec1	0.999998	0.666667	ec1	0.999998	False	ec1	0.666667	False	0	False	1	0
+iw_intpsi	hard_S1_s14003	hard_S1	hard	1		RCK MC	within phase blocks	ecdna1	4.69944	ec1	0.999999	1	ec1	0.999999	False	ec1	1	False	1	True	1	0
+iw_intpsi	hard_S1_s14003	hard_S1	hard	1		RCK MC	haplotype-blind	ecdna1	4.69944	ec1	0.999999	1	ec1	0.999999	False	ec1	1	False	1	True	1	0
+iw_intpsi	hard_S1_s14004	hard_S1	hard	1		RCK MC	within phase blocks	ecdna1	6.49907	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	1	0
+iw_intpsi	hard_S1_s14004	hard_S1	hard	1		RCK MC	haplotype-blind	ecdna1	6.49907	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	1	0
+iw_intpsi	hard_S1_s14006	hard_S1	hard	1		RCK MC	within phase blocks	ecdna1	19.4972	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	1	0
+iw_intpsi	hard_S1_s14006	hard_S1	hard	1		RCK MC	haplotype-blind	ecdna1	19.4972	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	1	0
+iw_intpsi	hard_S2_s15001	hard_S2	hard	2		RCK MC	within phase blocks	ecdna1	16.8976	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	2	0
+iw_intpsi	hard_S2_s15001	hard_S2	hard	2		RCK MC	within phase blocks	ecdna2	12.9981	ec2	0.999995	1	ec2	0.999995	False	ec2	1	False	1	True	2	0
+iw_intpsi	hard_S2_s15001	hard_S2	hard	2		RCK MC	haplotype-blind	ecdna1	16.8976	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	2	0
+iw_intpsi	hard_S2_s15001	hard_S2	hard	2		RCK MC	haplotype-blind	ecdna2	12.9981	ec2	0.999995	1	ec2	0.999995	False	ec2	1	False	1	True	2	0
+iw_intpsi	hard_S2_s15003	hard_S2	hard	2		RCK MC	within phase blocks	ecdna2	34.5952	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	2	0
+iw_intpsi	hard_S2_s15003	hard_S2	hard	2		RCK MC	within phase blocks	ecdna1	7.79888	ec2	0.593884	0.181818	ec2	0.593884	False	ec2	0.181818	False	0	False	2	0
+iw_intpsi	hard_S2_s15003	hard_S2	hard	2		RCK MC	haplotype-blind	ecdna2	34.5952	ec1	0.999998	1	ec1	0.999998	False	ec1	1	False	1	True	2	0
+iw_intpsi	hard_S2_s15003	hard_S2	hard	2		RCK MC	haplotype-blind	ecdna1	7.79888	ec2	0.593885	0.444444	ec1	0.630922	True	ec2	0.444444	False	0	False	2	0
+iw_intpsi	hard_S2_s15003	hard_S2	hard	2		CoRAL	haplotype-blind	ecdna2	34.5952	cycle2	0.016565	0.375	cycle1	0.196305	True	cycle1	0.5	True	0	False	2	0
+iw_intpsi	hard_S2_s15003	hard_S2	hard	2		CoRAL	haplotype-blind	ecdna1	7.79888	cycle1	0.227375	0.333333	cycle1	0.227375	False	cycle2	0.555556	True	0	False	2	0
+iw_intpsi	hard_S2_s15004	hard_S2	hard	2		RCK MC	within phase blocks	ecdna2	12.9981	ec1	0.99999	1	ec1	0.99999	False	ec1	1	False	1	True	2	0
+iw_intpsi	hard_S2_s15004	hard_S2	hard	2		RCK MC	within phase blocks	ecdna1	12.1981	ec2	0.999996	0.666667	ec2	0.999996	False	ec2	0.666667	False	0	False	2	0
+iw_intpsi	hard_S2_s15004	hard_S2	hard	2		RCK MC	haplotype-blind	ecdna2	12.9981	ec1	0.99999	1	ec1	0.99999	False	ec1	1	False	1	True	2	0
+iw_intpsi	hard_S2_s15004	hard_S2	hard	2		RCK MC	haplotype-blind	ecdna1	12.1981	ec2	0.999996	0.666667	ec2	0.999996	False	ec2	0.666667	False	0	False	2	0
+iw_intpsi	hard_S2_s15005	hard_S2	hard	2		RCK MC	within phase blocks	ecdna2	28.5959	ec1	0.999995	1	ec1	0.999995	False	ec1	1	False	1	True	2	0
+iw_intpsi	hard_S2_s15005	hard_S2	hard	2		RCK MC	within phase blocks	ecdna1	6.99888	ec2	0.999995	1	ec2	0.999995	False	ec2	1	False	1	True	2	0
+iw_intpsi	hard_S2_s15005	hard_S2	hard	2		RCK MC	haplotype-blind	ecdna2	28.5959	ec1	0.999995	1	ec1	0.999995	False	ec1	1	False	1	True	2	0
+iw_intpsi	hard_S2_s15005	hard_S2	hard	2		RCK MC	haplotype-blind	ecdna1	6.99888	ec2	0.999995	1	ec2	0.999995	False	ec2	1	False	1	True	2	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		RCK MC	within phase blocks	ecdna1	13.7981	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		RCK MC	within phase blocks	ecdna3	7.79888	ec2	0.999991	1	ec2	0.999991	False	ec2	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		RCK MC	within phase blocks	ecdna2	4.69944	ec3	0.999994	0.5	ec3	0.999994	False	ec3	0.5	False	0	False	4	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		RCK MC	within phase blocks	ecdna4	3.89944	ec4	0.999998	1	ec4	0.999998	False	ec4	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna1	13.7981	ec1	0.999997	1	ec1	0.999997	False	ec1	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna3	7.79888	ec2	0.999991	1	ec2	0.999991	False	ec2	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna2	4.69944	ec3	0.999994	0.5	ec3	0.999994	False	ec3	0.5	False	0	False	4	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna4	3.89944	ec4	0.999998	1	ec4	0.999998	False	ec4	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna1	13.7981	cycle1	0.317187	0.363636	cycle2	0.491011	True	cycle1	0.363636	False	0	False	3	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna3	7.79888	cycle2	0.586985	0.333333	cycle2	0.586985	False	cycle1	0.363636	True	0	False	3	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna2	4.69944	cycle3	0.0157004	0.285714	cycle2	0.539353	True	cycle2	0.4	True	0	False	3	0
+iw_intpsi	hard_S4_s16002	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna4	3.89944				cycle2	0.237361	True	cycle2	0.125	True	0	False	3	0
+iw_intpsi	hard_S4_s16003	hard_S4	hard	4		RCK MC	within phase blocks	ecdna3	30.3955	ec1	0.400877	0.25	ec1	0.400877	False	ec1	0.25	False	0	False	5	1
+iw_intpsi	hard_S4_s16003	hard_S4	hard	4		RCK MC	within phase blocks	ecdna4	11.1985	ec2	0.99999	1	ec2	0.99999	False	ec2	1	False	1	True	5	1
+iw_intpsi	hard_S4_s16003	hard_S4	hard	4		RCK MC	within phase blocks	ecdna1	8.59888	ec4	0.549666	0.375	ec4	0.549666	False	ec4	0.375	False	0	False	5	1
+iw_intpsi	hard_S4_s16003	hard_S4	hard	4		RCK MC	within phase blocks	ecdna2	8.59888	ec3	0.999992	1	ec3	0.999992	False	ec3	1	False	1	True	5	1
+iw_intpsi	hard_S4_s16003	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna3	30.3955	ec1	0.400877	0.25	ec2	0.483476	True	ec1	0.25	False	0	False	5	1
+iw_intpsi	hard_S4_s16003	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna4	11.1985	ec2	0.99999	1	ec2	0.99999	False	ec2	1	False	1	True	5	1
+iw_intpsi	hard_S4_s16003	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna1	8.59888	ec4	0.549666	0.375	ec4	0.549666	False	ec4	0.375	False	0	False	5	1
+iw_intpsi	hard_S4_s16003	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna2	8.59888	ec3	0.999992	1	ec3	0.999992	False	ec3	1	False	1	True	5	1
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		RCK MC	within phase blocks	ecdna2	55.092	ec1	0.999993	1	ec1	0.999993	False	ec1	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		RCK MC	within phase blocks	ecdna3	19.997	ec2	0.999989	1	ec2	0.999989	False	ec2	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		RCK MC	within phase blocks	ecdna4	9.0987	ec3	0.999988	1	ec3	0.999988	False	ec3	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		RCK MC	within phase blocks	ecdna1	7.79888	ec4	0.999997	0.6	ec4	0.999997	False	ec4	0.6	False	0	False	4	0
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna2	55.092	ec1	0.999993	1	ec1	0.999993	False	ec1	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna3	19.997	ec2	0.999989	1	ec2	0.999989	False	ec2	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna4	9.0987	ec3	0.999988	1	ec3	0.999988	False	ec3	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna1	7.79888	ec4	0.999997	0.6	ec4	0.999997	False	ec4	0.6	False	0	False	4	0
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna2	55.092	cycle1	0.999994	1	cycle1	0.999994	False	cycle1	1	False	1	True	1	0
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna3	19.997				cycle1	0.300731	True	cycle1	0	False	0	False	1	0
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna4	9.0987				cycle1	0.273531	True	cycle1	0	False	0	False	1	0
+iw_intpsi	hard_S4_s16005	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna1	7.79888				cycle1	0.409329	True	cycle1	0	False	0	False	1	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		RCK MC	within phase blocks	ecdna3	20.2972	ec1	0.999994	0.6	ec1	0.999994	False	ec1	0.6	False	0	False	4	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		RCK MC	within phase blocks	ecdna1	10.3985	ec2	0.999997	0.6	ec2	0.999997	False	ec2	0.6	False	0	False	4	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		RCK MC	within phase blocks	ecdna2	9.59851	ec3	0.999995	1	ec3	0.999995	False	ec3	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		RCK MC	within phase blocks	ecdna4	4.39926	ec4	0.999997	1	ec4	0.999997	False	ec4	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna3	20.2972	ec1	0.999994	0.6	ec1	0.999994	False	ec1	0.6	False	0	False	4	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna1	10.3985	ec2	0.999997	0.6	ec2	0.999997	False	ec2	0.6	False	0	False	4	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna2	9.59851	ec3	0.999995	1	ec3	0.999995	False	ec3	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		RCK MC	haplotype-blind	ecdna4	4.39926	ec4	0.999997	1	ec4	0.999997	False	ec4	1	False	1	True	4	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna3	20.2972				cycle1	0.17219	True	cycle1	0.384615	True	0	False	2	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna1	10.3985	cycle1	0.348821	0.384615	cycle1	0.348821	False	cycle1	0.384615	False	0	False	2	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna2	9.59851	cycle2	0.0194658	0.285714	cycle1	0.303042	True	cycle2	0.285714	False	0	False	2	0
+iw_intpsi	hard_S4_s16006	hard_S4	hard	4		CoRAL	haplotype-blind	ecdna4	4.39926				cycle1	0.237787	True	cycle2	0.142857	True	0	False	2	0

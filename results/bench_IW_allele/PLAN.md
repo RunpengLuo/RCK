@@ -71,6 +71,12 @@ detail"):
    topology, Jaccard-matrix and coverage figures of RCK MC and CoRAL side by side on 8 nested, both-allele cases
    (4 allelic-sibling, 4 bench_IW_intpsi) chosen with Yubi. **How to confirm the figures: [`NEXT_STEPS.md`](NEXT_STEPS.md),
    first section, step 4.** Output `topology_plots/compare/` (one folder per case, README.md index).
+10. **Done 2026-11-21: within-block recovery matrices and two-panel J_seg | J_adj matrices** (`make_block_figures.py`,
+   local, no Gurobi; "Figures: within-block recovery and J matrices" under "Item 1 in detail"). The new recovery
+   matrices equal the table on 36 / 36 cases. Paired cells are (1, 1) on 58 / 80 RCK MC species, exactly the exact
+   ones. 16 of the 22 misses are a balanced rearrangement walked through the reference (14 cases). **Waiting for
+   Yubi:** look at `topology_plots/species_matrix/` and the compare folders, and decide on the proposed opt-in
+   `--phase-frame within_block` for `evaluate.py`.
 
 **Part B: array finished, results not yet exported, scored or written (state checked 2026-11-20, nothing
 re-run).** `rck_partB.py status`: `chil` 24 / 24 optimal, `chil_avg` 24 / 24, `chil_err` 23 optimal + 1
@@ -741,6 +747,61 @@ figures) was not run through the dataviz validator (no Node.js on ionic); every 
   the model, or report as is?
 - Which CoRAL / CE variant goes in the text: linear walks kept (shown above) or dropped (both in the TSVs)?
 
+### Figures: within-block recovery and J matrices (2026-11-21)
+
+**Why.** `topology_plots/compare/<case>/rck_mc_recovery_matrix.png` showed low composites (0.275 on s18004) where the
+table has 1.000. That page draws the run's own `recovery_matrix.tsv`, whose main columns pair and phase in the
+absolute frame. Siblings differ only by allele, so a phase block oriented the other way makes it pair the truth outer
+with the inferred sibling (s18004, s18006, hard_S4_s16005). (The run's `*_blockwise` columns do re-pair after the
+swaps, `inferred_blockwise`: s18004 `composite_blockwise` 1.00 for both species. The plot and the main columns do not.)
+
+**What.** `make_block_figures.py` (local, ~25 s, no Gurobi; outputs `topology_plots/species_matrix/`, README there):
+- **Recovery matrix within phase blocks** (`<set>/<case>/rck_mc_recovery_matrix_block.{tsv,png}`), all 36 rck_mc cases:
+  blind pairing, one A/B swap per block, relabel, pairing with haplotypes, every column on that pair (CN error
+  included). Titled "within phase blocks", with the block footnote. **Check: 36 / 36 cases equal the table**: mean
+  composite and every per-species composite to < 1e-6, and the same pairing as the table's scorer
+  (`recovery_check.tsv`).
+- **Two-panel J_seg | J_adj matrices** (`make_species_matrix_figure.py --layout pair`, an option; the one-panel figure
+  is unchanged): RCK MC within blocks and haplotype-blind on all 36, CoRAL blind on the 8 compare cases. Outlined:
+  the scorer's pair. Corner triangle: the row maximum where it differs from the pair. "–": J_adj undefined.
+- **Compare folders:** the run's page was renamed `rck_mc_recovery_matrix_absolute.png`, and the new
+  `rck_mc_recovery_matrix_block.*` was added. The two-panel matrices take the old names. The old one-panel matrices
+  are `*_onepanel` (they were already scorer-paired, so `_absolute` would mislabel them). `make_compare_plots.py`
+  now writes the same set.
+
+**Results** (`jmatrix_summary.tsv`, `jmatrix_not_1_1.tsv`). Paired cell (1, 1) = both ≥ 0.995 (1.00 as printed).
+RCK MC within blocks: **58 of 80 truth species**. iw_allelic 19 / 24 (opp_mirror 6 / 8, opp_shared 6 / 8,
+mixed_mirror 7 / 8). bench_IW_intpsi 39 / 56 (simple S1 4 / 4, S2 5 / 8, S4 11 / 16; hard S1 3 / 4, S2 6 / 8,
+S4 10 / 16). **(1, 1) coincides with `exact_cycle` in all 80 rows**, so "(1, 1) on every correctly recovered
+species" holds by construction. **"(1, 1) on every simple case" does not: 8 of 28 simple species miss it.** The
+blind frame gives the same counts. CoRAL (blind, 8 cases): 3 of 22. No paired cell has J_adj NaN (every truth
+species has novel adjacencies). The 22 misses:
+- **16: a balanced rearrangement walked through the reference.** The paired walk has every truth base (J_seg 1.00)
+  and no false adjacency. It misses exactly a reciprocal set of the truth's novel adjacencies: an inversion pair, or
+  a 3-way chain in s17006, s12002, s12005 and s16002. J_adj is 0.25–0.67.
+  - The rearranged form is a separate strict species, with J_adj 1.00, in 3 rows: s17006, s18002, simple_S4_s13004
+    ecdna4. Here the row-max marker differs from the pair.
+  - It is only a low_weight species in 4 rows: s17008 (0.6 copies), s19006 (1.5), simple_S2_s12002, simple_S2_s12005.
+  - It is not returned at all in 9 rows: simple_S4_s13001, s13003, s13004 ecdna2, hard_S1_s14001, hard_S2_s15004,
+    hard_S4_s16002, s16005, s16006 (2 species).
+  - This widens "Item 1 arrays"' outer-split finding: 14 of 36 cases, not 3 of 24 intpsi plus 4 allelic.
+- **6 structural.** s18007: the outer as two cycles (J_seg 0.86). simple_S2_s12004: two cycles, 0.65 / 0.35.
+  simple_S4_s13002: a 5-copy species spread over 4 cycles. hard_S2_s15003: partial (0.59, 3 false adjacencies).
+  hard_S4_s16003: 2 species (the known weak case).
+- Row max vs pair: within blocks, J_seg never differs and J_adj differs in the 3 split rows above. RCK MC blind:
+  J_seg differs on s15003 ecdna1 and s16003 ecdna3.
+
+**Proposed fix in `rck/ecdna/evaluate.py` (not made; needs Yubi's go-ahead).** Add an opt-in
+`phase_frame="within_block"` (CLI `--phase-frame`) to `evaluate()` / `recovery_matrix()`, used only with phase
+blocks. The main columns (`inferred`, J_seg, J_hap, F1, PA, order, CN, composite, best_*), and so `evaluation_psi.tsv`'s
+pairing and `rck-ecdna-plot`'s page, would come from the within-block pair. The provisional pairing would use
+strict species, as `aa_eval` does. The default stays `absolute`, unchanged. Tests:
+1. A synthetic two-sibling case (same segments, opposite alleles) with one block flipped: absolute pairs crossed;
+   within-block pairs right, composite 1.
+2. No blocks: frame byte-identical to now.
+3. `psi_scores` follows the within-block pair.
+4. Regression: the 36 runs' within-block means equal the tables' (as `recovery_check.tsv` shows now).
+
 ### Item 1 dry run (2026-11-20)
 
 `bench_IW.py --set iw_allelic dryrun --candidates 8 --jobs 24` (amp repo; simulation and seed checks only,
@@ -861,6 +922,7 @@ rephasing leaves every haplotype-blind CoRAL / CE score unchanged (difference 0 
 | item 1 (allelic siblings): simulator options, set, seed checks, dry run | amp repo `simulations/`: `src/structures.py` (`allelic_sibling`, `sibling_haplotypes`), `src/mixture.py` (`ecdna_clone_weights_per_species`), `make_scenarios.py --set iw_allelic`, `bench_IW.py --set iw_allelic` (+ `dryrun`), `bench_nested.py::sibling_checks`; tests `tests/test_allelic_sibling.py`; README §5.6; configs and `dryrun.tsv` in `configs/bench_IW_allelic/`; runs `/n/fs/yubi-iw/runs/bench_IW_allelic/runs/` |
 | item 1 truth figures | `make_topology_plots.py --truth RUN_DIR ... --out item1_dryrun` → `topology_plots/item1_dryrun/<run>/` |
 | topology figures for the presentation (item 7) | `make_topology_plots.py` → `topology_plots/<k>_<case>/` (README.md lists the cases; rck-ecdna-plot pages of RCK bulk and, since rck-ecdna-plot learnt multi-clone runs on 2026-11-16, of the multi-clone route, coloured by allele; CoRAL 3.1.1 cycles of RCK bulk and multi-clone, graph of RCK bulk, from species-only / trimmed plotting copies); ran as Slurm jobs 32365923, 32366291. Page titles carry the run's built-in (absolute-frame) scores: a multi-clone species can show low "phasing accuracy" from a whole phase block swapped A↔B, which the within-block scores (Part A) do not count |
+| within-block recovery matrices, two-panel J_seg / J_adj matrices (2026-11-21) | `make_block_figures.py` (`run`, `reasons`, `compare`), `make_species_matrix_figure.py --layout pair` → `topology_plots/species_matrix/<set>/<case>/`, `jmatrix_summary.tsv`, `jmatrix_not_1_1.tsv`, `recovery_check.tsv` (README.md there); compare folders updated (`make_compare_plots.py`) |
 | Part B scoring, Figure 10, Table 4 | `score_partB.py` (→ `<run>/score/partB.json`, `partB_table.tsv`), `make_partB_figures.py` (→ `figures/fig10_partB.*`, `figures/table4.*`) |
 | driver, items 2–3 (phase, score, collect) | `allele_bench.py` |
 | driver, Part A (score the item 2–3 answers and the truth, collect) | `rck_style.py` |

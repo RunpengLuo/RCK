@@ -42,6 +42,14 @@ Added 2026-11-21 for the RCK MC vs CoRAL topology comparison (make_compare_plots
                        chooses one A/B swap per phase block, then pairing with haplotypes; with --blind, blind
                        pairing) on the strict species, instead of the run's recovery_matrix.tsv (absolute frame,
                        rck_mc only). Default run (unchanged behaviour).
+
+Added 2026-11-21 (later; within-block figures, make_block_figures.py):
+  --layout pair        J_seg and J_adj as two heatmaps side by side, each 0-1 with its own colour bar, the value in
+                       every cell ("–" where J_adj is NaN). Outlined: the scorer's one-to-one pair; a corner triangle
+                       marks a row's maximum where it differs from the paired cell; "missed" for an unpaired truth
+                       species. With --block the footnote says haplotypes are scored up to one A/B swap per phase
+                       block. Writes only <method>_species_matrix_<frame>.{png,pdf} (no coverage figure); needs
+                       --match score. Default single (unchanged behaviour).
 """
 import argparse
 import bisect
@@ -237,6 +245,111 @@ def figure_matrix(matrix, rl, cl, lay, title, path):
     plt.close(fig)
 
 
+BLOCK_NOTE = ("A/B orientation of a phase block is not identifiable from the data; haplotypes are scored up to one "
+              "A/B swap per block.")
+
+
+def row_maxima(matrix, lay):
+    """Per truth row, over the drawn inferred columns: {row: {value: (best column, best value, paired value,
+    differs)}} for value in j_seg / j_adj. ``differs``: the paired cell is not a row maximum (strictly below it,
+    1e-9), or the row has no pair and some cell is > 0. NaN cells are ignored; a row of NaN has best None."""
+    out = {}
+    for r in lay["rows"]:
+        out[r] = {}
+        for value in ("j_seg", "j_adj"):
+            sub = matrix[(matrix["truth"] == r) & (matrix["inferred"].isin(lay["species"]))]
+            sub = sub[sub[value].notna()]
+            paired = lay["matches"].get(r)
+            pv = sub.loc[sub["inferred"] == paired, value]
+            pv = float(pv.iloc[0]) if len(pv) else float("nan")
+            if not len(sub):
+                out[r][value] = (None, float("nan"), pv, False)
+                continue
+            # the column order breaks ties (diagonal first), so a tie with the pair is not a difference
+            order = {c: k for k, c in enumerate(lay["cols"])}
+            best = sorted(sub.to_dict("records"), key=lambda x: (-x[value], order.get(x["inferred"], 1e9)))[0]
+            bv = float(best[value])
+            differs = (bv > pv + 1e-9) if paired is not None and not pd.isna(pv) else bv > 0
+            out[r][value] = (best["inferred"], bv, pv, bool(differs))
+    return out
+
+
+def figure_matrix_pair(matrix, rl, cl, lay, title, path, footnote=None):
+    """Two heatmaps side by side, J_seg (left) and J_adj (right), each 0-1 with its own colour bar; the value in
+    every cell ("–" where J_adj is NaN: neither walk has a novel adjacency). Outlined: the scorer's one-to-one pair;
+    a corner triangle marks each row's maximum where it differs from the paired cell; a truth species with no pair
+    gets a "missed" cell on the diagonal. Rows / columns as in figure_matrix."""
+    ROWS, COLS, UNMATCHED, MATCHES = lay["rows"], lay["cols"], lay["unmatched"], lay["matches"]
+    maxima = row_maxima(matrix, lay)
+    w_panel = max(3.6, 0.6 + 1.05 * len(COLS))
+    fig, axes = plt.subplots(1, 2, figsize=(2.0 + 2 * w_panel + 1.2, max(3.6, 2.2 + 0.95 * len(ROWS))))
+    for ax, value, name in ((axes[0], "j_seg", "J_seg: shared bases (with multiplicity)"),
+                            (axes[1], "j_adj", "J_adj: shared novel adjacencies")):
+        grid = matrix.pivot(index="truth", columns="inferred", values=value).reindex(index=ROWS, columns=COLS)
+        cmap = plt.get_cmap("Greys").copy()
+        cmap.set_bad("#f4f4f2")
+        im = ax.imshow(grid.values.astype(float), cmap=cmap, norm=Normalize(0, 1), aspect="auto")
+        for i, r in enumerate(ROWS):
+            for j, c in enumerate(COLS):
+                if c not in lay["colors"]:
+                    if j == i:
+                        ax.text(j, i, "missed", ha="center", va="center", fontsize=9.5, color=INK_MUTED, style="italic")
+                        ax.add_patch(Rectangle((j - 0.47, i - 0.47), 0.94, 0.94, fill=False, edgecolor="#d1006b",
+                                               linewidth=1.4, linestyle=":", zorder=3))
+                    continue
+                v = grid.loc[r, c]
+                ax.text(j, i, _fmt(v), ha="center", va="center", fontsize=10,
+                        color="white" if (not pd.isna(v) and v > 0.55) else INK)
+                if MATCHES.get(r) == c:
+                    ax.add_patch(Rectangle((j - 0.47, i - 0.47), 0.94, 0.94, fill=False, edgecolor="#d1006b",
+                                           linewidth=2.2, zorder=3))
+                best, _bv, _pv, differs = maxima[r][value]
+                if differs and best == c:
+                    ax.add_patch(plt.Polygon([(j + 0.47, i - 0.47), (j + 0.47, i - 0.25), (j + 0.25, i - 0.47)],
+                                             closed=True, facecolor="#d1006b", edgecolor="white", linewidth=0.8, zorder=4))
+        for k in range(len(COLS) + 1):
+            ax.axvline(k - 0.5, color="white", linewidth=2)
+        for k in range(len(ROWS) + 1):
+            ax.axhline(k - 0.5, color="white", linewidth=2)
+        if UNMATCHED:
+            j0 = COLS.index(UNMATCHED[0])
+            ax.axvline(j0 - 0.5, color=INK, linestyle="--", linewidth=1.3, zorder=5)
+            ax.text(j0 + (len(UNMATCHED) - 1) / 2, len(ROWS) - 0.5 + 0.1, "unmatched", ha="center", va="top",
+                    fontsize=8.5, color=INK_MUTED)
+        for j, c in enumerate(COLS):
+            if c in lay["colors"]:
+                ax.add_patch(Rectangle((j - 0.45, -0.5 - 0.14), 0.9, 0.1, facecolor=lay["colors"][c], edgecolor="none",
+                                       clip_on=False))
+        ax.set_xticks(range(len(COLS)))
+        ax.set_xticklabels([cl[c] for c in COLS], fontsize=8.5)
+        ax.xaxis.tick_top()
+        ax.tick_params(axis="x", length=0, pad=12)
+        ax.set_yticks(range(len(ROWS)))
+        ax.set_yticklabels([rl[r] for r in ROWS] if ax is axes[0] else [], fontsize=8.5)
+        ax.tick_params(axis="y", length=0)
+        for s in ax.spines.values():
+            s.set_visible(False)
+        ax.set_xlim(-0.5, len(COLS) - 0.5)
+        ax.set_ylim(len(ROWS) - 0.5, -0.5)
+        ax.set_xlabel(name, fontsize=10, color=INK, labelpad=22 if UNMATCHED else 8)
+        cb = fig.colorbar(im, ax=ax, fraction=0.05, pad=0.03)
+        cb.set_label(value.replace("j_", "J_"), fontsize=9)
+        cb.outline.set_visible(False)
+    axes[0].set_ylabel("truth species (by copy number)", fontsize=10, color=INK_MUTED)
+    fig.suptitle(title, fontsize=11)
+    notes = ["outlined: the scorer's one-to-one pair · corner triangle: the row maximum, where it differs from the pair · "
+             "– : J_adj undefined (neither walk has a novel adjacency)",
+             "columns: inferred strict species, pairs on the diagonal, unmatched last · copies are bulk copies per cell"]
+    if footnote:
+        notes.append(footnote)
+    fig.text(0.01, 0.01, "\n".join(notes), fontsize=7.5, color=INK_MUTED, va="bottom")
+    fig.tight_layout(rect=(0, 0.02 + 0.03 * len(notes), 1, 0.96))
+    for ext in ("png", "pdf"):
+        fig.savefig("%s.%s" % (path, ext), dpi=200)
+    plt.close(fig)
+    return maxima
+
+
 def coverage_pieces(t, inferred, names, with_hap):
     """[(offset, length, covering names)] along the truth walk t, merged where the covering set repeats."""
     key = (lambda s: (s.chrom, s.hap)) if with_hap else (lambda s: (s.chrom,))
@@ -337,6 +450,11 @@ def figure_coverage(truth, inferred, rl, lay, with_hap, title, path):
     return texts
 
 
+def pair_title(case, block, blind):
+    frame = "within phase blocks" if block else ("haplotype-blind" if blind else "absolute haplotypes")
+    return "%s — %s, %s: J_seg and J_adj per truth × inferred species" % (case, LABEL[METHOD], frame)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--blind", action="store_true", help="haplotype-blind rows/coverage (default: phased)")
@@ -349,6 +467,9 @@ def main():
     p.add_argument("--variant", choices=["walks_kept", "walks_dropped"], default="walks_kept",
                    help="CoRAL / CE scoring variant (default walks_kept)")
     p.add_argument("--match", choices=["run", "score"], default="run")
+    p.add_argument("--layout", choices=["single", "pair"], default="single",
+                   help="pair: J_seg and J_adj as two heatmaps side by side (figure_matrix_pair), matrix only, no "
+                        "coverage figure; needs --match score. Default single (unchanged behaviour)")
     args = p.parse_args()
     global METHOD, VARIANT, PHASING, MATCH
     ab.use_set(args.set)
@@ -370,6 +491,13 @@ def main():
         title = "%s — %s, %s" % (args.case, LABEL[METHOD], labelling if args.blind else "%s, %s" % (hap, labelling))
     m_path = os.path.join(plot_dir, METHOD + "_species_matrix" + suffix)
     c_path = os.path.join(plot_dir, METHOD + "_species_coverage" + suffix)
+    if args.layout == "pair":
+        if MATCH != "score":
+            raise SystemExit("--layout pair needs --match score")
+        figure_matrix_pair(matrix, rl, cl, lay, pair_title(args.case, args.block, args.blind), m_path,
+                           BLOCK_NOTE if args.block else None)
+        print("wrote %s.{png,pdf}" % m_path)
+        return
     print("matches (%s): %s" % (lay["match_source"] or "fallback: best phased J_seg",
                                 ", ".join("%s->%s" % (r, lay["matches"].get(r) or "missed") for r in lay["rows"])))
     print("columns: %s; unmatched: %s" % (", ".join(lay["cols"]), ", ".join(lay["unmatched"]) or "none"))

@@ -26,6 +26,13 @@ graph figure gets a plotting copy of the graph with only the sequence edges at l
 segments the species use, padded by 10 kb (and the edges between kept sequence edges). --hide-genes: the simulated amplicons sit on real hg38
 loci whose gene tracks would cover the figure.
 
+Truth only (`--truth RUN_DIR ...`, PLAN.md item 1 dry run): for each simulator run, into
+topology_plots/<--out>/<run>/: truth_topology.png (every truth species as a topology row of rck-ecdna-plot,
+coloured by haplotype, on one genome axis; bulk copies and psi per clone in the labels) and
+coral_truth_<species>_cycles.png (CoRAL's cycles figure of each species' truth/aa cycles, haplotype-blind).
+
+    python make_topology_plots.py --truth RUN_DIR [RUN_DIR ...] --out item1_dryrun
+
 Run folders are only read: the RCK bulk run is copied (without pool/ and score/) to a temporary folder for
 rck-ecdna-plot, which writes next to its input. ~1 min per case, so the full set runs as a Slurm job:
 
@@ -204,10 +211,79 @@ def plot_case(rank, case, description):
     return folder
 
 
+def clone_psi(run_dir):
+    """{species: {clone: psi}} and {species: bulk copies of tumor1} from truth/proportions.tsv."""
+    import pandas as pd
+    p = pd.read_csv(os.path.join(run_dir, "truth", "proportions.tsv"), sep="\t")
+    psi, bulk = {}, {}
+    for r in p.itertuples():
+        if r.KIND == "ecdna_psi":
+            psi.setdefault(str(r.ID), {})[str(r.CLONE)] = float(r.PSI)
+        elif r.KIND == "ecdna_burden" and r.SAMPLE == "tumor1":
+            bulk[str(r.ID)] = float(r.PHI)
+    return psi, bulk
+
+
+def plot_truth(run_dir, folder):
+    """truth_topology.png and CoRAL's truth cycles figures of one simulator run (module docstring)."""
+    from rck.ecdna import evaluate as ev
+    from rck.ecdna import plot as rp
+
+    name = os.path.basename(run_dir.rstrip("/"))
+    os.makedirs(folder, exist_ok=True)
+    plt, _, cnplot = rp.import_plotting(CNPLOT)
+    truth = ev.load_truth(run_dir)
+    psi, bulk = clone_psi(run_dir)
+    species = [(c.name, [rp.PStep(s.chrom, s.start, s.end, s.hap, s.strand) for s in c.steps]) for c in truth]
+    work = tempfile.mkdtemp(prefix="topo_truth_")
+    try:
+        regions = rp.axis_regions([st for _, steps in species for st in steps])
+        axis = rp.build_axis(cnplot, regions, work)
+        heights = [max(1.4, 0.22 * len(steps)) for _, steps in species]
+        height = min(sum(heights) + 1.6, 30)
+        fig = plt.figure(figsize=(15, height))
+        grid = fig.add_gridspec(len(heights), 1, height_ratios=heights, hspace=0.25, top=1.0 - 0.8 / height, bottom=0.7 / height)
+        axes = []
+        for row, (sp, steps) in enumerate(species):
+            ax = fig.add_subplot(grid[row, 0], sharex=axes[0] if axes else None)
+            base = sp.split(".")[0]
+            label = "{s}\n{b:.1f} bulk copies\npsi {p}".format(s=sp, b=bulk.get(base, float("nan")), p=", ".join(
+                "{c} {v:g}".format(c=c, v=v) for c, v in sorted(psi.get(base, {}).items())))
+            rp.draw_topology(ax, axis, steps, True, label)
+            ax.set_xlim(axis.ch_coords[0], axis.chr_end)
+            for boundary in axis.chr_boundaries:
+                ax.axvline(boundary, color=rp.INK_MUTED, linewidth=0.8, zorder=0)
+            ax.tick_params(axis="x", labelbottom=False, bottom=False)
+            axes.append(ax)
+        axes[-1].tick_params(axis="x", labelbottom=True, bottom=True)
+        rp.position_ticks(axes[-1], axis)
+        from matplotlib.patches import Patch
+        fig.legend(handles=[Patch(facecolor=rp.HAP_COLORS["A"], label="haplotype A"),
+                            Patch(facecolor=rp.HAP_COLORS["B"], label="haplotype B")],
+                   loc="upper right", bbox_to_anchor=(0.98, 1.0), ncol=2, fontsize=8, frameon=False)
+        fig.suptitle("{n}: truth (simulator), one row per step in walk order".format(n=name), fontsize=10, color=rp.INK,
+                     x=0.02, y=1.0 - 0.1 / height, ha="left", va="top")
+        fig.savefig(os.path.join(folder, "truth_topology.png"), dpi=150)
+        plt.close(fig)
+        for path in sorted(glob.glob(os.path.join(run_dir, "truth", "aa", "ecdna*_cycles.txt"))):
+            sp = os.path.basename(path)[:-len("_cycles.txt")]
+            coral_plot(os.path.join(work, "coral_truth_" + sp), cycles=path)
+            shutil.copy(os.path.join(work, "coral_truth_{s}_cycles.png".format(s=sp)), folder)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    return folder
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("cases", nargs="*", help="case names (default: all of CASES)")
+    p.add_argument("--truth", nargs="+", default=None, metavar="RUN_DIR", help="draw these simulator runs' truth only")
+    p.add_argument("--out", default="truth", help="with --truth: folder under topology_plots/ (default truth)")
     a = p.parse_args()
+    if a.truth:
+        for run_dir in a.truth:
+            print(plot_truth(run_dir, os.path.join(OUT, a.out, os.path.basename(run_dir.rstrip("/")))), flush=True)
+        return
     by_name = {c["name"]: c for c in bi.cases()}
     for rank, (name, description) in enumerate(CASES, start=1):
         if a.cases and name not in a.cases:

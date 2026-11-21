@@ -17,10 +17,11 @@ species, with a shared-weights control for the mirrored clone split ("Item 1 in 
 
 **Item 1 (allelic siblings), started 2026-11-20.** Order of work, with Yubi's stops (details in "Item 1 in
 detail"):
-1. PLAN.md rewritten for the decided design — **done** (this commit).
-2. Simulator options + unit tests (amp repo `simulations/`, local, no Gurobi) — next.
-3. Dry run: a few candidate seeds per scenario, simulation only; acceptance rates, rejection reasons, one
-   truth topology plot per scenario. **Then stop and report to Yubi.**
+1. PLAN.md rewritten for the decided design — **done** (RCK `4ac2990`).
+2. Simulator options + unit tests — **done** (amp `13ae73b`: 26 new tests, 116 / 116 simulator tests
+   pass; defaults byte-identical, checked end to end on bench_IW_intpsi hard_S2_s15003).
+3. Dry run — **done** (amp `cdb9e0f`; "Item 1 dry run" below): 5 of 24 accepted. **Stopped here, waiting
+   for Yubi** on the `is_clean` strictness and the candidate budget for step 4.
 4. After the go-ahead: all 12 cases, both subgraphs per case, `check-shared`. **Stop again** before any Gurobi
    work: propose a 2-case local `rck_mc` pilot, then arrays (`rck_mc`, `rck_bulk`, CoRAL / CE on `rck_bulk`'s
    graph), each `%1`, with sizes and commands; nothing submitted without the go-ahead.
@@ -509,6 +510,43 @@ an observed ecDNA phenomenon, unless a citation turns up.
   sibling: clone 2).
 - The existing checks: bulk ratio within 10% of the target, footprint ≤ 8 Mb, `placed`, traversal cap 3.
 
+### Item 1 dry run (2026-11-20)
+
+`bench_IW.py --set iw_allelic dryrun --candidates 8 --jobs 24` (amp repo; simulation and seed checks only,
+local, 1.5 min wall, ~2 GB and ~105 s per simulation): the first 8 seeds of each block. Records:
+`simulations/configs/bench_IW_allelic/dryrun.tsv`; runs `/n/fs/yubi-iw/runs/bench_IW_allelic/runs/`.
+
+| scenario | accepted | rejected for (a seed can have several) |
+|---|---|---|
+| `sib_opp_mirror` | 2 / 8 (s17004, s17008) | truth `is_ext` 5, nested interval not placed 2, sibling breakpoint within 1 bin 2 |
+| `sib_opp_shared` | 2 / 8 (s18002, s18004) | truth `is_ext` 5, not placed 4 |
+| `sib_mixed_mirror` | 1 / 8 (s19006) | truth `is_ext` 6, not placed 2, within 1 bin 1, not mixed 1 (one shared interval) |
+
+- **Every truth `is_ext` is within one species** (per-species counts add up to the total in all 24): an
+  extremity reused by ecSimulator's duplication / translocation loop, the same property bench_IW_intpsi's
+  truth has in 10 of 24 cases (Part A). No seed has a cross-species violation: `is_hom` = `is_recip` = 0 in
+  all 24. 8 seeds fail on `is_ext` alone; with only cross-species violations counted, 13 / 24 would pass
+  (4 / 4 / 5).
+- The other checks behave as intended: sibling inside the outer 0.83–1.00 (all pass), opposite share 1.000
+  on every `opp` seed, mirroring holds on every mirror seed (e.g. s17004 outer ψ (9, 2), sibling (4, 16)),
+  minor species ≥ 4.1 bulk copies and ≥ 20 reads per junction on every seed (s17004: 5.1 copies, 21 reads).
+- `mixed` seeds range from 34% to 99% opposite (s19007: 12 kb of 863 kb the same); "≥ 1 of each" accepts
+  a nearly all-opposite sibling. Option: also require each relation on ≥ 10% of the shared bases.
+- Truth topology (`make_topology_plots.py --truth`, one accepted case per scenario):
+  `topology_plots/item1_dryrun/{sib_opp_mirror_s17004, sib_opp_shared_s18002, sib_mixed_mirror_s19006}/`
+  (`truth_topology.png`: both species, haplotype-coloured, ψ per clone; `coral_truth_*_cycles.png`).
+
+**Open for Yubi:**
+1. `is_clean` as specified (truth `is_*` all 0) accepts ~20% (mixed ~12%): 4 accepted per scenario needs
+   ~16–32 candidates, and it drops outer species whose own rearrangement reuses an extremity (a selection
+   toward simpler outer walks than hard_S2's). Alternative: count only cross-species violations
+   (`is_hom`, `is_hom_same`, `is_recip`, and `is_ext` on an extremity shared by the two species), which keeps
+   hard_S2's within-species behaviour, as in bench_IW_intpsi, at ~54% acceptance.
+2. Whether `mixed` needs a minimum share of each relation (above).
+3. Step 4 budget: proposed one CPU Slurm job (no Gurobi): `dryrun --candidates 60 --jobs 32` (180
+   simulations, ~12 min, ~64 GB), then `scenario <s> --accept 4 --candidates 60 --max-tries 60` per scenario
+   (reuses the simulations, builds the union subgraphs), `--cnp rebuild`, `check-shared`.
+
 ### Runs (each after Yubi's go-ahead)
 
 A 2-case local `rck_mc` pilot first, then arrays (`%1` each, Gurobi licence) for `rck_mc` (the method under
@@ -589,6 +627,8 @@ rephasing leaves every haplotype-blind CoRAL / CE score unchanged (difference 0 
 | RCK-style metrics (Part A: adjacency FNR / FDR / FPR, Eq. 11, generalized-IS violations) | `rck/ecdna/rck_eval.py`; tests `tests/ecdna/test_rck_eval.py` |
 | Part B inputs (CHIL, averaging, errors) | `rck/ecdna/rck_inputs.py` (tests `tests/ecdna/test_rck_inputs.py`); driver `make_rck_inputs.py` → `/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/<case>/<variant>/rck_input/`; counts `rck_inputs_summary.tsv` |
 | Part B runs (multi-clone on the degraded inputs) | `rck_partB.py`, `rck_partB.sbatch`, `submit_partB.sh` → `<case>/<variant>/rck_mc/`; logs `/n/fs/yubi-iw/runs/bench_IW_intpsi_rckstyle/logs/slurm/` (`submitted.txt` lists the arrays) |
+| item 1 (allelic siblings): simulator options, set, seed checks, dry run | amp repo `simulations/`: `src/structures.py` (`allelic_sibling`, `sibling_haplotypes`), `src/mixture.py` (`ecdna_clone_weights_per_species`), `make_scenarios.py --set iw_allelic`, `bench_IW.py --set iw_allelic` (+ `dryrun`), `bench_nested.py::sibling_checks`; tests `tests/test_allelic_sibling.py`; README §5.6; configs and `dryrun.tsv` in `configs/bench_IW_allelic/`; runs `/n/fs/yubi-iw/runs/bench_IW_allelic/runs/` |
+| item 1 truth figures | `make_topology_plots.py --truth RUN_DIR ... --out item1_dryrun` → `topology_plots/item1_dryrun/<run>/` |
 | topology figures for the presentation (item 7) | `make_topology_plots.py` → `topology_plots/<k>_<case>/` (README.md lists the cases; rck-ecdna-plot pages of RCK bulk and, since rck-ecdna-plot learnt multi-clone runs on 2026-11-16, of the multi-clone route, coloured by allele; CoRAL 3.1.1 cycles of RCK bulk and multi-clone, graph of RCK bulk, from species-only / trimmed plotting copies); ran as Slurm jobs 32365923, 32366291. Page titles carry the run's built-in (absolute-frame) scores: a multi-clone species can show low "phasing accuracy" from a whole phase block swapped A↔B, which the within-block scores (Part A) do not count |
 | Part B scoring, Figure 10, Table 4 | `score_partB.py` (→ `<run>/score/partB.json`, `partB_table.tsv`), `make_partB_figures.py` (→ `figures/fig10_partB.*`, `figures/table4.*`) |
 | driver, items 2–3 (phase, score, collect) | `allele_bench.py` |

@@ -75,8 +75,8 @@ detail"):
    local, no Gurobi; "Figures: within-block recovery and J matrices" under "Item 1 in detail"). The new recovery
    matrices equal the table on 36 / 36 cases. Paired cells are (1, 1) on 58 / 80 RCK MC species, exactly the exact
    ones. 16 of the 22 misses are a balanced rearrangement walked through the reference (14 cases). **Waiting for
-   Yubi:** look at `topology_plots/species_matrix/` and the compare folders, and decide on the proposed opt-in
-   `--phase-frame within_block` for `evaluate.py`.
+   Yubi:** look at `topology_plots/species_matrix/` and the compare folders. (The proposed `evaluate.py`
+   `--phase-frame` change was declined, 2026-11-21: do not make it.)
 
 **Part B: array finished, results not yet exported, scored or written (state checked 2026-11-20, nothing
 re-run).** `rck_partB.py status`: `chil` 24 / 24 optimal, `chil_avg` 24 / 24, `chil_err` 23 optimal + 1
@@ -791,7 +791,7 @@ species has novel adjacencies). The 22 misses:
 - Row max vs pair: within blocks, J_seg never differs and J_adj differs in the 3 split rows above. RCK MC blind:
   J_seg differs on s15003 ecdna1 and s16003 ecdna3.
 
-**Proposed fix in `rck/ecdna/evaluate.py` (not made; needs Yubi's go-ahead).** Add an opt-in
+**Proposed fix in `rck/ecdna/evaluate.py`: DECLINED by Yubi (2026-11-21), not to be made; kept for the record.** Add an opt-in
 `phase_frame="within_block"` (CLI `--phase-frame`) to `evaluate()` / `recovery_matrix()`, used only with phase
 blocks. The main columns (`inferred`, J_seg, J_hap, F1, PA, order, CN, composite, best_*), and so `evaluation_psi.tsv`'s
 pairing and `rck-ecdna-plot`'s page, would come from the within-block pair. The provisional pairing would use

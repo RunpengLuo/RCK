@@ -20,7 +20,8 @@ and J matrices"; file list: `topology_plots/species_matrix/README.md`.
 3. **Read the misses** in `topology_plots/species_matrix/jmatrix_not_1_1.tsv` (22 rows, `kind` and `reason`, plus
    the missing / extra adjacencies).
 4. **Open for Yubi:**
-   - the opt-in `--phase-frame within_block` for `rck/ecdna/evaluate.py` (proposal and tests in PLAN.md; not made);
+   - (declined 2026-11-21: no `--phase-frame` change to `rck/ecdna/evaluate.py`; the within-block figures come from
+     `make_block_figures.py` only);
    - the balanced-rearrangement-through-reference behaviour, now seen on 16 species in 14 of 36 cases, 9 of them
      without the rearranged form at all. It joins the earlier open question on rck_mc's outer splits.
 

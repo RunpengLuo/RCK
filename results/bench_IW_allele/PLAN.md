@@ -9,17 +9,38 @@ instead of allelic twins (reasons under "Alignment with the literature"). The en
 blocked on the purity / ploidy fit. Revised again 2026-11-16 (Yubi's decisions): Part A + Part B mimic RCK's
 2020 evaluation as closely as possible, on the multi-clone route with the true clone profiles and
 proportions as input (RCK's simulation also used the true copy numbers), P = 0.9 only, no homogeneous S′
-cases, and the bulk route kept only as the graph CoRAL / CE decompose.*
+cases, and the bulk route kept only as the graph CoRAL / CE decompose. Revised 2026-11-20 (Yubi's decided
+design): item 1 is now three scenarios of 4 cases each, the sibling's haplotype defined relative to the outer
+species, with a shared-weights control for the mirrored clone split ("Item 1 in detail").*
 
 ## Resume here
 
-**State at hand-off (2026-11-16, ~21:20 EST).** Part B's 72-task array **32364902** (`0-71%1`, submitted
+**Item 1 (allelic siblings), started 2026-11-20.** Order of work, with Yubi's stops (details in "Item 1 in
+detail"):
+1. PLAN.md rewritten for the decided design — **done** (this commit).
+2. Simulator options + unit tests (amp repo `simulations/`, local, no Gurobi) — next.
+3. Dry run: a few candidate seeds per scenario, simulation only; acceptance rates, rejection reasons, one
+   truth topology plot per scenario. **Then stop and report to Yubi.**
+4. After the go-ahead: all 12 cases, both subgraphs per case, `check-shared`. **Stop again** before any Gurobi
+   work: propose a 2-case local `rck_mc` pilot, then arrays (`rck_mc`, `rck_bulk`, CoRAL / CE on `rck_bulk`'s
+   graph), each `%1`, with sizes and commands; nothing submitted without the go-ahead.
+5. Scoring (`allele_bench.py`, `rck_style.py`, species matrix extended to the set; phased species matching;
+   per-clone ψ; `sib_opp_mirror` vs `sib_opp_shared`).
+
+**Part B: array finished, results not yet exported, scored or written (state checked 2026-11-20, nothing
+re-run).** `rck_partB.py status`: `chil` 24 / 24 optimal, `chil_avg` 24 / 24, `chil_err` 23 optimal + 1
+**time-limited** (hard_S4_s16005 `chil_err`: Gurobi status 9 at the 600 s MILP limit, MIP gap 0.53%, run
+606 s; a feasible answer exists). Remaining: the steps below from 3 on (export, score, Figure 10 / Table 4,
+write "Part B results"); the status-9 run needs a decision (score it as is, with its gap stated, or rerun
+with a longer limit: a Gurobi run, so Yubi's call).
+
+**Part B hand-off (2026-11-16, ~21:20 EST), kept for the steps.** Part B's 72-task array **32364902** (`0-71%1`, submitted
 21:10 EST with Yubi's go-ahead) was running: 11 of 72 runs done, all optimal (the 3 pilot runs, array
 32364762, included), about one task per minute, expected to finish ~22:20–22:30 EST. Everything else from the
 session is committed on `yubi_CNP_ionic` (RCK `ec5284a` … this commit; amplicon-allele-analysis unchanged),
 not pushed. Partial Part B tables / Figure 10 were deliberately not committed; step 4 below regenerates them.
 
-**Pick up here, in `results/bench_IW_allele/`** (`/n/fs/yubi-iw/conda/envs/gurobi-env` python):
+**Pick up Part B here, in `results/bench_IW_allele/`** (`/n/fs/yubi-iw/conda/envs/gurobi-env` python):
 
 1. **Check the array.** `python rck_partB.py status` reads the run folders (no Slurm calls): every variant
    should show `'done (optimal)': 24`. If needed, `sacct -j 32364902 --format=JobID,State,Elapsed,MaxRSS`
@@ -41,8 +62,7 @@ not pushed. Partial Part B tables / Figure 10 were deliberately not committed; s
 6. **Write "Part B results"** under "Part B status" (RCK's Fig. 2 reading: what CHIL alone, averaging, and
    the full errors each cost against the labelled reference, single vs mixed cases; descriptive, n = 6
    mixed), update this list, commit `partB_table.tsv`, Figure 10 and Table 4 with the text.
-7. **Then, waiting for Yubi:** item 1 (allelic siblings): the simulator option first (local, cheap; amp repo
-   `simulations/src/structures.py`), method runs need arrays and Yubi's go-ahead.
+7. Item 1 (allelic siblings): in progress, see the item 1 list at the top of this section.
 
 **Observation to check across all cases (from the pilot case only):** on hard_S4_s16003 (the known weak
 multi-clone case, item 8) the label-free `chil` input gave near-exact clone copy numbers (Eq. 11 over clones,
@@ -150,8 +170,8 @@ Sources (DOIs checked against Crossref on 2026-11-16; Aganezov 2020 also read in
 | # | analysis | status | cost |
 |---|---|---|---|
 | A | **RCK-style evaluation of the existing runs**: haplotype-specific adjacency FNR / FDR / FPR, Eq. 11 CN distance, generalized-IS violations | **done 2026-11-16** | local, seconds |
-| B | **RCK's simulation inputs on the multi-clone route**: CHIL, 50 kb averaging, full errors; P = 0.9; all 24 cases | steps 1–2 + pilot done; array 32364902 submitted 2026-11-16; scoring scripts ready; results pending ("Resume here") | 72 `rck_mc` runs (array, `%1`) |
-| 1 | **allelic-sibling cases**: a second species on the other allele of the same locus, own breakpoints | designed (below), not started | simulator option + seeds; method arrays |
+| B | **RCK's simulation inputs on the multi-clone route**: CHIL, 50 kb averaging, full errors; P = 0.9; all 24 cases | array 32364902 finished (71 / 72 optimal, 1 time-limited at gap 0.53%); export, scoring and write-up pending ("Resume here") | 72 `rck_mc` runs (array, `%1`) |
+| 1 | **allelic-sibling cases**: a nested sibling species built from the same locus, own breakpoints, its haplotype opposite to (or mixed with) the outer species'; mirrored vs shared clone weights; 3 scenarios × 4 cases | design decided 2026-11-20 (below); simulator work in progress | simulator options + 12 seeds; arrays for `rck_mc`, `rck_bulk`, CoRAL / CE (go-ahead) |
 | 2 | **post-hoc phasing baseline**: CoRAL / CE (and RCK's own structures) phased afterwards by a rule | **done 2026-11-16** | local, minutes |
 | 3 | **allele-specific copy numbers** per segment: true vs inferred CN_A / CN_B, BAF error | **done 2026-11-16** | local, minutes |
 | 4 | ablation: RCK with the alleles collapsed (allele-blind graph) | idea | small array |
@@ -408,58 +428,106 @@ CHIL tests; phase across blocks is unknowable from any data); Eq. 11 also in eac
    (adjacency FNR / FPR and Eq. 11 per variant), Table 4 per variant; the CoRAL / CE comparison as
    RCK's Figs. 3–4.
 
-## Item 1 in detail: the allelic-sibling benchmark (design, not started)
+## Item 1 in detail: the allelic-sibling benchmark (design decided 2026-11-20)
+
+*Replaces the 2026-11-16 design (one full-footprint sibling, a grid of minor shares, 16–32 cases).*
 
 **Goal.** Cases where both alleles of one locus are amplified on different ecDNA species, so the
-allele-specific model is necessary by construction, while respecting RCK's generalized IS: species 1
-plus a **sibling** on the other allele of the same reference intervals, with its **own** breakpoints and
-rearrangement. A haplotype-blind method sees overlapping species with summed copy numbers on shared
-segments; post-hoc phasing can give each base only one allele, so it recovers at most the major share.
-Varying the minor sibling's share gives a curve (prediction: post-hoc ≈ 1 − minor share on sibling
-bases; RCK flat if it separates them).
+allele-specific model is necessary by construction, while the truth still obeys RCK's generalized IS. Each
+case has 2 species: an **outer** species and a nested **sibling** placed inside the outer's reference
+intervals, with its **own** breakpoints and rearrangement, and haplotypes set relative to the outer's. A
+haplotype-blind method sees overlapping species with summed copy numbers on shared segments; post-hoc
+phasing can give each base only one allele.
 
-**What the simulator does today** (amplicon-allele-analysis `simulations/src/structures.py`,
-`build_structures`): every step of a species walk carries a haplotype. With `hap_labels: inherit`
-(bench_IW's setting) `inherit_haplotypes` draws one haplotype per source interval, switching between
-intervals with probability `p_cross` (0.2). Nested species (`nest_species: true`) are placed inside
-species 1's intervals (`select_nested_intervals`) with their own rearrangement and haplotypes;
-`nest_same_haplotype` forces the nested species onto species 1's starting haplotype.
+**Biological model (framing).** A modelled case motivated by **mirrored-subclonal allelic imbalance**,
+where different subclones amplify opposite alleles of the same region (CHISEL, Zaccaria & Raphael 2021;
+Alleloscope, Wu et al. 2021; "Alignment with the literature"): two ecDNA species form independently from the
+same locus, one per parental allele, each with its own breakpoints and rearrangements, and in some cases
+they sit in different tumour clones. **Caveat, to keep in the text:** the literature search of 2026-11-16
+found no report of ecDNA built from both alleles of one locus, so this is presented as a modelled case, not
+an observed ecDNA phenomenon, unless a citation turns up.
 
-**Simulator change** (defaults leave every existing config byte-identical; a test checks it):
-1. `l2_structures.allelic_sibling`: a per-species list, `null` or the 0-based index of the source species.
-   A sibling takes the source's `intervals` (or, with `sibling_footprint` < 1, nested intervals inside them,
-   as `select_nested_intervals`), then draws its own breakpoints (`assign_breakpoints`) and rearrangement.
-2. Haplotypes: each sibling segment gets the opposite of the haplotype the source carries on the source
-   interval that contains it (inherit mode gives one per interval), so the sibling follows the source's own
-   crossings on the other allele.
-3. Per-species clone weights (`ecdna_clone_weights` is per clone and shared by every species today): an
-   optional per-species override, so the A-sibling can sit mostly in clone 1 and the B-sibling mostly in
-   clone 2, the ecDNA form of mirrored-subclonal allelic imbalance.
+### Scenarios (12 cases)
 
-**Scenarios** (make_scenarios.py set `iw_allelic`, `integer_psi: true`, otherwise `iw_intpsi`):
-- `sib_S2`: species 1 + a full-footprint sibling; minor share on a grid 0.1 / 0.2 / 0.3 / 0.5 on the same
-  structures (the structures layer has its own random stream, `layer_rng(cfg, "structures")`, so
-  changing `ecdna_proportions` keeps the walks); total copies fixed (~40) so the minor sibling keeps
-  ≥ 4 copies and ≥ 20 reads per junction.
-- `sib_S2c`: as `sib_S2` with the clone split (A-sibling clone 1, B-sibling clone 2).
-- 4 structure seeds × 4 shares per scenario (32 cases, or 16 for `sib_S2` alone to start).
+| scenario | sibling's haplotype vs the outer's, per shared interval | ψ clone weights (tumour clone 1, tumour clone 2) | replicates |
+|---|---|---|---|
+| `sib_opp_mirror` | opposite on every shared interval | outer [1, 0.25], sibling [0.25, 1] | 4 |
+| `sib_opp_shared` (control) | opposite on every shared interval | both [1, 0.5], as bench_IW_intpsi | 4 |
+| `sib_mixed_mirror` | opposite on some shared intervals, same on others (≥ 1 of each) | outer [1, 0.25], sibling [0.25, 1] | 4 |
 
-**Seed checks** (bench_IW.py `--set iw_allelic`): `sibling` (the sibling's bases lie in the source's;
-opposite allele on ≥ 90% of them), **`is_clean` (no breakpoint of the sibling within 1 bin of a source
-breakpoint, so the truth obeys RCK's generalized IS; Part A's `is_*` counts on the truth must be 0)**,
-`placed`, `footprint`, ≥ 20 reads per junction, bulk ratio. Enough heterozygous SNPs on the intervals
-(~1 per 1.8 kb in truth/phasing.tsv; intervals ≥ 100 kb are fine).
+- **Why relative to the outer species.** Scoring works within phase blocks (one unknown A/B swap per block),
+  so a haplotype switch inside one species across blocks cannot be scored. Only the relative haplotype of
+  species that share a block can, and nested siblings share the outer's bases, hence its blocks.
+- **Why the control.** With mirroring, the true clone profiles given to `rck_mc` (each clone's ecDNA copies
+  folded into its karyotype) already show allele A amplified in clone 1 and allele B in clone 2: part of the
+  separation is in the input. `sib_opp_shared` has the same kind of structures, with both species in both
+  clones at [1, 0.5], so the profiles carry no clone-wise allele signal; the difference between the two
+  scenarios separates the allele model's contribution from that input.
+- **Mirroring is between the 2 tumour clones.** The normal clone carries no ecDNA.
+- **Everything else as bench_IW_intpsi's `hard_S2`:** the same clone set (`clone_seed: 7`, identical clone
+  proportions and copy-number profiles; `bench_IW.py check-shared`); `integer_psi: true`; the same size,
+  interval, breakpoint, traversal and copy-number draws (`make_scenarios.iw_draw`: outer 0.6–3 Mb, nested
+  fraction 0.3–0.7, 2–3 intervals, ≤ 10 breakpoints, bulk copies lognormal median 8 kept within 4–60,
+  max / min ≤ 8, cap 3 traversals, footprint ≤ 8 Mb); the same read model, base config and subgraph builds
+  (union subgraph for the bulk route, `--cnp` subgraph with `--clone-profiles truth --diag-labeling-groups
+  block` for the multi-clone route).
 
-**Runs and scoring:** `bench_iw.py` `SETS` entry `iw_allelic`; arrays for `rck_mc` (the method under
-test) and `rck_bulk` (only to build the graph CoRAL / CE decompose), then CoRAL / CE on that graph (`%1` per Gurobi array), **after Yubi's go-ahead**, preceded by a local pilot on
-2–3 cases (also Gurobi, so also needs the go-ahead and a free licence). Scored with `allele_bench.py`
-(`--set`), Part A's metrics, and phased species matching for proportions (`evaluate._match(...,
-with_hap=True)`; `bench_metrics.proportion_scores` matches blind).
+### Simulator options (amp repo `simulations/`; defaults leave every existing config byte-identical)
 
-**Expected figure:** x = minor-sibling share; y = allele-specific copy-number recall, Eq. 11 distance and
-phased species F1; lines for RCK bulk / multi-clone (own), post-hoc oracle, CoRAL / CE (BAF). If RCK does
-*not* separate siblings (it may prefer one species carrying both alleles where the step penalty favours
-fewer cycles), that is a finding too; the pilot answers it before any array.
+1. `l2_structures.allelic_sibling`: per-species list, `null` or the 0-based index of the source species.
+   A sibling takes the source's intervals (`sibling_footprint` ≥ 1, the default) or, with
+   `sibling_footprint` < 1, nested intervals inside them (`select_nested_intervals`, target = the source's
+   target size × footprint); then draws its own breakpoints (`assign_breakpoints`) and rearrangement.
+   `iw_allelic` sets the footprint to `iw_draw`'s nested fraction, so the geometry draws are hard_S2's.
+2. `l2_structures.sibling_haplotype`: `opposite` (every sibling segment gets the opposite of the haplotype
+   the source carries on the source interval containing it) or `mixed` (opposite on a random subset of the
+   shared source intervals, the same on the rest, at least one of each; drawn from the structures layer's own
+   stream). `mixed` needs ≥ 2 shared intervals; with fewer the sibling falls back to `opposite` with a
+   warning and the seed check rejects it.
+3. `l3_mixture.ecdna_clone_weights_per_species`: optional per-species override of `ecdna_clone_weights`
+   (`null` entries use the shared weights). With `abundance_mode: per_sample` each species is normalised on
+   its own weights, so its bulk copies Σ_k u_k ψ_{s,k} stay ecdna_burden × its share (the drawn copies keep
+   their meaning); with `integer_psi` every ψ_{s,k} is still a whole number.
+4. `make_scenarios.py --set iw_allelic` and `bench_IW.py --set iw_allelic`: seed blocks 17001–17099,
+   18001–18099, 19001–19099 (bench_IW's are 11001–16099); configs in `configs/bench_IW_allelic/`, runs in
+   `/n/fs/yubi-iw/runs/bench_IW_allelic/` (beside bench_IW_intpsi's), subgraphs in
+   `subgraphs/bench_IW_allelic{,_cnp}/`. Nothing written into bench_IW_intpsi's folders.
+5. Unit tests per option, and a byte-identity test of an existing config against a fixed seed; documented
+   in `simulations/README.md` and `CHANGELOG.md`.
+
+### Seed checks (every case)
+
+- `sibling`: the sibling's bases lie inside the outer species (≥ 80% of them on the outer's walk, as the
+  `nested` check; the outer's own deletions can drop some of its interval bases). `opp` scenarios: the
+  sibling is on the opposite allele on ≥ 90% of the shared bases; `mixed`: at least one opposite and one same
+  shared interval.
+- **`is_clean`**: no sibling breakpoint within 1 bin (1 kb) of a breakpoint of the outer species (either
+  allele), and Part A's `is_*` counts (`rck/ecdna/rck_eval.py`, `score_truth`) are 0 on the truth.
+- **Minor species**: at least 4 bulk copies (Σ_k u_k ψ_{s,k}, after the whole-number rounding) for every
+  species, and every junction of every species at least 20 reads.
+- **Mirroring** (mirror scenarios): each species' larger ψ is in its intended tumour clone (outer: clone 1;
+  sibling: clone 2).
+- The existing checks: bulk ratio within 10% of the target, footprint ≤ 8 Mb, `placed`, traversal cap 3.
+
+### Runs (each after Yubi's go-ahead)
+
+A 2-case local `rck_mc` pilot first, then arrays (`%1` each, Gurobi licence) for `rck_mc` (the method under
+test), `rck_bulk` (only to build the graph CoRAL / CE decompose) and CoRAL / CE on `rck_bulk`'s graph, with
+bench_IW_intpsi's settings; sizes and commands proposed before submission.
+
+### Scoring
+
+- `allele_bench.py`, `rck_style.py` (Part A: labelled-adjacency FNR / FDR, Eq. 11, `is_*`) and the species
+  matrix (`make_species_matrix_figure.py`) extended to the new set.
+- Proportions with species matched **with haplotypes** (`evaluate._match(..., with_hap=True)`;
+  `bench_metrics.proportion_scores` matches blind).
+- Per-clone ψ for `rck_mc` against the truth (and per-clone Eq. 11, Part B's `clone_cn_scores`).
+- **`sib_opp_mirror` vs `sib_opp_shared`**: the allele model's contribution with and without the
+  clone-wise allele signal in the input; `sib_mixed_mirror` tests a sibling that shares the outer's allele on
+  part of the locus.
+- New tables and figures in `results/bench_IW_allele/`; this plan's results and "Resume here" kept current.
+- If RCK does *not* separate the siblings (it may prefer one species carrying both alleles where the step
+  penalty favours fewer cycles), that is a finding too; the pilot answers it before any array.
 
 ## Results (items 2 and 3, 2026-11-16)
 

@@ -4,7 +4,15 @@
 [`PLAN.md`](PLAN.md) ("Item 1 in detail", "Resume here"). This file is the how-to: check the arrays, fix
 failures, score, and what is still to be written.*
 
-## RUNNING: RCK MC vs CoRAL topology figures (Slurm array 32468172, submitted 2026-11-21)
+## RCK MC vs CoRAL topology figures (Slurm array 32468172, 2026-11-21): DONE, waiting for Yubi to look
+
+**Status (checked 2026-11-21, same session):** all 8 tasks finished, every figure is in place, committed
+(RCK-cnp, see git log). In 6 of 8 tasks one step had failed: `coral plot --graph` (CoRAL's graph figure) raised
+`IndexError`, because the plotting copy of CoRAL's input graph kept the long-read path constraints, which index
+sequence edges by position and point past the trimmed edges. `make_compare_plots.py` now drops those lines from
+the plotting copy (they are not drawn), and the CoRAL figures of those 6 cases were redone locally
+(`--index K --coral-only`, ~25 s each). Every folder now has `coral_graph.png`. **What is left for Yubi:** step 4
+below (look at and confirm the figures); steps 1–3 already pass.
 
 **What it is.** Yubi asked (2026-11-21) for topology plots, Jaccard (species) matrices and coverage figures
 of RCK MC and CoRAL side by side, on cases where RCK MC recovers nested ecDNA with both alleles amplified.
@@ -53,7 +61,7 @@ Files in each folder (details in `make_compare_plots.py`'s docstring):
    ```bash
    for d in topology_plots/compare/*_*/; do echo "$d $(ls $d*.png | wc -l) png"; done
    ```
-3. **Redo one case** (task index K from the table): `sbatch --array=K --output=/n/fs/yubi-iw/runs/bench_IW_allelic/logs/slurm/%x_%A_%a.out compare_plots.sbatch`,
+3. **Redo one case** (task index K from the table; `--coral-only` redoes only the CoRAL figures): `sbatch --array=K --output=/n/fs/yubi-iw/runs/bench_IW_allelic/logs/slurm/%x_%A_%a.out compare_plots.sbatch`,
    or locally `PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH python make_compare_plots.py --index K`
    (1–2 min). It overwrites that case's folder only.
 4. **Confirm the results**, case by case (open `topology_compare.png`, then the matrices):
@@ -66,9 +74,9 @@ Files in each folder (details in `make_compare_plots.py`'s docstring):
      `coral_species_matrix_blind.png`: "missed" columns or low J_seg. Expected misses: the hard_S4 cases have one
      RCK MC species that is not exact (3 of 4 exact; 2 of 4 on s16006), and s15003 has 1 of 2.
    - Coverage figures: RCK MC's truth bars in one colour each; CoRAL's shared by one cycle across species.
-5. **Commit the figures** (about 8 folders of PNG / PDF):
-   `git add results/bench_IW_allele/topology_plots/compare && git commit -m "bench_IW_allele: RCK MC vs CoRAL topology figures (array 32468172)"`.
-   Push from a machine with GitHub credentials (ionic has none).
+5. **Figures are committed** (23 MB, 205 files in `topology_plots/compare/`). If you redo a case, commit it again.
+   Push from a terminal where you can log in to GitHub: ionic has no stored credentials, so
+   `git push origin yubi_CNP_ionic` there asks for your username and a personal access token.
 
 **State 2026-11-21: §2–§5 done; item 1 finished.** All 48 runs ok. CoRAL and CE on sib_opp_mirror_s17006 were
 rerun (jobs 32468001 / 32468002) on an **input patch**: a copy of rck_bulk's graph with its 4 zero-read

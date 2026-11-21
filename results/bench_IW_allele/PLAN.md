@@ -66,10 +66,11 @@ detail"):
 8. **Figures relabelled 2026-11-21:** figures 2–9, Tables 1–3 and the item 1 figures compare only RCK MC, CoRAL
    and CE, labelled so, with no * / † marks (RCK-cnp `3c4d1ea`); `results/bench_IW/RESULTS.md` rewritten to match
    (`f1375c8`).
-9. **RUNNING: RCK MC vs CoRAL topology figures, Slurm array 32468172** (submitted 2026-11-21, 8 tasks, no Gurobi):
+9. **Done 2026-11-21: RCK MC vs CoRAL topology figures, Slurm array 32468172** (8 tasks, no Gurobi; CoRAL graph
+   figures of 6 cases redone locally after a fix, see NEXT_STEPS.md):
    topology, Jaccard-matrix and coverage figures of RCK MC and CoRAL side by side on 8 nested, both-allele cases
-   (4 allelic-sibling, 4 bench_IW_intpsi) chosen with Yubi. **What to do when it finishes, and how to confirm the
-   figures: [`NEXT_STEPS.md`](NEXT_STEPS.md), first section.** Output `topology_plots/compare/`.
+   (4 allelic-sibling, 4 bench_IW_intpsi) chosen with Yubi. **How to confirm the figures: [`NEXT_STEPS.md`](NEXT_STEPS.md),
+   first section, step 4.** Output `topology_plots/compare/` (one folder per case, README.md index).
 
 **Part B: array finished, results not yet exported, scored or written (state checked 2026-11-20, nothing
 re-run).** `rck_partB.py status`: `chil` 24 / 24 optimal, `chil_avg` 24 / 24, `chil_err` 23 optimal + 1

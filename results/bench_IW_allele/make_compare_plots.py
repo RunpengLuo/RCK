@@ -18,6 +18,7 @@ For each case in CASES, writes topology_plots/compare/<k>_<case>/:
   coral_rck_mc_cycles.png      CoRAL's own figure style drawing RCK MC's species (haplotype-blind)
   coral_cycles.png             CoRAL's own figure of CoRAL's own answer (its cycles file, all walks)
   coral_graph.png              CoRAL's figure of the graph CoRAL decomposed, trimmed to the region its walks use
+                               (plotting copy without the path constraints, which are not drawn)
   rck_mc_species_matrix_block, J_seg / J_adj of every truth x inferred species pair and the coverage of each truth
   rck_mc_species_coverage_block species by the inferred ones (make_species_matrix_figure.py): RCK MC within phase
   rck_mc_species_*_blind,      blocks (alleles must match) and haplotype-blind; CoRAL haplotype-blind. Species are
@@ -201,6 +202,12 @@ def coral_figures(case, folder, work):
     shutil.copy(os.path.join(work, "coral_cycles.png"), folder)
     small = os.path.join(work, "coral_graph_trimmed.txt")
     mtp.trimmed_graph(bi.inferred_graph(case), cycles, small)
+    # the long-read path constraints index sequence edges by position (e34 ...), which no longer exist after
+    # trimming (coral plot then fails with IndexError); they are not drawn, so the plotting copy drops them
+    with open(small) as handle:
+        kept = [l for l in handle if not l.startswith(("path_constraint", "PathConstraint"))]
+    with open(small, "w") as handle:
+        handle.writelines(kept)
     mtp.coral_plot(os.path.join(work, "coral"), graph=small)
     shutil.copy(os.path.join(work, "coral_graph.png"), folder)
 
@@ -287,6 +294,7 @@ def main():
     p.add_argument("--index", type=int, help="case index in CASES (0-based; the Slurm array task id)")
     p.add_argument("--list", action="store_true")
     p.add_argument("--readme", action="store_true")
+    p.add_argument("--coral-only", action="store_true", help="with --index: redo only the CoRAL figures")
     a = p.parse_args()
     if a.list:
         for k, (s, n, _) in enumerate(CASES):
@@ -299,6 +307,17 @@ def main():
         p.error("--index, --list or --readme")
     import logging
     logging.disable(logging.INFO)
+    if a.coral_only:
+        set_name, name, _ = CASES[a.index]
+        alb.use_set(set_name)
+        case = next(c for c in alb.bi.cases() if c["name"] == name)
+        work = tempfile.mkdtemp(prefix="compare_")
+        try:
+            coral_figures(case, folder_of(a.index, name), work)
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+        print("{n}: coral figures ok".format(n=name))
+        return 0
     return run_case(a.index)
 
 

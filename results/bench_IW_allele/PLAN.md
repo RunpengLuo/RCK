@@ -530,6 +530,20 @@ an observed ecDNA phenomenon, unless a citation turns up.
 sib_opp_mirror_s17006 only, where the observed phasing orients 2 of 4 phase blocks the other way (absolute
 frame; scoring is within blocks, both species swapped alike), as bench_IW_intpsi hard_S4_s16003.
 
+**Pilot done 2026-11-20** (Yubi's go-ahead; local, one run at a time, nothing else holding the licence):
+`rck_mc` on sib_opp_mirror_s17004 (clean) and sib_mixed_mirror_s19002 (reuse), both optimal (status 2, gap 0),
+5.1 s and 1.3 s, ~110 MB. Both return the two truth species (plus the 2 chromosomal background paths every
+multi-clone run has): within phase blocks composite 1.000, phasing accuracy 1.000, phased junction F1 1.000,
+order matched; ψ per clone exact (s17004: outer (9, 2), sibling (4, 16); s19002: (62, 15), (4, 17)). The
+**sibling-vs-outer relation**, checked per base directly on the walks (not through per-species block swaps,
+which could forgive a sibling put on the outer's allele): s17004 opposite on all 680 kb shared, s19002
+opposite 188 kb / same 223 kb as in the truth; no base disagrees. Absolute-frame phasing is partial (0.42–0.74),
+from phase-block orientation only. So the multi-clone route does separate siblings on these two cases; whether
+it holds across the 12 (and for the reuse cases) is what the array answers.
+
+**rck_bulk (Yubi, 2026-11-20): no longer tested or explored as a method.** It is run only to build the graph
+CoRAL / CE decompose (as bench_IW_intpsi), and its own answers are not scored or reported for item 1.
+
 **Proposed next (Gurobi, needs Yubi's go-ahead; licence 2 sessions):**
 1. Local pilot, `rck_mc` on 2 cases, one at a time: `python allelic_bench.py run --method rck_mc 1`
    (sib_opp_mirror_s17004, clean) and `... 8` (sib_mixed_mirror_s19002, reuse; the hardest kind). Seconds to

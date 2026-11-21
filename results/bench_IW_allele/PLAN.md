@@ -32,8 +32,24 @@ detail"):
    methods/`), `allelic_method.sbatch`, `submit_allelic.sh` written and dry-checked (`list`, printed commands).
    **Stopped before any Gurobi work, waiting for Yubi**: propose a 2-case local `rck_mc` pilot, then arrays (`rck_mc`, `rck_bulk`, CoRAL / CE on `rck_bulk`'s
    graph), each `%1`, with sizes and commands; nothing submitted without the go-ahead.
-5. Scoring (`allele_bench.py`, `rck_style.py`, species matrix extended to the set; phased species matching;
-   per-clone ψ; `sib_opp_mirror` vs `sib_opp_shared`).
+5. **Arrays submitted 2026-11-20 ~22:00 EST** (Yubi's go-ahead; `./submit_allelic.sh --submit`, 12 tasks each,
+   `%1`, 2G): `rck_bulk` **32462470** (90 min/task; graph builder only), `rck_mc` **32462471** (15 min/task; the
+   method under test; tasks 1 and 8 are the pilot and skip as done), CoRAL **32462472** (90 min/task) and CE
+   **32462473** (60 min/task), both `aftercorr` on 32462470. Logs `/n/fs/yubi-iw/runs/bench_IW_allelic/logs/
+   slurm/iwa-<method>_<job>_<task>.out`; runs `/n/fs/yubi-iw/runs/bench_IW_allelic/methods/<case>/<method>/`.
+   Expected: rck_mc minutes; the rest a few hours in all (bench_IW_intpsi: ~1–2 h per baseline array).
+6. **Pick up here next session** (gurobi-env python, in this folder):
+   - `python allelic_bench.py status` (reads run folders, no Slurm calls): every run `done`. Only if needed,
+     `sacct -j 32462470,32462471,32462472,32462473 --format=JobID,State,Elapsed,MaxRSS` (≥ 60 s between
+     `squeue` / `sacct` calls). A coral / ce task left `DependencyNeverSatisfied` means its case's rck_bulk task
+     failed: read that log first. Failed tasks: diagnose from the log and `<run>/run.json` before resubmitting
+     (`./submit_allelic.sh --submit` skips finished runs; a resubmission is a new Gurobi array: ask Yubi).
+   - Check the 4 licence holders did not exhaust the licence retries (15 × 2 min) when CoRAL / CE joined.
+   - Then scoring: `python allelic_bench.py score --jobs 8 && python allelic_bench.py collect`, and step 7.
+7. Scoring for item 1 ("Scoring" under "Item 1 in detail"): `allele_bench.py`, `rck_style.py`, species matrix
+   extended to the set; phased species matching; per-clone ψ; `sib_opp_mirror` vs `sib_opp_shared`; clean vs
+   reuse. Check the sibling-vs-outer relation per base directly (as the pilot did), not only through
+   per-species block swaps. rck_bulk is not scored or reported (Yubi, 2026-11-20).
 
 **Part B: array finished, results not yet exported, scored or written (state checked 2026-11-20, nothing
 re-run).** `rck_partB.py status`: `chil` 24 / 24 optimal, `chil_avg` 24 / 24, `chil_err` 23 optimal + 1

@@ -11,6 +11,8 @@ Reads rck_style_table.tsv (rck_style.py collect); writes to figures/ here:
                                own violations
     figure_data/fig9_rck_style.tsv
 
+Methods: RCK MC (rck_mc), CoRAL and CE only (Yubi, 2026-11-21); rck_bulk is not shown.
+
 Every score is within phase blocks (RCK's "up to haplotype symmetries"; one A/B swap per block). Style,
 colours and markers are bench_IW/make_figures.py's (imported, not edited); post-hoc phasing is drawn with
 open markers as in Figure 7.
@@ -36,8 +38,7 @@ FOOT9 = ("Within phase blocks. own: the method's haplotypes; BAF / oracle: post-
          "100 bp and must carry the true haplotype pair. Eq. 11: sum over phase blocks of the A/B-swap minimum of\n"
          "(|c_A - t_A| + |c_B - t_B| + unphased) x bp, over the true copies x bp; log scale, 0 drawn at 0.001.\n"
          "Violations: extremities used on both homologs, plus reference-neighbour extremity pairs used on opposite\n"
-         "homologs (RCK's homologous and homologous-reciprocal exclusivity); dashed line: the truth's own mean.\n"
-         + mf.FOOT)
+         "homologs (RCK's homologous and homologous-reciprocal exclusivity); dashed line: the truth's own mean.")
 
 
 def load(baseline_variant):
@@ -46,7 +47,7 @@ def load(baseline_variant):
     t["group"] = np.where(t["mixed_bp_frac"] > 0, "mixed", "single")
     t["is_homologous"] = t["is_is_hom"] + t["is_is_recip"]
     truth = t[t.method == "truth"].copy()
-    keep = {"rck_bulk": "rck_bulk", "rck_mc": "rck_mc", "coral:" + baseline_variant: "coral", "ce:" + baseline_variant: "ce"}
+    keep = {"rck_mc": "rck_mc", "coral:" + baseline_variant: "coral", "ce:" + baseline_variant: "ce"}
     t = t[t.method_variant.isin(keep)].copy()
     t["m"] = t.method_variant.map(keep)
     return t, truth
@@ -69,7 +70,7 @@ METRICS = [("adj_phased_fnr", "labelled adjacency\nFNR", "linear"),
 
 def fig9(t, truth, out):
     cols = columns()
-    fig, axes = plt.subplots(len(METRICS), 2, figsize=(8.4, 8.2), sharey="row",
+    fig, axes = plt.subplots(len(METRICS), 2, figsize=(7.4, 8.2), sharey="row",
                              gridspec_kw={"wspace": 0.06, "hspace": 0.4})
     rows = []
     for j, (g, title) in enumerate(GROUPS):
@@ -176,7 +177,7 @@ def table3(t, truth, out):
     md += ["Means over cases (Eq. 11: median, as CoRAL / CE's over-counted copies make the mean uninformative). own: the "
            "method's haplotypes; BAF / oracle: post-hoc phasing (Fig. 7). The input subgraphs contain no spurious "
            "candidate junctions (0 of 9 median per case), so RCK's input-level FPR is undefined here (PLAN.md Part B "
-           "adds spurious candidates). n = 6 mixed cases: descriptive only.", "", mf.FOOT]
+           "adds spurious candidates). n = 6 mixed cases: descriptive only."]
     pd.DataFrame(rows).to_csv(os.path.join(out, "table3.tsv"), sep="\t", index=False)
     with open(os.path.join(out, "table3.md"), "w") as handle:
         handle.write("\n".join(md) + "\n")

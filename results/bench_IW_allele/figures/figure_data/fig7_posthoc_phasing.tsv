@@ -1,7 +1,4 @@
 group	metric	method	phasing	n	mean
-single	as_cn_recall_block	rck_bulk	native	18	0.9668858485364046
-single	as_cn_recall_block	rck_bulk	baf_major	18	0.966532620777558
-single	as_cn_recall_block	rck_bulk	truth_major	18	0.9668858485364046
 single	as_cn_recall_block	rck_mc	native	18	0.9977580273302524
 single	as_cn_recall_block	rck_mc	baf_major	18	0.9973797227149649
 single	as_cn_recall_block	rck_mc	truth_major	18	0.9977580273302524
@@ -9,9 +6,6 @@ single	as_cn_recall_block	coral	baf_major	18	0.8867566421382885
 single	as_cn_recall_block	coral	truth_major	18	0.8869305157642294
 single	as_cn_recall_block	ce	baf_major	18	0.9909224990322946
 single	as_cn_recall_block	ce	truth_major	18	0.9911556579009064
-single	phased_jadj_best_mean_block	rck_bulk	native	18	0.9535714285714286
-single	phased_jadj_best_mean_block	rck_bulk	baf_major	18	0.8404310966810967
-single	phased_jadj_best_mean_block	rck_bulk	truth_major	18	0.9535714285714286
 single	phased_jadj_best_mean_block	rck_mc	native	18	0.8856481481481482
 single	phased_jadj_best_mean_block	rck_mc	baf_major	18	0.798363596280263
 single	phased_jadj_best_mean_block	rck_mc	truth_major	18	0.8856481481481482
@@ -19,9 +13,6 @@ single	phased_jadj_best_mean_block	coral	baf_major	18	0.789246632996633
 single	phased_jadj_best_mean_block	coral	truth_major	18	0.9125280583613917
 single	phased_jadj_best_mean_block	ce	baf_major	18	0.8206289081289082
 single	phased_jadj_best_mean_block	ce	truth_major	18	0.9233525733525734
-mixed	as_cn_recall_block	rck_bulk	native	6	0.9519076856079104
-mixed	as_cn_recall_block	rck_bulk	baf_major	6	0.8188209900177129
-mixed	as_cn_recall_block	rck_bulk	truth_major	6	0.819394090405778
 mixed	as_cn_recall_block	rck_mc	native	6	0.9475055758862684
 mixed	as_cn_recall_block	rck_mc	baf_major	6	0.8135823836650786
 mixed	as_cn_recall_block	rck_mc	truth_major	6	0.8145778876448637
@@ -29,9 +20,6 @@ mixed	as_cn_recall_block	coral	baf_major	6	0.6887265639322351
 mixed	as_cn_recall_block	coral	truth_major	6	0.6889172031420315
 mixed	as_cn_recall_block	ce	baf_major	6	0.7602908133369599
 mixed	as_cn_recall_block	ce	truth_major	6	0.7607864866279833
-mixed	phased_jadj_best_mean_block	rck_bulk	native	6	0.6475694444444445
-mixed	phased_jadj_best_mean_block	rck_bulk	baf_major	6	0.3816294510228333
-mixed	phased_jadj_best_mean_block	rck_bulk	truth_major	6	0.39610906862745093
 mixed	phased_jadj_best_mean_block	rck_mc	native	6	0.8036931818181818
 mixed	phased_jadj_best_mean_block	rck_mc	baf_major	6	0.44749000999000993
 mixed	phased_jadj_best_mean_block	rck_mc	truth_major	6	0.468521756021756

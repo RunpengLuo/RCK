@@ -1,32 +1,4 @@
 ours	baseline	metric	n_pairs	median_diff	ours_better	ties	wilcoxon_p	p_holm
-rck_bulk	coral:walks_kept	ecDNA CN recall	24	0.01443	16	0	0.001093	0.006556
-rck_bulk	coral:walks_kept	ecDNA CN precision	24	0.6855	19	3	0.0002142	0.001499
-rck_bulk	coral:walks_kept	proportion TV	24	-0.1306	19	1	0.002602	0.01109
-rck_bulk	coral:walks_kept	species F1 (blind)	24	0.2929	15	8	0.002529	0.01109
-rck_bulk	coral:walks_kept	J_seg (blind)	24	0.03156	12	12	0.002218	0.01109
-rck_bulk	coral:walks_kept	J_adj (blind)	24	0	7	15	0.05041	0.05041
-rck_bulk	coral:walks_kept	exact cycles	24	0	11	12	0.005064	0.01109
-rck_bulk	coral:walks_dropped	ecDNA CN recall	24	0.1858	21	0	2.98e-06	2.086e-05
-rck_bulk	coral:walks_dropped	ecDNA CN precision	21	0	7	5	0.3794	0.3794
-rck_bulk	coral:walks_dropped	proportion TV	24	-0.08235	17	4	0.004045	0.01618
-rck_bulk	coral:walks_dropped	species F1 (blind)	24	0.06667	12	11	0.006752	0.01618
-rck_bulk	coral:walks_dropped	J_seg (blind)	24	0.03156	12	12	0.002218	0.01331
-rck_bulk	coral:walks_dropped	J_adj (blind)	24	0	11	12	0.00282	0.0141
-rck_bulk	coral:walks_dropped	exact cycles	24	0	11	12	0.005064	0.01618
-rck_bulk	ce:walks_kept	ecDNA CN recall	24	-0.003832	4	0	0.0691	0.0691
-rck_bulk	ce:walks_kept	ecDNA CN precision	24	0.6747	20	1	5.95e-05	0.000357
-rck_bulk	ce:walks_kept	proportion TV	24	-0.2859	22	0	2.98e-06	2.086e-05
-rck_bulk	ce:walks_kept	species F1 (blind)	24	0.4167	19	4	0.0002795	0.001397
-rck_bulk	ce:walks_kept	J_seg (blind)	24	0	11	12	0.002873	0.01149
-rck_bulk	ce:walks_kept	J_adj (blind)	24	0	7	16	0.01729	0.03458
-rck_bulk	ce:walks_kept	exact cycles	24	0	11	12	0.005064	0.01519
-rck_bulk	ce:walks_dropped	ecDNA CN recall	24	-0.003832	5	0	0.178	0.178
-rck_bulk	ce:walks_dropped	ecDNA CN precision	24	0.6695	20	1	8.726e-05	0.0005381
-rck_bulk	ce:walks_dropped	proportion TV	24	-0.1417	21	1	7.687e-05	0.0005381
-rck_bulk	ce:walks_dropped	species F1 (blind)	24	0.3095	16	7	0.001134	0.00567
-rck_bulk	ce:walks_dropped	J_seg (blind)	24	0	11	12	0.002873	0.01149
-rck_bulk	ce:walks_dropped	J_adj (blind)	24	0	7	16	0.01729	0.03458
-rck_bulk	ce:walks_dropped	exact cycles	24	0	11	12	0.005064	0.01519
 rck_mc	coral:walks_kept	ecDNA CN recall	24	0.04907	16	0	0.0005676	0.003405
 rck_mc	coral:walks_kept	ecDNA CN precision	24	0.7042	19	5	0.0001318	0.0009228
 rck_mc	coral:walks_kept	proportion TV	24	-0.1621	17	1	0.004671	0.02335

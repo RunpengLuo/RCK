@@ -10,9 +10,9 @@ Writes to figures_intpsi/ (or --out):
     fig3_structure_vs_S.{pdf,png}        blind J_seg / J_adj per truth species vs number of species
     fig4_mass_ratio.{pdf,png}            inferred / true ecDNA copy-number mass (log scale)
     fig5_proportions.{pdf,png}           species proportions: inferred vs truth, and TV per case
-    fig6_allele_specific.{pdf,png}       RCK only: blind vs phased J_seg; within-block vs absolute counts
+    fig6_allele_specific.{pdf,png}       RCK MC only: blind vs phased J_seg; within-block vs absolute counts
     table1.tsv / table1.md               mean +- SD per method variant, overall and per class
-    table1_paired_tests.tsv              paired Wilcoxon tests, RCK routes vs each baseline variant
+    table1_paired_tests.tsv              paired Wilcoxon tests, RCK MC vs each baseline variant
     figure_data/*.tsv                    the exact numbers each figure plots
 
 Usage (from results/bench_IW):
@@ -20,8 +20,9 @@ Usage (from results/bench_IW):
     python make_figures.py --baseline-variant walks_dropped --out figures_intpsi_walks_dropped
 
 Conventions (see RESULTS.md):
-- Main figures show four methods: rck_bulk, rck_mc, CoRAL, CE. CoRAL / CE are shown as one walk
-  variant (--baseline-variant); Table 1 always lists all six method variants.
+- Figures and Table 1 compare three methods, labelled RCK MC (rck_mc), CoRAL and CE (Yubi, 2026-11-21).
+  rck_bulk only builds the graph CoRAL / CE decompose and is not shown. The labels carry no footnote marks.
+  CoRAL / CE are shown as one walk variant in the figures (--baseline-variant); Table 1 lists both.
 - A run with no cycle at all (CoRAL with walks dropped returns only linear walks in 3 cases) has no
   best-match Jaccard or exact cycles in the collected table (NaN). Here they count as 0: the method
   returned no ecDNA, so nothing matches. The pooled TSV from `bench_iw.py collect` skips them instead.
@@ -42,23 +43,19 @@ from scipy.stats import wilcoxon  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-# Categorical slots 1-4 of the dataviz reference palette, in their validated order (adjacent
-# pairs pass CVD >= 8 and normal-vision >= 15). Colour follows the method everywhere. Four colours
-# fail the all-pairs check, so no panel relies on colour alone: every plot also separates methods
-# by x position or by panel, and carries a legend or axis labels.
-METHODS = ["rck_bulk", "rck_mc", "coral", "ce"]
-COLOR = {"rck_bulk": "#2a78d6", "rck_mc": "#eb6834", "coral": "#1baf7a", "ce": "#eda100"}
-LABEL = {"rck_bulk": "RCK-ecDNA (bulk)", "rck_mc": "RCK-ecDNA (multi-clone*)",
-         "coral": "CoRAL†", "ce": "CycleExtractor†"}
-SHORT = {"rck_bulk": "RCK bulk", "rck_mc": "RCK multi-clone*", "coral": "CoRAL†", "ce": "CE†"}
-VARIANT_ORDER = ["rck_bulk", "rck_mc", "coral:walks_kept", "coral:walks_dropped",
-                 "ce:walks_kept", "ce:walks_dropped"]
+# Categorical slots 2-4 of the dataviz reference palette, in their validated order (adjacent
+# pairs pass CVD >= 8 and normal-vision >= 15); the same colour per method as before rck_bulk
+# (slot 1) was dropped. Colour follows the method everywhere, and no panel relies on colour alone:
+# every plot also separates methods by x position or by panel, and carries a legend or axis labels.
+METHODS = ["rck_mc", "coral", "ce"]
+COLOR = {"rck_mc": "#eb6834", "coral": "#1baf7a", "ce": "#eda100"}
+LABEL = {"rck_mc": "RCK MC", "coral": "CoRAL", "ce": "CE"}
+SHORT = LABEL
+VARIANT_ORDER = ["rck_mc", "coral:walks_kept", "coral:walks_dropped", "ce:walks_kept", "ce:walks_dropped"]
 CLASS_ORDER = ["simple", "hard"]
 CLASS_LABEL = {"simple": "simple", "hard": "nested"}
 MARKER = {"simple": "o", "hard": "^"}
 INK, INK2, MUTED, GRID = "#0b0b0b", "#52514e", "#8a8984", "#e6e5e0"
-FOOT = ("* given the true clone profiles (upper bound for the multi-clone route).  "
-        "† decomposition only, on RCK bulk's graph.")
 
 plt.rcParams.update({
     "font.family": "sans-serif", "font.size": 8, "axes.titlesize": 9, "axes.labelsize": 8,
@@ -82,8 +79,7 @@ def load(table_path, baseline_variant):
     t["errors_within"] = t["n_missed"] + t["n_false"]
     t["errors_absolute"] = t["n_missed_absolute"] + t["n_false_absolute"]
     t["variant"] = t["method_variant"]
-    keep = {"rck_bulk": "rck_bulk", "rck_mc": "rck_mc",
-            "coral:" + baseline_variant: "coral", "ce:" + baseline_variant: "ce"}
+    keep = {"rck_mc": "rck_mc", "coral:" + baseline_variant: "coral", "ce:" + baseline_variant: "ce"}
     main = t[t["variant"].isin(keep)].copy()
     main["m"] = main["variant"].map(keep)
     return t, main, int(no_cycles.sum())
@@ -99,10 +95,6 @@ def save(fig, out, name, data=None):
     plt.close(fig)
     if data is not None:
         data.to_csv(os.path.join(out, "figure_data", name + ".tsv"), sep="\t", index=False)
-
-
-def footnote(fig, y=-0.02):
-    fig.text(0.01, y, FOOT, fontsize=6.5, color=INK2, ha="left", va="top")
 
 
 def class_legend(ax, loc="lower left"):
@@ -130,7 +122,7 @@ def mean_bar(ax, x0, values, half=0.3):
 # -- figures ----------------------------------------------------------------------------------
 
 def fig2(main, out):
-    fig, axes = plt.subplots(1, 4, figsize=(7.2, 2.3), sharex=True, sharey=True)
+    fig, axes = plt.subplots(1, len(METHODS), figsize=(5.6, 2.4), sharex=True, sharey=True)
     for ax, m in zip(axes, METHODS):
         d = main[main.m == m]
         for c in CLASS_ORDER:
@@ -151,7 +143,6 @@ def fig2(main, out):
                           markeredgewidth=1.5, label="mean (recall / precision)"))
     fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, 1.1), ncol=3,
                frameon=False)
-    footnote(fig, y=-0.04)
     save(fig, out, "fig2_cn_recall_precision",
          main[["name", "class", "S", "m", "variant", "cn_recall", "cn_precision"]])
 
@@ -160,7 +151,7 @@ def fig3(main, out):
     metrics = [("blind_jseg_best_mean", "best-match J_seg (blind)"),
                ("blind_jadj_best_mean", "best-match J_adj (blind)")]
     Ss = sorted(main.S.unique())
-    off = {m: (i - 1.5) * 0.12 for i, m in enumerate(METHODS)}
+    off = {m: (i - (len(METHODS) - 1) / 2) * 0.12 for i, m in enumerate(METHODS)}
     fig, axes = plt.subplots(2, 2, figsize=(6.4, 4.6), sharex=True, sharey=True)
     rows = []
     for r, (col, ylab) in enumerate(metrics):
@@ -188,12 +179,11 @@ def fig3(main, out):
             if k == 0:
                 ax.set_ylabel(ylab)
     axes[0, 0].legend(loc="lower left", frameon=False, ncol=1)
-    footnote(fig, y=0.0)
     save(fig, out, "fig3_structure_vs_S", pd.DataFrame(rows))
 
 
 def fig4(main, out):
-    fig, ax = plt.subplots(figsize=(4.2, 2.8))
+    fig, ax = plt.subplots(figsize=(3.4, 2.8))
     rows = []
     for i, m in enumerate(METHODS):
         d = main[main.m == m]
@@ -209,7 +199,6 @@ def fig4(main, out):
     ax.set_ylabel("inferred / true ecDNA copy-number mass")
     ax.set_xlim(-0.6, len(METHODS) - 0.4)
     class_legend(ax, loc="upper left")
-    footnote(fig)
     save(fig, out, "fig4_mass_ratio",
          main[["name", "class", "S", "m", "variant", "inferred_mass", "truth_mass", "mass_ratio"]])
     pd.DataFrame(rows).to_csv(os.path.join(out, "figure_data", "fig4_mass_ratio_summary.tsv"),
@@ -217,8 +206,7 @@ def fig4(main, out):
 
 
 def fig5(main, props, baseline_variant, out):
-    keep = {"rck_bulk": "rck_bulk", "rck_mc": "rck_mc",
-            "coral:" + baseline_variant: "coral", "ce:" + baseline_variant: "ce"}
+    keep = {"rck_mc": "rck_mc", "coral:" + baseline_variant: "coral", "ce:" + baseline_variant: "ce"}
     p = props[(props.set == "strict") & props.method_variant.isin(keep)].copy()
     p["m"] = p.method_variant.map(keep)
     # unmatched truth species (missed) plot at inferred 0; unmatched inferred (false) at truth 0
@@ -226,8 +214,8 @@ def fig5(main, props, baseline_variant, out):
     p["inferred_proportion"] = p.inferred_proportion.fillna(0.0)
     p["kind"] = np.where(p.truth.isna(), "false", np.where(p.inferred.isna(), "missed", "matched"))
 
-    fig = plt.figure(figsize=(7.2, 4.4))
-    gs = fig.add_gridspec(2, 4, height_ratios=[1, 0.9], hspace=0.55, wspace=0.35)
+    fig = plt.figure(figsize=(6.0, 4.4))
+    gs = fig.add_gridspec(2, len(METHODS), height_ratios=[1, 0.9], hspace=0.55, wspace=0.35)
     for k, m in enumerate(METHODS):
         ax = fig.add_subplot(gs[0, k])
         d = p[p.m == m]
@@ -257,7 +245,6 @@ def fig5(main, props, baseline_variant, out):
     ax.set_ylabel("proportion TV distance\n(strict cycles; lower is better)")
     ax.set_ylim(-0.02, max(0.6, main.proportion_tv.max() + 0.05))
     class_legend(ax, loc="upper left")
-    footnote(fig, y=0.03)
     fig.text(0.01, 0.0, "Top: strict cycles pooled over all cases; × = missed (true species, "
              "inferred 0) or false (inferred species, truth 0).", fontsize=6.5, color=INK2, va="top")
     save(fig, out, "fig5_proportions",
@@ -266,7 +253,7 @@ def fig5(main, props, baseline_variant, out):
 
 
 def fig6(main, out):
-    rck = ["rck_bulk", "rck_mc"]
+    rck = ["rck_mc"]
     d = main[main.m.isin(rck)]
     fig, axes = plt.subplots(1, 3, figsize=(7.2, 2.5), gridspec_kw={"width_ratios": [1, 1.25, 1]})
 
@@ -312,7 +299,7 @@ def fig6(main, out):
     ax.set_xticks(centers)
     ax.set_xticklabels(names, fontsize=6)
     ax.tick_params(axis="x", length=0)
-    ax.set_xlabel("RCK multi-clone* cases")
+    ax.set_xlabel("RCK MC cases")
     ax.set_ylabel("missed + false species")
     ax.set_title("b  phase-block identifiability", loc="left", color=INK, pad=18)
     ax.legend(loc="lower left", bbox_to_anchor=(0, 0.99), ncol=2, frameon=False,
@@ -329,7 +316,7 @@ def fig6(main, out):
                 rate = q[col].sum() / q.n_truth.sum()
                 rows.append({"m": m, "class": c, "kind": kind, "rate": rate})
             b = [r for r in rows if r["m"] == m and r["class"] == c]
-            xpos = k + (j - 0.5) * width
+            xpos = k + (j - (len(rck) - 1) / 2) * width
             ax.bar(xpos, b[0]["rate"], width=width - 0.04, color=COLOR[m], zorder=2)
             ax.scatter([xpos], [b[1]["rate"]], marker="_", s=120, color=INK, linewidths=1.5,
                        zorder=3)
@@ -344,8 +331,8 @@ def fig6(main, out):
               loc="lower left", bbox_to_anchor=(0, 0.99), ncol=2, frameon=False, fontsize=6,
               borderaxespad=0, handletextpad=0.2, columnspacing=0.6)
     fig.tight_layout(w_pad=1.2)
-    fig.text(0.01, -0.02, "* given the true clone profiles. CoRAL and CycleExtractor report no "
-             "alleles, so they have no phased scores.", fontsize=6.5, color=INK2, va="top")
+    fig.text(0.01, -0.02, "CoRAL and CE report no alleles, so they have no phased scores.", fontsize=6.5,
+             color=INK2, va="top")
     save(fig, out, "fig6_allele_specific",
          d[["name", "class", "S", "m", "blind_jseg_best_mean", "phased_jseg_best_mean",
             "n_missed", "n_false", "n_missed_absolute", "n_false_absolute", "blind_exact_cycles",
@@ -362,11 +349,11 @@ T1_COLS = [("cn_recall", "ecDNA CN recall", "up"),
            ("species_detection_strict_blind_f1", "species F1 (blind)", "up"),
            ("blind_jseg_best_mean", "J_seg (blind)", "up"),
            ("blind_jadj_best_mean", "J_adj (blind)", "up")]
-VARIANT_LABEL = {"rck_bulk": "RCK-ecDNA bulk", "rck_mc": "RCK-ecDNA multi-clone*",
-                 "coral:walks_kept": "CoRAL† (linear walks kept)",
-                 "coral:walks_dropped": "CoRAL† (linear walks dropped)",
-                 "ce:walks_kept": "CycleExtractor† (linear walks kept)",
-                 "ce:walks_dropped": "CycleExtractor† (linear walks dropped)"}
+VARIANT_LABEL = {"rck_mc": "RCK MC",
+                 "coral:walks_kept": "CoRAL (linear walks kept)",
+                 "coral:walks_dropped": "CoRAL (linear walks dropped)",
+                 "ce:walks_kept": "CE (linear walks kept)",
+                 "ce:walks_dropped": "CE (linear walks dropped)"}
 
 
 def table1(t, out):
@@ -403,7 +390,7 @@ def table1(t, out):
                 cells.append(cell)
             cells.append("{:.2f}".format(r["exact-cycle rate"]))
             lines.append("| " + " | ".join(cells) + " |")
-    lines += ["", "Mean ± SD over cases; best mean per column in bold. " + FOOT,
+    lines += ["", "Mean ± SD over cases; best mean per column in bold.",
               "Strict cycles: RCK `status`, CoRAL / CE `cn-frac:0.1`. Exact-cycle rate = exact "
               "cycles / true species, summed over cases."]
     with open(os.path.join(out, "table1.md"), "w") as fh:
@@ -411,8 +398,8 @@ def table1(t, out):
 
     tests = []
     cols = T1_COLS + [("blind_exact_cycles", "exact cycles", "up")]
-    for ours in ["rck_bulk", "rck_mc"]:
-        for base in VARIANT_ORDER[2:]:
+    for ours in ["rck_mc"]:
+        for base in VARIANT_ORDER[1:]:
             a = t[t.variant == ours].set_index("name")
             b = t[t.variant == base].set_index("name")
             for col, name, direction in cols:

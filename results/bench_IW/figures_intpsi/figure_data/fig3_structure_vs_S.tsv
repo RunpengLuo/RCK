@@ -1,7 +1,4 @@
 metric	class	S	m	mean	sd
-blind_jseg_best_mean	simple	1	rck_bulk	0.9742899773796603	0.05141682298235095
-blind_jseg_best_mean	simple	2	rck_bulk	0.9999986485886843	2.3679082952024068e-07
-blind_jseg_best_mean	simple	4	rck_bulk	0.9999978382608203	5.819663081678215e-07
 blind_jseg_best_mean	simple	1	rck_mc	0.9999950289414555	3.478544981856557e-06
 blind_jseg_best_mean	simple	2	rck_mc	0.9558657899855628	0.08826230762932552
 blind_jseg_best_mean	simple	4	rck_mc	0.987500283155382	0.02499319123831267
@@ -11,9 +8,6 @@ blind_jseg_best_mean	simple	4	coral	0.6947872850522983	0.36377700261761503
 blind_jseg_best_mean	simple	1	ce	0.9742899773796603	0.05141682298235095
 blind_jseg_best_mean	simple	2	ce	0.8437489623056471	0.18749968295219668
 blind_jseg_best_mean	simple	4	ce	0.7416651684856271	0.25467739347705304
-blind_jseg_best_mean	hard	1	rck_bulk	0.9999983627831819	2.8363695322670273e-07
-blind_jseg_best_mean	hard	2	rck_bulk	0.9247574481263305	0.15047982147868408
-blind_jseg_best_mean	hard	4	rck_bulk	0.6050541518803763	0.03767225965915293
 blind_jseg_best_mean	hard	1	rck_mc	0.9999980755659739	5.028477990466574e-07
 blind_jseg_best_mean	hard	2	rck_mc	0.9538609617378486	0.09226739070108857
 blind_jseg_best_mean	hard	4	rck_mc	0.939565954167233	0.12085650051491939
@@ -23,9 +17,6 @@ blind_jseg_best_mean	hard	4	coral	0.3072368282454583	0.2264334967753793
 blind_jseg_best_mean	hard	1	ce	0.9999983627831819	2.8363695322670273e-07
 blind_jseg_best_mean	hard	2	ce	0.7541283819776827	0.17648096496592597
 blind_jseg_best_mean	hard	4	ce	0.45224574645848986	0.18607421229126112
-blind_jadj_best_mean	simple	1	rck_bulk	0.9285714285714286	0.14285714285714285
-blind_jadj_best_mean	simple	2	rck_bulk	1.0	0.0
-blind_jadj_best_mean	simple	4	rck_bulk	1.0	0.0
 blind_jadj_best_mean	simple	1	rck_mc	1.0	0.0
 blind_jadj_best_mean	simple	2	rck_mc	0.75625	0.1663016836956259
 blind_jadj_best_mean	simple	4	rck_mc	0.8541666666666666	0.02405626121623445
@@ -35,9 +26,6 @@ blind_jadj_best_mean	simple	4	coral	0.875	0.25
 blind_jadj_best_mean	simple	1	ce	0.9285714285714286	0.14285714285714285
 blind_jadj_best_mean	simple	2	ce	1.0	0.0
 blind_jadj_best_mean	simple	4	ce	0.9375	0.12499999999999999
-blind_jadj_best_mean	hard	1	rck_bulk	1.0	0.0
-blind_jadj_best_mean	hard	2	rck_bulk	0.8625	0.275
-blind_jadj_best_mean	hard	4	rck_bulk	0.5568795787545787	0.10340685383002819
 blind_jadj_best_mean	hard	1	rck_mc	0.9166666666666666	0.16666666666666674
 blind_jadj_best_mean	hard	2	rck_mc	0.8888888888888888	0.13608276348795437
 blind_jadj_best_mean	hard	4	rck_mc	0.8078125	0.10961283664942412

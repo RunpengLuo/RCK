@@ -4,7 +4,7 @@
 One figure per scenario (figures/item1_species_<scenario>.{png,pdf}; numbers in
 figures/figure_data/item1_species_<scenario>.tsv). Rows: the 4 cases, each with its two truth species (outer,
 sibling) as bars laid out in the truth walk's step order (length normalised; true length in the row label).
-Columns: rck_mc (haplotype-aware: a base counts as covered only by an inferred species on the same allele,
+Columns, labelled RCK MC, CoRAL and CE: rck_mc (haplotype-aware: a base counts as covered only by an inferred species on the same allele,
 after the per-phase-block A/B swap the scorer chooses), CoRAL and CE (haplotype-blind, as they have no
 alleles; linear walks kept). Each base is coloured by the inferred species covering it, with multiplicity
 (make_species_matrix_figure.coverage_pieces); a base covered by several is split in height.
@@ -42,9 +42,9 @@ from rck.ecdna import evaluate as ev  # noqa: E402
 
 bi = alb.bi
 FIG = os.path.join(HERE, "figures")
-PANELS = [("rck_mc", "", "native", True, "rck_mc (allele-specific)"),
-          ("coral", "walks_kept", "baf_major", False, "CoRAL (haplotype-blind)"),
-          ("ce", "walks_kept", "baf_major", False, "CE (haplotype-blind)")]
+PANELS = [("rck_mc", "", "native", True, "RCK MC"),
+          ("coral", "walks_kept", "baf_major", False, "CoRAL"),
+          ("ce", "walks_kept", "baf_major", False, "CE")]
 ROLE_COLOURS = {"outer": smf.PALETTE[0], "sibling": smf.PALETTE[1]}
 EXTRA_COLOURS = smf.PALETTE[2:]
 
@@ -135,10 +135,14 @@ def draw_scenario(scenario):
                Patch(facecolor=ROLE_COLOURS["sibling"], label="species paired with the sibling")]
     handles += [Patch(facecolor=EXTRA_COLOURS[k], label="other species %d" % (k + 1)) for k in range(used_extra)]
     handles += [Patch(facecolor=smf.UNCOVERED, label="not covered")]
-    fig.legend(handles=handles, loc="lower center", ncol=len(handles), frameon=False, fontsize=8)
+    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.025), ncol=len(handles), frameon=False,
+               fontsize=8)
     fig.suptitle("%s: truth species covered by each method's species (position along the truth walk)" % scenario,
                  fontsize=11, x=0.01, ha="left")
-    fig.subplots_adjust(left=0.1, right=0.995, top=0.9, bottom=0.11, wspace=0.08)
+    fig.text(0.01, 0.005, "RCK MC: a base counts as covered only by a species on the same allele (within phase blocks). "
+             "CoRAL and CE report no alleles, so their coverage is haplotype-blind; linear walks kept.",
+             fontsize=7, color=smf.INK_MUTED, ha="left", va="bottom")
+    fig.subplots_adjust(left=0.1, right=0.995, top=0.9, bottom=0.14, wspace=0.08)
     path = os.path.join(FIG, "item1_species_" + scenario)
     for ext in ("png", "pdf"):
         fig.savefig("%s.%s" % (path, ext), dpi=200)

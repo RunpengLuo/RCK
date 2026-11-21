@@ -10,6 +10,8 @@ $BENCH_IW_ALLELE_OUT; writes to figures/ here:
     table2.tsv / table2.md           mean +- SD per method and phasing, by case group
     figure_data/*.tsv                the numbers each figure plots
 
+Methods: RCK MC (rck_mc), CoRAL and CE only (Yubi, 2026-11-21); rck_bulk is not shown.
+
 Every score here is within phase blocks (one A/B swap per block, the frame rck_mc is scored in;
 docs/pipeline/evaluation.md 3.10). Absolute scores are in allele_table.tsv (columns without _block).
 Style, colours and markers are bench_IW/make_figures.py's (imported, not edited).
@@ -31,17 +33,16 @@ from matplotlib.lines import Line2D  # noqa: E402
 
 PHASE_LABEL = {"native": "own", "baf_major": "BAF", "truth_major": "oracle"}
 GROUPS = [("single", "single-allele cases"), ("mixed", "both alleles amplified")]
-FOOT7 = ("own: the method's haplotypes. BAF / oracle: post-hoc, each segment given the major allele of the observed "
-         "CN_A / CN_B (BAF) or of the true ecDNA copies (oracle, the best any one-allele-per-segment rule can do).\n"
-         + mf.FOOT)
+FOOT7 = ("own: the method's haplotypes. BAF / oracle: post-hoc, each segment given the major allele of the observed\n"
+         "CN_A / CN_B (BAF) or of the true ecDNA copies (oracle, the best any one-allele-per-segment rule can do).")
 
 
 def load(baseline_variant):
     a = pd.read_csv(os.path.join(HERE, "allele_table.tsv"), sep="\t")
     a = a[a["status"] == "ok"].copy()
-    mixed = a[(a.method_variant == "rck_bulk") & (a.phasing == "native")].set_index("name")["mixed_bp_frac"]
+    mixed = a[(a.method_variant == "rck_mc") & (a.phasing == "native")].set_index("name")["mixed_bp_frac"]
     a["group"] = np.where(a["name"].map(mixed) > 0, "mixed", "single")
-    keep = {"rck_bulk": "rck_bulk", "rck_mc": "rck_mc", "coral:" + baseline_variant: "coral", "ce:" + baseline_variant: "ce"}
+    keep = {"rck_mc": "rck_mc", "coral:" + baseline_variant: "coral", "ce:" + baseline_variant: "ce"}
     a = a[a.method_variant.isin(keep)].copy()
     a["m"] = a.method_variant.map(keep)
     for col in ("phased_jseg_best_mean_block", "phased_jadj_best_mean_block", "phased_exact_cycles_block"):
@@ -62,7 +63,7 @@ def fig7(a, out):
     metrics = [("as_cn_recall_block", "allele-specific ecDNA\ncopy-number recall"),
                ("phased_jadj_best_mean_block", "phased adjacency\nJaccard (J_adj)")]
     cols = columns()
-    fig, axes = plt.subplots(2, 2, figsize=(8.4, 4.8), sharey="row", gridspec_kw={"wspace": 0.06, "hspace": 0.35})
+    fig, axes = plt.subplots(2, 2, figsize=(7.4, 4.8), sharey="row", gridspec_kw={"wspace": 0.06, "hspace": 0.35})
     rows = []
     for j, (g, title) in enumerate(GROUPS):
         n = a[a.group == g]["name"].nunique()
@@ -127,13 +128,13 @@ def within_block_tables(a, phasing_of):
 
 
 def fig8(a, out):
-    phasing_of = {"rck_bulk": "native", "rck_mc": "native", "coral": "baf_major", "ce": "baf_major"}
+    phasing_of = {"rck_mc": "native", "coral": "baf_major", "ce": "baf_major"}
     t = within_block_tables(a, phasing_of)
     t = t[(t["end"] - t["start"] + 1) >= 1000]  # 1-bp slivers from breakpoint offsets add nothing
     mixed_base = (t.t_A > 0) & (t.t_B > 0)
     long = pd.concat([t.assign(allele=h, truth=t["t_" + h], inferred=t["c_" + h], mixed_base=mixed_base) for h in ("A", "B")])
     long = long[(long.truth > 0) | (long.inferred > 0)]
-    fig, axes = plt.subplots(1, 4, figsize=(7.4, 2.5), sharex=True, sharey=True, gridspec_kw={"wspace": 0.08})
+    fig, axes = plt.subplots(1, len(mf.METHODS), figsize=(5.8, 2.5), sharex=True, sharey=True, gridspec_kw={"wspace": 0.08})
     lim = max(long.truth.max(), long.inferred.max()) * 1.15
     for ax, m in zip(axes, mf.METHODS):
         d = long[long.m == m]
@@ -163,7 +164,7 @@ def fig8(a, out):
                       label="both alleles amplified")]
     fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, -0.2), ncol=2, frameon=False, fontsize=6.5, handletextpad=0.2)
     fig.text(0.01, -0.27, "One point per ecDNA segment (>= 1 kb) and allele, all 24 cases; within phase blocks. "
-             "CoRAL / CE phased post-hoc from the observed CN_A / CN_B.\n" + mf.FOOT, fontsize=6.2, color=mf.INK2,
+             "CoRAL / CE phased post-hoc from the observed CN_A / CN_B.", fontsize=6.2, color=mf.INK2,
              ha="left", va="top")
     mf.save(fig, out, "fig8_allele_cn", long[["name", "m", "phasing", "group", "chrom", "start", "end", "allele", "truth",
                                                "inferred", "mixed_base"]])
@@ -200,7 +201,7 @@ def table2(a, out):
         md.append("")
     md += ["Mean ± SD over cases. own: the method's haplotypes; BAF / oracle: post-hoc phasing (fig. 7 caption). "
            "Exact-cycle rate = phased exact cycles / truth species, summed over cases. n = 6 mixed cases is too few "
-           "for tests; report it descriptively.", "", mf.FOOT]
+           "for tests; report it descriptively."]
     pd.DataFrame(rows).to_csv(os.path.join(out, "table2.tsv"), sep="\t", index=False)
     with open(os.path.join(out, "table2.md"), "w") as handle:
         handle.write("\n".join(md) + "\n")

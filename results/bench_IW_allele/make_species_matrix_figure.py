@@ -32,6 +32,16 @@ block exactly as aa_eval.score does (evaluate.block_swaps on the blind strict ma
 Species colours come from a fixed colourblind-safe list (Paul Tol's "muted"), assigned in column order.
 
     python make_species_matrix_figure.py [--case hard_S4_s16003] [--blind] [--block] [--plot-dir DIR]
+
+Added 2026-11-21 for the RCK MC vs CoRAL topology comparison (make_compare_plots.py):
+  --set iw_allelic     the item 1 cases (allele_bench.use_set); default iw_intpsi
+  --method coral|ce    a baseline's answer (linear walks kept, --variant), drawn from allele_bench's baf_major
+                       task folder; use with --blind (CoRAL / CE have no alleles). Default rck_mc. Files are named
+                       <method>_species_matrix* / <method>_species_coverage*.
+  --match score        pair species as the scorer does (evaluate.score_decomposition: with --block, blind pairing
+                       chooses one A/B swap per phase block, then pairing with haplotypes; with --blind, blind
+                       pairing) on the strict species, instead of the run's recovery_matrix.tsv (absolute frame,
+                       rck_mc only). Default run (unchanged behaviour).
 """
 import argparse
 import bisect
@@ -58,7 +68,8 @@ from rck.ecdna import evaluate as ev  # noqa: E402
 
 bi = ab.bi
 DEFAULT_CASE = "hard_S4_s16003"
-METHOD, PHASING = "rck_mc", "native"
+METHOD, VARIANT, PHASING, MATCH = "rck_mc", None, "native", "run"
+LABEL = {"rck_mc": "RCK MC", "coral": "CoRAL", "ce": "CE"}
 MISSED = "(missed)"  # placeholder column name for a truth species with no match
 
 # Paul Tol's "muted" scheme (colourblind-safe), avoiding the haplotype blue/orange of rck.ecdna.plot;
@@ -72,7 +83,7 @@ def case_info(name):
     case = next((c for c in bi.cases() if c["name"] == name), None)
     if case is None:
         raise SystemExit("unknown case %r" % name)
-    return case, os.path.join(ab.task_dir(case, METHOD, None, PHASING))
+    return case, os.path.join(ab.task_dir(case, METHOD, VARIANT, PHASING))
 
 
 def default_plot_dir(name):
@@ -117,7 +128,8 @@ def load(name, block, haplotype):
     sub = "aa_eval_block" if block else "aa_eval"
     full = pd.read_csv(os.path.join(folder, sub, "aa_species_matrix.tsv"), sep="\t")
     matrix = full[full["haplotype"] == haplotype]
-    matches, source = run_matches(case, full[full["haplotype"] == "phased"])
+    if MATCH == "run":
+        matches, source = run_matches(case, full[full["haplotype"] == "phased"])
     with open(os.path.join(folder, "done.json")) as fh:
         cycles_path = json.load(fh)["cycles"]
     truth = {t.name: t for t in ev.load_truth(case["truth"])}
@@ -131,6 +143,12 @@ def load(name, block, haplotype):
         swaps = ev.block_swaps(pairs, blocks)
         cycles = [ev.relabel(c, blocks, swaps) for c in cycles]
     inferred = {c.name: c for c in cycles}
+    if MATCH == "score":
+        strict_names = {c.name for c in ae.strict_select(records, ae.species_cycles(records))[0]}
+        strict = [c for c in cycles if c.name in strict_names]  # relabelled within blocks if --block
+        chosen = ev._match(list(truth.values()), strict, haplotype == "phased")
+        matches = {t: chosen.get(t) for t in truth}
+        source = "scorer pairing (%s)" % ("within phase blocks" if block else haplotype)
     rows, cols, unmatched, colors = layout(matrix, matches)
     species = [c for c in cols if c in colors]
     missing = [n for n in rows if n not in truth] + [n for n in species if n not in inferred]
@@ -326,17 +344,32 @@ def main():
     p.add_argument("--case", default=DEFAULT_CASE, help="bench_IW run name (default: %(default)s)")
     p.add_argument("--plot-dir", "--outdir", dest="plot_dir", default=None,
                    help="output folder (default: topology_plots/<n>_<case>)")
+    p.add_argument("--set", choices=["iw_intpsi", "iw_allelic"], default="iw_intpsi")
+    p.add_argument("--method", choices=["rck_mc", "coral", "ce"], default="rck_mc")
+    p.add_argument("--variant", choices=["walks_kept", "walks_dropped"], default="walks_kept",
+                   help="CoRAL / CE scoring variant (default walks_kept)")
+    p.add_argument("--match", choices=["run", "score"], default="run")
     args = p.parse_args()
+    global METHOD, VARIANT, PHASING, MATCH
+    ab.use_set(args.set)
+    METHOD, MATCH = args.method, args.match
+    if METHOD != "rck_mc":
+        VARIANT, PHASING = args.variant, "baf_major"
+        if MATCH == "run":
+            raise SystemExit("--method %s needs --match score (only rck_mc runs have recovery_matrix.tsv)" % METHOD)
     plot_dir = args.plot_dir or default_plot_dir(args.case)
     hap = "blind" if args.blind else "phased"
-    labelling = "within-block labels" if args.block else "native labels"
+    labelling = "within-block labels" if args.block else ("haplotype-blind" if args.blind else "native labels")
     suffix = ("_blind" if args.blind else "") + ("_block" if args.block else "")
     matrix, truth, inferred, lay = load(args.case, args.block, hap)
     rl, cl = labels(matrix, truth, inferred, lay)
     os.makedirs(plot_dir, exist_ok=True)
-    title = "%s — rck_mc, %s, %s" % (args.case, hap, labelling)
-    m_path = os.path.join(plot_dir, "rck_mc_species_matrix" + suffix)
-    c_path = os.path.join(plot_dir, "rck_mc_species_coverage" + suffix)
+    if METHOD == "rck_mc" and MATCH == "run":  # the original files keep their original title
+        title = "%s — rck_mc, %s, %s" % (args.case, hap, "within-block labels" if args.block else "native labels")
+    else:
+        title = "%s — %s, %s" % (args.case, LABEL[METHOD], labelling if args.blind else "%s, %s" % (hap, labelling))
+    m_path = os.path.join(plot_dir, METHOD + "_species_matrix" + suffix)
+    c_path = os.path.join(plot_dir, METHOD + "_species_coverage" + suffix)
     print("matches (%s): %s" % (lay["match_source"] or "fallback: best phased J_seg",
                                 ", ".join("%s->%s" % (r, lay["matches"].get(r) or "missed") for r in lay["rows"])))
     print("columns: %s; unmatched: %s" % (", ".join(lay["cols"]), ", ".join(lay["unmatched"]) or "none"))

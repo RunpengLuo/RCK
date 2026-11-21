@@ -42,6 +42,8 @@ VARIANTS = [("rck_bulk", ""), ("rck_mc", ""), ("coral", "walks_kept"), ("coral",
             ("ce", "walks_kept"), ("ce", "walks_dropped")]
 PHASINGS = ["native", "baf_major", "truth_major"]
 SET = "iw_intpsi"
+_INTPSI = {"OUT": OUT, "TABLE": TABLE, "SEGMENTS": SEGMENTS, "VARIANTS": list(VARIANTS), "cases": bi.cases,
+           "inferred_graph": bi.inferred_graph, "bi_tables": (bi.TABLE, bi.POOLED, bi.PROPORTIONS)}
 
 
 def use_set(name):
@@ -50,6 +52,12 @@ def use_set(name):
     and *_allelic.tsv here; rck_mc, CoRAL and CE only, as Yubi asked on 2026-11-21). Call before run/collect."""
     global OUT, TABLE, SEGMENTS, VARIANTS, SET
     if name == "iw_intpsi":
+        if SET != "iw_intpsi":  # switch back (bench_iw and this module as on import)
+            bi.configure("iw_intpsi")
+            bi.cases, bi.inferred_graph = _INTPSI["cases"], _INTPSI["inferred_graph"]
+            bi.TABLE, bi.POOLED, bi.PROPORTIONS = _INTPSI["bi_tables"]
+            OUT, TABLE, SEGMENTS = _INTPSI["OUT"], _INTPSI["TABLE"], _INTPSI["SEGMENTS"]
+            VARIANTS, SET = list(_INTPSI["VARIANTS"]), "iw_intpsi"
         return
     if name != "iw_allelic":
         raise ValueError(name)

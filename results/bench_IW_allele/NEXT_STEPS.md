@@ -4,6 +4,72 @@
 [`PLAN.md`](PLAN.md) ("Item 1 in detail", "Resume here"). This file is the how-to: check the arrays, fix
 failures, score, and what is still to be written.*
 
+## RUNNING: RCK MC vs CoRAL topology figures (Slurm array 32468172, submitted 2026-11-21)
+
+**What it is.** Yubi asked (2026-11-21) for topology plots, Jaccard (species) matrices and coverage figures
+of RCK MC and CoRAL side by side, on cases where RCK MC recovers nested ecDNA with both alleles amplified.
+`make_compare_plots.py` draws them, one case per array task (`compare_plots.sbatch`, 2 CPUs, 4 GB, 30 min, no
+Gurobi). Output: `topology_plots/compare/<k>_<case>/`, one folder per case, plus `topology_plots/compare/README.md`
+(the case list and why each was chosen).
+
+| task | folder | set | why chosen (scores from the benchmark tables) |
+|---|---|---|---|
+| 0 | `1_sib_opp_shared_s18004` | iw_allelic | opposite-allele sibling, equal clone weights; RCK MC both exact, CoRAL one cycle over both (sibling missed) |
+| 1 | `2_sib_opp_mirror_s17004` | iw_allelic | opposite-allele sibling, mirrored clones; RCK MC both exact; CoRAL 1 of 2 exact + a false species |
+| 2 | `3_sib_mixed_mirror_s19012` | iw_allelic | sibling opposite on some intervals, same on others; RCK MC both exact; CoRAL misses the sibling |
+| 3 | `4_sib_opp_shared_s18006` | iw_allelic | opposite-allele sibling, reuse stratum; RCK MC both exact; CoRAL none exact |
+| 4 | `5_hard_S4_s16005` | iw_intpsi | 4 nested species, both alleles on 56% of ecDNA; RCK MC 3 of 4 exact; CoRAL one cycle, 3 missed |
+| 5 | `6_hard_S4_s16002` | iw_intpsi | 4 nested, both alleles on 39%; RCK MC 3 of 4 exact; CoRAL 1 missed, none exact |
+| 6 | `7_hard_S4_s16006` | iw_intpsi | (extra) 4 nested, both alleles on 39%; RCK MC 2 of 4 exact; CoRAL 2 missed |
+| 7 | `8_hard_S2_s15003` | iw_intpsi | (extra) 2 nested, both alleles on 62%; RCK MC 1 of 2 exact (J_seg 0.82); CoRAL J_seg 0.21 |
+
+Files in each folder (details in `make_compare_plots.py`'s docstring):
+- `topology_compare.png`: **the main figure.** One genome axis. Rows: the truth species, then RCK MC's species,
+  then CoRAL's. Haplotype A blue, B orange; CoRAL has no alleles, so grey. RCK MC's alleles are shown after the
+  scorer's one swap per phase block. "→ ecdnaN" is the truth species each answer species is paired with.
+- `truth_topology.png`, `coral_truth_<species>_cycles.png`: the truth alone.
+- `rck_mc_rank1_ec<k>.png`, `rck_mc_recovery_matrix.png`: rck-ecdna-plot pages of the RCK MC run.
+- `coral_cycles.png`, `coral_graph.png`: CoRAL's own figures of CoRAL's answer and of the graph it decomposed.
+  `coral_rck_mc_cycles.png`: RCK MC's species in CoRAL's style.
+- `rck_mc_species_matrix_block.*`, `rck_mc_species_coverage_block.*`: RCK MC within phase blocks (alleles must
+  match). `rck_mc_species_*_blind.*`, `coral_species_*_blind.*`: both methods haplotype-blind, for a like-for-like
+  view.
+- `README.txt`: the case, why it was chosen, RCK MC and CoRAL scores, and for the sibling cases the per-base
+  sibling-vs-outer check.
+- `species_matrix.log`: what the matrix script printed (pairings, coverage shares).
+
+### When it has finished (from `~/RCK-cnp/results/bench_IW_allele`)
+
+1. **Did every task finish?** Each task log ends with `<case>: done -> <folder>`, and lists any step that failed:
+   ```bash
+   grep -h "done ->\|FAILED" /n/fs/yubi-iw/runs/bench_IW_allelic/logs/slurm/iwa-compare_32468172_*.out
+   sacct -j 32468172 -X --format=JobID,State,Elapsed,MaxRSS     # if needed; wait >= 60 s between sacct calls
+   ```
+   Expect 8 `done` lines and no `FAILED`. A failed step leaves the other figures in place; the traceback is in
+   that task's log.
+2. **Are all the files there?** Each folder should have `topology_compare.png`, `truth_topology.png`,
+   `coral_cycles.png`, `coral_graph.png`, `coral_rck_mc_cycles.png`, at least one `rck_mc_rank1_ec*.png`, and 6
+   species-matrix / coverage PNGs (`rck_mc_*_block`, `rck_mc_*_blind`, `coral_*_blind`):
+   ```bash
+   for d in topology_plots/compare/*_*/; do echo "$d $(ls $d*.png | wc -l) png"; done
+   ```
+3. **Redo one case** (task index K from the table): `sbatch --array=K --output=/n/fs/yubi-iw/runs/bench_IW_allelic/logs/slurm/%x_%A_%a.out compare_plots.sbatch`,
+   or locally `PATH=/n/fs/yubi-iw/conda/envs/gurobi-env/bin:$PATH python make_compare_plots.py --index K`
+   (1–2 min). It overwrites that case's folder only.
+4. **Confirm the results**, case by case (open `topology_compare.png`, then the matrices):
+   - RCK MC's rows should repeat the truth's rows: the same blocks in the same order, the same colours. For the
+     sibling cases, the outer and the sibling should be on opposite colours (s19012: opposite on some intervals,
+     the same on others), matching `README.txt`'s 0 bp disagreeing.
+   - CoRAL's rows should show the failure the table says: one long grey cycle running through both species
+     (s18004, s16005), a missing sibling (s19012), or extra / partial cycles.
+   - `rck_mc_species_matrix_block.png`: an outlined diagonal of 1.00 / 1.00 for the exact species.
+     `coral_species_matrix_blind.png`: "missed" columns or low J_seg. Expected misses: the hard_S4 cases have one
+     RCK MC species that is not exact (3 of 4 exact; 2 of 4 on s16006), and s15003 has 1 of 2.
+   - Coverage figures: RCK MC's truth bars in one colour each; CoRAL's shared by one cycle across species.
+5. **Commit the figures** (about 8 folders of PNG / PDF):
+   `git add results/bench_IW_allele/topology_plots/compare && git commit -m "bench_IW_allele: RCK MC vs CoRAL topology figures (array 32468172)"`.
+   Push from a machine with GitHub credentials (ionic has none).
+
 **State 2026-11-21: §2–§5 done; item 1 finished.** All 48 runs ok. CoRAL and CE on sib_opp_mirror_s17006 were
 rerun (jobs 32468001 / 32468002) on an **input patch**: a copy of rck_bulk's graph with its 4 zero-read
 discordant edges set to 1 read, because CoRAL and CE cannot take in 0 reads (`allelic_bench.py`,

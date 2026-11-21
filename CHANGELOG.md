@@ -13,6 +13,19 @@ the plan are in amplicon-allele-analysis (branch `yubi_CNP_ionic`; changes and r
 `CHANGELOG.md`). Step 3 (the multi-clone model and route) is below; status and next steps in
 [`docs/multiclone_NEXT_STEPS.md`](docs/multiclone_NEXT_STEPS.md). The bulk route is unchanged.
 
+### Added (2026-11-21): RCK MC vs CoRAL topology comparison; three-method figures
+
+In `results/bench_IW_allele/` and `results/bench_IW/`; no runs or scores changed.
+- Figures 2–9, Tables 1–3 and the item 1 figures compare only RCK MC, CoRAL and CE (Yubi), labelled so, with no
+  * / † marks; Table 1's paired tests are RCK MC vs each baseline; `results/bench_IW/RESULTS.md` rewritten.
+- `make_compare_plots.py` + `compare_plots.sbatch` (Slurm array 32468172): per chosen case, a shared-axis
+  topology figure (truth / RCK MC / CoRAL), rck-ecdna-plot pages of RCK MC, CoRAL's own figures of its answer and
+  graph, and species (Jaccard) matrices and coverage figures of both methods. Follow-up in
+  `results/bench_IW_allele/NEXT_STEPS.md`.
+- `make_species_matrix_figure.py`: `--set`, `--method coral|ce`, `--match score` (the scorer's pairing instead of
+  the run's absolute-frame `recovery_matrix.tsv`); default output unchanged.
+- `allele_bench.use_set("iw_intpsi")` now switches back after `iw_allelic` in the same process.
+
 ### Added (2026-11-21): item 1 (allelic siblings) scored; input patch for CoRAL / CE on one case
 
 In `results/bench_IW_allele/` (results in its `PLAN.md`, "Item 1 results"). Compares rck_mc with CoRAL and CE

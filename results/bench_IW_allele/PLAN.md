@@ -81,8 +81,9 @@ detail"):
    (`make_compare_plots.py`, local, ~30 s per case, no Gurobi; details under "Figures: within-block recovery and J
    matrices", "RCK MC pages and more topology figures"). The 8 compare cases' `rck_mc_rank1_ec<k>.png` now pair and
    colour as the table does (old pages kept as `*_absolute.png`); `topology_compare.png` added to the 8 numbered
-   `topology_plots/` folders and to `item1_dryrun/` s18002 and s19006. **Waiting for Yubi:** whether to regenerate the
-   numbered folders' own RCK MC pages (absolute frame; 3 pages pair differently, see `topology_plots/README.md`).
+   `topology_plots/` folders and to `item1_dryrun/` s18002 and s19006. The 8 numbered folders' RCK MC pages were then
+   regenerated within blocks too (Yubi's go-ahead; `--pages-case`), all agreeing with the tables. **Waiting for Yubi:**
+   look at the figures.
 
 **Part B: array finished, results not yet exported, scored or written (state checked 2026-11-20, nothing
 re-run).** `rck_partB.py status`: `chil` 24 / 24 optimal, `chil_avg` 24 / 24, `chil_err` 23 optimal + 1
@@ -810,8 +811,9 @@ species has novel adjacencies). The 22 misses:
   s18004 and s18006 ec1 ecdna1 → ecdna2, ec2 ecdna2 → ecdna1; hard_S4_s16005 ec3 ecdna1 → ecdna4, ec4 ecdna4 → ecdna1;
   hard_S4_s16002 ec4 none → ecdna4; hard_S4_s16006 ec1 ecdna4 → ecdna3, ec2 none → ecdna1, ec3 none → ecdna2, ec4
   ecdna3 → ecdna4. Unchanged pairs (s17004, s19012, s15003, the rest) often had a lower absolute composite.
-- **Numbered folders** (`topology_plots/<k>_<case>/`, make_topology_plots.py): their RCK MC pages are still absolute.
-  Pair differs on simple_S4_s13001 ec3 (none → ecdna3) and hard_S4_s16005 ec3 / ec4 (as above); not regenerated (ask).
+- **Numbered folders** (`topology_plots/<k>_<case>/`): RCK MC pages regenerated within blocks the same way (Yubi,
+  2026-11-21; `make_compare_plots.py --pages-case iw_intpsi <case> <folder>`), old ones `*_absolute.png`; all 8 agree
+  with the tables. Pair changed on simple_S4_s13001 ec3 (none → ecdna3, 0.733) and hard_S4_s16005 ec3 / ec4 (as above).
 - **topology_compare.png** (`--topology-case SET CASE FOLDER`): now labelled from the scorer's own
   `aa_species_metrics.tsv` (equal to the earlier re-matching on all 18 cases drawn, so the compare figures stand). Added for
   the 8 numbered folders (hard_S2_s15001 is item 2 of the request) and `item1_dryrun/` s18002 and s19006 (the dry-run

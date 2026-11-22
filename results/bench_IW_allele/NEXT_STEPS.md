@@ -13,9 +13,9 @@ Local, no Gurobi (PLAN.md "RCK MC pages and more topology figures").
    Needs `make_block_figures.py run` output (`species_matrix/<set>/<case>/rck_mc_recovery_matrix_block.tsv`) first.
 2. **Look at:** `compare/<case>/rck_mc_rank1_ec<k>.png` next to `*_absolute.png`; `topology_plots/<k>_<case>/topology_compare.png`;
    `item1_dryrun/{sib_opp_shared_s18002, sib_mixed_mirror_s19006}/topology_compare.png`.
-3. **Open for Yubi:** regenerate the numbered folders' RCK MC pages within blocks too? (3 pages pair differently:
-   simple_S4_s13001 ec3, hard_S4_s16005 ec3 / ec4; `topology_plots/rck_mc_pages_frame_check.tsv`.) It would need
-   make_topology_plots.py to call `make_compare_plots.rck_mc_pages`.
+3. **Numbered folders' RCK MC pages: done within blocks** (Yubi's go-ahead, 2026-11-21): `python make_compare_plots.py
+   --pages-case iw_intpsi <case> topology_plots/<k>_<case>/`; old pages `*_absolute.png`. Note `make_topology_plots.py`
+   still draws absolute pages: after rerunning it, rerun `--pages-case` for those folders.
 
 ## Within-block recovery matrices and J_seg / J_adj matrices (2026-11-21): DONE, waiting for Yubi to look
 

@@ -48,6 +48,7 @@ task; no Gurobi.
     python make_compare_plots.py --index K --pages  # only the RCK MC pages (within phase blocks), checked vs the tables
     python make_compare_plots.py --topology-case SET CASE FOLDER   # topology_compare.png (+ README.txt section) of any
                                                     # case with rck_mc and CoRAL runs (numbered topology_plots/ folders)
+    python make_compare_plots.py --pages-case SET CASE FOLDER   # --pages for any case (numbered folders)
     python make_compare_plots.py --topology-index   # that section of topology_plots/README.md
 
 topology_compare labels pairs from the scorer's own aa_species_metrics.tsv (strict; prints a note if re-matching
@@ -591,13 +592,14 @@ def topology_index():
     lines += ["", "`item1_dryrun/`: the three dry-run candidates' truth figures; all three are finished iw_allelic cases (the "
               "same simulations), so s18002 and s19006 got a `topology_compare.png` there; s17004's is `compare/2_sib_opp_mirror_s17004/`. "
               "`species_matrix/`: matrix figures only (no topology figure needed).", "",
-              "**RCK MC pages here (`rck_mc_rank1_ec<k>.png`, make_topology_plots.py) are the run's own rck-ecdna-plot pages: "
-              "absolute-frame pairing, not regenerated.** `rck_mc_pages_frame_check.tsv` (audit_page_pairing.py) compares each "
-              "page's pair with the within-block one. Pair differs on: `4_simple_S4_s13001` ec3 (no truth drawn; within blocks "
-              "→ ecdna3, 0.733) and `7_hard_S4_s16005` ec3 (ecdna1 → ecdna4) and ec4 (ecdna4 → ecdna1). Same pair but a lower "
-              "absolute composite on s12003 ec2, s13001 ec1/ec2/ec4, s16005 ec1/ec2 (haplotypes compared without the block "
-              "swaps). Equal on s11001, s14003, s15001, s15003, s16003. The within-block pages exist for the 8 `compare/` cases "
-              "(`make_compare_plots.py --index K --pages`); s16005 and s15003 are there."]
+              "**RCK MC pages here are within phase blocks too (2026-11-21, `make_compare_plots.py --pages-case iw_intpsi "
+              "<case> <folder>`):** `rck_mc_rank1_ec<k>.png` pairs and colours as the benchmark table (checked on all 8 against "
+              "the block TSV, the scorer's rows and `mean_composite`); the run's own pages are `*_absolute.png`. "
+              "`rck_mc_pages_frame_check.tsv` (audit_page_pairing.py) lists old vs new pair per page. Pair changed on "
+              "`4_simple_S4_s13001` ec3 (none → ecdna3, 0.733) and `7_hard_S4_s16005` ec3 (ecdna1 → ecdna4) and ec4 "
+              "(ecdna4 → ecdna1). Same pair, higher composite: s12003 ec2, s13001 ec1/ec2/ec4, s16005 ec1/ec2. Unchanged: "
+              "s11001, s14003, s15001, s15003, s16003. `rck_mc_recovery_matrix.png` here is still the run's (absolute); the "
+              "within-block matrix is in `species_matrix/iw_intpsi/<case>/`."]
     path = os.path.join(mtp.OUT, "README.md")
     text = open(path).read().split("\n" + INDEX_MARK)[0].rstrip("\n")
     with open(path, "w") as handle:
@@ -634,9 +636,13 @@ def check_pages(set_name, case, drawn):
 
 def pages_only(k):
     set_name, name, _ = CASES[k]
+    return pages_case(set_name, name, folder_of(k, name))
+
+
+def pages_case(set_name, name, folder):
+    """rck_mc_pages for any case into folder (compare or numbered topology_plots/ folders), checked vs the tables."""
     alb.use_set(set_name)
     case = next(c for c in alb.bi.cases() if c["name"] == name)
-    folder = folder_of(k, name)
     work = tempfile.mkdtemp(prefix="compare_")
     try:
         drawn = rck_mc_pages(set_name, case, folder, work)
@@ -661,6 +667,8 @@ def main():
     p.add_argument("--topology-case", nargs=3, metavar=("SET", "CASE", "FOLDER"),
                    help="draw only topology_compare.png of any case with rck_mc and CoRAL runs into FOLDER, and its "
                    "section in FOLDER/README.txt (scores from the benchmark table)")
+    p.add_argument("--pages-case", nargs=3, metavar=("SET", "CASE", "FOLDER"),
+                   help="--pages for any case into FOLDER (e.g. the numbered topology_plots/ folders)")
     p.add_argument("--topology-index", action="store_true", help="write the topology_compare.png section of "
                    "topology_plots/README.md (numbered folders; scores from the tables)")
     a = p.parse_args()
@@ -682,6 +690,8 @@ def main():
         topology_readme(set_name, case, folder)
         print("{n}: topology_compare.png and README.txt section -> {f}".format(n=name, f=folder))
         return 0
+    if a.pages_case:
+        return pages_case(*a.pages_case)
     if a.pages:
         if a.index is None:
             p.error("--pages needs --index")

@@ -1,0 +1,44 @@
+where	set	case	folder	page	inferred	absolute_truth	absolute_composite	block_truth	block_composite	pair_differs	regenerated_within_blocks
+compare	iw_allelic	sib_opp_shared_s18004	compare/1_sib_opp_shared_s18004	rck_mc_rank1_ec1_absolute.png	ec1	ecdna1	0.237	ecdna2	1.000	True	True
+compare	iw_allelic	sib_opp_shared_s18004	compare/1_sib_opp_shared_s18004	rck_mc_rank1_ec2_absolute.png	ec2	ecdna2	0.313	ecdna1	1.000	True	True
+compare	iw_allelic	sib_opp_mirror_s17004	compare/2_sib_opp_mirror_s17004	rck_mc_rank1_ec1_absolute.png	ec1	ecdna2	0.749	ecdna2	1.000	False	True
+compare	iw_allelic	sib_opp_mirror_s17004	compare/2_sib_opp_mirror_s17004	rck_mc_rank1_ec2_absolute.png	ec2	ecdna1	0.684	ecdna1	1.000	False	True
+compare	iw_allelic	sib_mixed_mirror_s19012	compare/3_sib_mixed_mirror_s19012	rck_mc_rank1_ec1_absolute.png	ec1	ecdna1	1.000	ecdna1	1.000	False	True
+compare	iw_allelic	sib_mixed_mirror_s19012	compare/3_sib_mixed_mirror_s19012	rck_mc_rank1_ec2_absolute.png	ec2	ecdna2	1.000	ecdna2	1.000	False	True
+compare	iw_allelic	sib_opp_shared_s18006	compare/4_sib_opp_shared_s18006	rck_mc_rank1_ec1_absolute.png	ec1	ecdna1	0.484	ecdna2	1.000	True	True
+compare	iw_allelic	sib_opp_shared_s18006	compare/4_sib_opp_shared_s18006	rck_mc_rank1_ec2_absolute.png	ec2	ecdna2	0.484	ecdna1	1.000	True	True
+compare	iw_intpsi	hard_S4_s16005	compare/5_hard_S4_s16005	rck_mc_rank1_ec1_absolute.png	ec1	ecdna2	0.628	ecdna2	1.000	False	True
+compare	iw_intpsi	hard_S4_s16005	compare/5_hard_S4_s16005	rck_mc_rank1_ec2_absolute.png	ec2	ecdna3	0.702	ecdna3	1.000	False	True
+compare	iw_intpsi	hard_S4_s16005	compare/5_hard_S4_s16005	rck_mc_rank1_ec3_absolute.png	ec3	ecdna1	0.431	ecdna4	1.000	True	True
+compare	iw_intpsi	hard_S4_s16005	compare/5_hard_S4_s16005	rck_mc_rank1_ec4_absolute.png	ec4	ecdna4	0.436	ecdna1	0.750	True	True
+compare	iw_intpsi	hard_S4_s16002	compare/6_hard_S4_s16002	rck_mc_rank1_ec1_absolute.png	ec1	ecdna1	0.699	ecdna1	1.000	False	True
+compare	iw_intpsi	hard_S4_s16002	compare/6_hard_S4_s16002	rck_mc_rank1_ec2_absolute.png	ec2	ecdna3	0.787	ecdna3	1.000	False	True
+compare	iw_intpsi	hard_S4_s16002	compare/6_hard_S4_s16002	rck_mc_rank1_ec3_absolute.png	ec3	ecdna2	0.671	ecdna2	0.733	False	True
+compare	iw_intpsi	hard_S4_s16002	compare/6_hard_S4_s16002	rck_mc_rank1_ec4_absolute.png	ec4			ecdna4	1.000	True	True
+compare	iw_intpsi	hard_S4_s16006	compare/7_hard_S4_s16006	rck_mc_rank1_ec1_absolute.png	ec1	ecdna4	0.294	ecdna3	0.750	True	True
+compare	iw_intpsi	hard_S4_s16006	compare/7_hard_S4_s16006	rck_mc_rank1_ec2_absolute.png	ec2			ecdna1	0.750	True	True
+compare	iw_intpsi	hard_S4_s16006	compare/7_hard_S4_s16006	rck_mc_rank1_ec3_absolute.png	ec3			ecdna2	1.000	True	True
+compare	iw_intpsi	hard_S4_s16006	compare/7_hard_S4_s16006	rck_mc_rank1_ec4_absolute.png	ec4	ecdna3	0.337	ecdna4	1.000	True	True
+compare	iw_intpsi	hard_S2_s15003	compare/8_hard_S2_s15003	rck_mc_rank1_ec1_absolute.png	ec1	ecdna2	0.960	ecdna2	0.960	False	True
+compare	iw_intpsi	hard_S2_s15003	compare/8_hard_S2_s15003	rck_mc_rank1_ec2_absolute.png	ec2	ecdna1	0.621	ecdna1	0.621	False	True
+numbered	iw_intpsi	simple_S1_s11001	1_simple_S1_s11001	rck_mc_rank1_ec1.png	ec1	ecdna1	1.000	ecdna1	1.000	False	False
+numbered	iw_intpsi	hard_S1_s14003	2_hard_S1_s14003	rck_mc_rank1_ec1.png	ec1	ecdna1	1.000	ecdna1	1.000	False	False
+numbered	iw_intpsi	simple_S2_s12003	3_simple_S2_s12003	rck_mc_rank1_ec1.png	ec1	ecdna2	1.000	ecdna2	1.000	False	False
+numbered	iw_intpsi	simple_S2_s12003	3_simple_S2_s12003	rck_mc_rank1_ec2.png	ec2	ecdna1	0.774	ecdna1	1.000	False	False
+numbered	iw_intpsi	simple_S4_s13001	4_simple_S4_s13001	rck_mc_rank1_ec1.png	ec1	ecdna4	0.638	ecdna4	1.000	False	False
+numbered	iw_intpsi	simple_S4_s13001	4_simple_S4_s13001	rck_mc_rank1_ec2.png	ec2	ecdna1	0.750	ecdna1	1.000	False	False
+numbered	iw_intpsi	simple_S4_s13001	4_simple_S4_s13001	rck_mc_rank1_ec3.png	ec3			ecdna3	0.733	True	False
+numbered	iw_intpsi	simple_S4_s13001	4_simple_S4_s13001	rck_mc_rank1_ec4.png	ec4	ecdna2	0.770	ecdna2	1.000	False	False
+numbered	iw_intpsi	hard_S2_s15001	5_hard_S2_s15001	rck_mc_rank1_ec1.png	ec1	ecdna1	1.000	ecdna1	1.000	False	False
+numbered	iw_intpsi	hard_S2_s15001	5_hard_S2_s15001	rck_mc_rank1_ec2.png	ec2	ecdna2	1.000	ecdna2	1.000	False	False
+numbered	iw_intpsi	hard_S2_s15003	6_hard_S2_s15003	rck_mc_rank1_ec1.png	ec1	ecdna2	0.960	ecdna2	0.960	False	False
+numbered	iw_intpsi	hard_S2_s15003	6_hard_S2_s15003	rck_mc_rank1_ec2.png	ec2	ecdna1	0.621	ecdna1	0.621	False	False
+numbered	iw_intpsi	hard_S4_s16005	7_hard_S4_s16005	rck_mc_rank1_ec1.png	ec1	ecdna2	0.628	ecdna2	1.000	False	False
+numbered	iw_intpsi	hard_S4_s16005	7_hard_S4_s16005	rck_mc_rank1_ec2.png	ec2	ecdna3	0.702	ecdna3	1.000	False	False
+numbered	iw_intpsi	hard_S4_s16005	7_hard_S4_s16005	rck_mc_rank1_ec3.png	ec3	ecdna1	0.431	ecdna4	1.000	True	False
+numbered	iw_intpsi	hard_S4_s16005	7_hard_S4_s16005	rck_mc_rank1_ec4.png	ec4	ecdna4	0.436	ecdna1	0.750	True	False
+numbered	iw_intpsi	hard_S4_s16003	8_hard_S4_s16003	rck_mc_rank1_ec1.png	ec1	ecdna3	0.560	ecdna3	0.560	False	False
+numbered	iw_intpsi	hard_S4_s16003	8_hard_S4_s16003	rck_mc_rank1_ec2.png	ec2	ecdna4	0.995	ecdna4	0.995	False	False
+numbered	iw_intpsi	hard_S4_s16003	8_hard_S4_s16003	rck_mc_rank1_ec3.png	ec3	ecdna2	0.993	ecdna2	0.993	False	False
+numbered	iw_intpsi	hard_S4_s16003	8_hard_S4_s16003	rck_mc_rank1_ec4.png	ec4	ecdna1	0.600	ecdna1	0.600	False	False
+numbered	iw_intpsi	hard_S4_s16003	8_hard_S4_s16003	rck_mc_rank1_ec5.png	ec5					False	False

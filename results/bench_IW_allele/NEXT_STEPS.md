@@ -4,6 +4,19 @@
 [`PLAN.md`](PLAN.md) ("Item 1 in detail", "Resume here"). This file is the how-to: check the arrays, fix
 failures, score, and what is still to be written.*
 
+## RCK MC pages within phase blocks + topology_compare.png for the numbered folders (2026-11-21): DONE, waiting for Yubi
+
+Local, no Gurobi (PLAN.md "RCK MC pages and more topology figures").
+1. **Redo:** `python make_compare_plots.py --index K --pages` (K = 0..7; ~30 s; prints each page's pair and "pages agree
+   with the block TSV and the table"); `python make_compare_plots.py --topology-case iw_intpsi <case> topology_plots/<k>_<case>/`
+   (~20 s; also writes the README.txt section); `python make_compare_plots.py --topology-index`; `python audit_page_pairing.py`.
+   Needs `make_block_figures.py run` output (`species_matrix/<set>/<case>/rck_mc_recovery_matrix_block.tsv`) first.
+2. **Look at:** `compare/<case>/rck_mc_rank1_ec<k>.png` next to `*_absolute.png`; `topology_plots/<k>_<case>/topology_compare.png`;
+   `item1_dryrun/{sib_opp_shared_s18002, sib_mixed_mirror_s19006}/topology_compare.png`.
+3. **Open for Yubi:** regenerate the numbered folders' RCK MC pages within blocks too? (3 pages pair differently:
+   simple_S4_s13001 ec3, hard_S4_s16005 ec3 / ec4; `topology_plots/rck_mc_pages_frame_check.tsv`.) It would need
+   make_topology_plots.py to call `make_compare_plots.rck_mc_pages`.
+
 ## Within-block recovery matrices and J_seg / J_adj matrices (2026-11-21): DONE, waiting for Yubi to look
 
 `make_block_figures.py` (local, ~25 s in all, no Gurobi). Details and results: PLAN.md "Figures: within-block recovery

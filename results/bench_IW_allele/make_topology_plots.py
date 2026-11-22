@@ -289,12 +289,18 @@ def main():
         if a.cases and name not in a.cases:
             continue
         print(plot_case(rank, by_name[name], description), flush=True)
-    with open(os.path.join(OUT, "README.md"), "w") as handle:
+    path = os.path.join(OUT, "README.md")
+    # keep the topology_compare.png section that make_compare_plots.py --topology-index writes after this table
+    mark = "\n## topology_compare.png in the numbered folders"
+    kept = open(path).read().split(mark, 1) if os.path.exists(path) else [""]
+    kept = mark + kept[1] if len(kept) > 1 else ""
+    with open(path, "w") as handle:
         handle.write("# Topology figures (make_topology_plots.py)\n\nSimple → hard; the script's docstring says what "
                      "each file is. rck_bulk_* / rck_mc_* pages (rck-ecdna-plot, RCK bulk and multi-clone routes): "
                      "haplotype A blue, B orange. coral_* figures: CoRAL 3.1.1's own style, which does not show alleles.\n\n| folder | case |\n|---|---|\n")
         for rank, (name, description) in enumerate(CASES, start=1):
             handle.write("| `{k}_{n}` | {d} |\n".format(k=rank, n=name, d=description))
+        handle.write(kept)
 
 
 if __name__ == "__main__":

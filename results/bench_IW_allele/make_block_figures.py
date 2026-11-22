@@ -107,6 +107,21 @@ def recovery_block(case):
     return matrix
 
 
+def rank_swaps(case):
+    """(blocks, swaps, rank) of the run's top decomposition: the per-block A/B swaps recovery_block uses (blind pairing of
+    the decomposition's species, evaluate.block_swaps), for relabelling the run's own files (make_compare_plots pages)."""
+    from rck.ecdna import evaluate as ev
+
+    run = ab.bi.run_dir(case, "rck_mc")
+    truth = ev.load_truth(case["truth"])
+    blocks = ev.read_phase_blocks(os.path.join(case["rck_input"], "rck.fragments.tsv"))
+    inferred = ev.read_inferred(os.path.join(run, "decompositions.tsv"))
+    rank = min(inferred)
+    cycles = inferred[rank]["cycles"]
+    tb, by = {t.name: t for t in truth}, {c.name: c for c in cycles}
+    return blocks, ev.block_swaps([(tb[a], by[b]) for a, b in ev._match(truth, cycles, False).items()], blocks), rank
+
+
 def draw_recovery(matrix, case, table_mean, path):
     from rck.ecdna import plot as rp
 

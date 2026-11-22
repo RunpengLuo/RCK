@@ -77,6 +77,12 @@ detail"):
    ones. 16 of the 22 misses are a balanced rearrangement walked through the reference (14 cases). **Waiting for
    Yubi:** look at `topology_plots/species_matrix/` and the compare folders. (The proposed `evaluate.py`
    `--phase-frame` change was declined, 2026-11-21: do not make it.)
+11. **Done 2026-11-21: RCK MC pages within phase blocks, and topology_compare.png for the numbered folders**
+   (`make_compare_plots.py`, local, ~30 s per case, no Gurobi; details under "Figures: within-block recovery and J
+   matrices", "RCK MC pages and more topology figures"). The 8 compare cases' `rck_mc_rank1_ec<k>.png` now pair and
+   colour as the table does (old pages kept as `*_absolute.png`); `topology_compare.png` added to the 8 numbered
+   `topology_plots/` folders and to `item1_dryrun/` s18002 and s19006. **Waiting for Yubi:** whether to regenerate the
+   numbered folders' own RCK MC pages (absolute frame; 3 pages pair differently, see `topology_plots/README.md`).
 
 **Part B: array finished, results not yet exported, scored or written (state checked 2026-11-20, nothing
 re-run).** `rck_partB.py status`: `chil` 24 / 24 optimal, `chil_avg` 24 / 24, `chil_err` 23 optimal + 1
@@ -790,6 +796,29 @@ species has novel adjacencies). The 22 misses:
   hard_S4_s16003: 2 species (the known weak case).
 - Row max vs pair: within blocks, J_seg never differs and J_adj differs in the 3 split rows above. RCK MC blind:
   J_seg differs on s15003 ecdna1 and s16003 ecdna3.
+
+**RCK MC pages and more topology figures (2026-11-21, after the above).**
+- **Why:** the compare folders' `rck_mc_rank1_ec<k>.png` (rck-ecdna-plot) took each page's "matched truth" from the run's
+  `evaluation.tsv` (absolute frame), so s18004's ec1 (the sibling) was drawn against the outer species, composite 0.237.
+- **How** (`make_compare_plots.py --index K --pages`; `rck/ecdna/plot.py` unchanged): rck-ecdna-plot's `plot_run` on a
+  copy of the run with `recovery_matrix.tsv` = the block TSV, `evaluation.tsv` rebuilt from its pairs, and the scorer's
+  per-block A/B swaps (`make_block_figures.rank_swaps`) applied to `decompositions.tsv` walks and `rck.scnt.tsv`, so walk
+  colours and the A/B copy-number tracks compare with the truth's. Headers: "within phase blocks", the scorer's pair and
+  composite, the case mean (= table). **Check: all 8 cases agree** with `rck_mc_recovery_matrix_block.tsv`, the scorer's
+  per-species rows and `mean_composite`. s18004: ec1 → ecdna2, ec2 → ecdna1, both 1.000.
+- **Pairs that changed** (old absolute → within blocks; `topology_plots/rck_mc_pages_frame_check.tsv`, `audit_page_pairing.py`):
+  s18004 and s18006 ec1 ecdna1 → ecdna2, ec2 ecdna2 → ecdna1; hard_S4_s16005 ec3 ecdna1 → ecdna4, ec4 ecdna4 → ecdna1;
+  hard_S4_s16002 ec4 none → ecdna4; hard_S4_s16006 ec1 ecdna4 → ecdna3, ec2 none → ecdna1, ec3 none → ecdna2, ec4
+  ecdna3 → ecdna4. Unchanged pairs (s17004, s19012, s15003, the rest) often had a lower absolute composite.
+- **Numbered folders** (`topology_plots/<k>_<case>/`, make_topology_plots.py): their RCK MC pages are still absolute.
+  Pair differs on simple_S4_s13001 ec3 (none → ecdna3) and hard_S4_s16005 ec3 / ec4 (as above); not regenerated (ask).
+- **topology_compare.png** (`--topology-case SET CASE FOLDER`): now labelled from the scorer's own
+  `aa_species_metrics.tsv` (equal to the earlier re-matching on all 18 cases drawn, so the compare figures stand). Added for
+  the 8 numbered folders (hard_S2_s15001 is item 2 of the request) and `item1_dryrun/` s18002 and s19006 (the dry-run
+  candidates are finished iw_allelic cases, same simulations). Layout fixes: rows ≥ 2.1 in (the 3-line labels collided),
+  bigger bottom margin, crowded tick labels thinned, and CoRAL steps over 5 Mb (background in linear walks; 29–94 Mb on
+  s15001 / s16003) no longer set the axis but are drawn clipped to it (noted in the CoRAL heading; s15001).
+  Scores per figure: `topology_plots/README.md` and each folder's README.txt.
 
 **Proposed fix in `rck/ecdna/evaluate.py`: DECLINED by Yubi (2026-11-21), not to be made; kept for the record.** Add an opt-in
 `phase_frame="within_block"` (CLI `--phase-frame`) to `evaluate()` / `recovery_matrix()`, used only with phase

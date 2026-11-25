@@ -60,7 +60,6 @@ METHODS = ["rck_mc", "coral", "ce"]
 VARIANT = {"rck_mc": "rck_mc", "coral": "coral:walks_kept", "ce": "ce:walks_kept"}
 COLOR = {"rck_mc": "#eb6834", "coral": "#1baf7a", "ce": "#eda100"}
 LABEL = {"rck_mc": "RCK MC", "coral": "CoRAL", "ce": "CE"}
-SETS = ["iw_intpsi", "iw_allelic"]
 INK, INK2, MUTED, GRID = "#0b0b0b", "#52514e", "#8a8984", "#e6e5e0"
 
 plt.rcParams.update({
@@ -231,7 +230,7 @@ def per_case_figure(d, out):
     handles += [Line2D([], [], ls="", marker="x", color=INK2, label="missed (no matched cycle)"),
                 Line2D([], [], color=MUTED, lw=0.8, ls="--", label="y = x")]
     fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=5, frameon=False, fontsize=8)
-    fig.suptitle("ecDNA copies per cell per species: rows 1-4 bench_IW_intpsi, rows 5-6 bench_IW_allele; "
+    fig.suptitle("ecDNA copies per cell per species; "
                  "species named above their truth $v_s$; methods offset slightly in x", y=1.025, fontsize=8, color=INK2)
     fig.tight_layout(rect=(0, 0, 1, 0.985))
     save(fig, out, "vs_per_case")

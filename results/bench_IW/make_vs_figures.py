@@ -25,7 +25,7 @@ Per pair: rel_err = |w_c - PHI_s| / PHI_s. A truth species with no matched cycle
 inferred v_s, appears in the per-case figure as an x at 0, and is counted (not plotted) in the summary.
 
 Writes to figures_vs/ (or --out):
-    vs_summary.{pdf,png}     inferred vs truth v_s (log-log, y = x), one panel per method, marker = set;
+    vs_summary.{pdf,png}     inferred vs truth v_s (log-log, y = x), one panel per method, all 36 cases pooled;
                              and per-species relative error per method (box + points)
     vs_per_case.{pdf,png}    one panel per case: inferred vs truth v_s, each method, species named
     figure_data/vs_pairs.tsv every (case, method, truth species) row the figures plot
@@ -61,8 +61,6 @@ VARIANT = {"rck_mc": "rck_mc", "coral": "coral:walks_kept", "ce": "ce:walks_kept
 COLOR = {"rck_mc": "#eb6834", "coral": "#1baf7a", "ce": "#eda100"}
 LABEL = {"rck_mc": "RCK MC", "coral": "CoRAL", "ce": "CE"}
 SETS = ["iw_intpsi", "iw_allelic"]
-SET_LABEL = {"iw_intpsi": "bench_IW_intpsi (24 cases)", "iw_allelic": "bench_IW_allele (12 cases)"}
-MARKER = {"iw_intpsi": "o", "iw_allelic": "s"}
 INK, INK2, MUTED, GRID = "#0b0b0b", "#52514e", "#8a8984", "#e6e5e0"
 
 plt.rcParams.update({
@@ -153,10 +151,9 @@ def summary_figure(d, out):
         ax = fig.add_subplot(grid[0, i])
         ax.plot([lo, hi], [lo, hi], color=MUTED, lw=1, ls="--", zorder=1)
         sub = d[d["method"] == method]
-        for s in SETS:
-            pts = sub[(sub["set"] == s) & sub["inferred_v"].notna()]
-            ax.scatter(pts["truth_v"], pts["inferred_v"], s=22, marker=MARKER[s], color=COLOR[method],
-                       edgecolor="white", linewidth=0.6, alpha=0.9, zorder=3)
+        pts = sub[sub["inferred_v"].notna()]
+        ax.scatter(pts["truth_v"], pts["inferred_v"], s=22, marker="o", color=COLOR[method],
+                   edgecolor="white", linewidth=0.6, alpha=0.9, zorder=3)
         n, missed = len(sub), int(sub["inferred_v"].isna().sum())
         ax.set_xscale("log")
         ax.set_yscale("log")
@@ -169,9 +166,8 @@ def summary_figure(d, out):
         ax.set_xlabel("truth $v_s$ (copies / cell)")
         if i == 0:
             ax.set_ylabel("inferred $v_s$ (copies / cell)")
-    handles = [Line2D([], [], ls="", marker=MARKER[s], color=INK2, label=SET_LABEL[s]) for s in SETS]
-    handles.append(Line2D([], [], color=MUTED, lw=1, ls="--", label="y = x"))
-    fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=3, frameon=False)
+    handles = [Line2D([], [], color=MUTED, lw=1, ls="--", label="y = x")]
+    fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=1, frameon=False)
 
     ax = fig.add_subplot(grid[1, :])
     rng = np.random.default_rng(0)
@@ -180,10 +176,9 @@ def summary_figure(d, out):
                medianprops={"color": INK, "lw": 1.5}, boxprops={"color": MUTED}, whiskerprops={"color": MUTED},
                capprops={"color": MUTED})
     for i, method in enumerate(METHODS):
-        for s in SETS:
-            e = m.loc[(m["method"] == method) & (m["set"] == s), "rel_err"].values
-            ax.scatter(e, i + rng.uniform(-0.18, 0.18, len(e)), s=12, marker=MARKER[s], color=COLOR[method],
-                       edgecolor="white", linewidth=0.4, alpha=0.85, zorder=3)
+        e = data[i]
+        ax.scatter(e, i + rng.uniform(-0.18, 0.18, len(e)), s=12, marker="o", color=COLOR[method],
+                   edgecolor="white", linewidth=0.4, alpha=0.85, zorder=3)
         med = np.median(data[i]) if len(data[i]) else np.nan
         label = "median < 0.001" if med < 0.001 else "median {v:.3f}".format(v=med)
         ax.text(1.01, i, label, transform=ax.get_yaxis_transform(), ha="left",

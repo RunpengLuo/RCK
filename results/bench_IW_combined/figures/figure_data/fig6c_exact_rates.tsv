@@ -1,0 +1,7 @@
+m	class	kind	rate
+rck_mc	simple	blind	0.75
+rck_mc	simple	phased	0.75
+rck_mc	hard	blind	0.6785714285714286
+rck_mc	hard	phased	0.6785714285714286
+rck_mc	sibling	blind	0.875
+rck_mc	sibling	phased	0.875

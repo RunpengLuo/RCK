@@ -1,0 +1,29 @@
+ours	baseline	metric	n_pairs	median_diff	ours_better	ties	wilcoxon_p	p_holm
+rck_mc	coral:walks_kept	ecDNA CN recall	36	0.1098	27	0	4.881e-07	3.417e-06
+rck_mc	coral:walks_kept	ecDNA CN precision	36	0.5036	24	12	1.822e-05	0.0001093
+rck_mc	coral:walks_kept	proportion TV	36	-0.1715	29	1	2.956e-05	0.0001478
+rck_mc	coral:walks_kept	species F1 (blind)	36	0.4	26	3	0.0008953	0.001791
+rck_mc	coral:walks_kept	J_seg (blind)	36	0.3142	23	2	7.563e-05	0.0003025
+rck_mc	coral:walks_kept	J_adj (blind)	36	0.04167	18	11	0.005545	0.005545
+rck_mc	coral:walks_kept	exact cycles	36	1	22	9	0.0003464	0.001039
+rck_mc	coral:walks_dropped	ecDNA CN recall	36	0.2336	32	0	1.251e-09	8.76e-09
+rck_mc	coral:walks_dropped	ecDNA CN precision	33	0	8	25	0.01172	0.01172
+rck_mc	coral:walks_dropped	proportion TV	36	-0.2028	27	5	7.895e-06	4.737e-05
+rck_mc	coral:walks_dropped	species F1 (blind)	36	0.4	24	5	0.002774	0.005549
+rck_mc	coral:walks_dropped	J_seg (blind)	36	0.3166	23	2	7.563e-05	0.0003781
+rck_mc	coral:walks_dropped	J_adj (blind)	36	0.2929	23	8	0.0002544	0.001018
+rck_mc	coral:walks_dropped	exact cycles	36	1	22	9	0.0003464	0.001039
+rck_mc	ce:walks_kept	ecDNA CN recall	36	-4.914e-07	16	0	0.1045	0.1135
+rck_mc	ce:walks_kept	ecDNA CN precision	36	0.6226	28	8	3.79e-06	2.274e-05
+rck_mc	ce:walks_kept	proportion TV	36	-0.3229	32	0	1.56e-08	1.092e-07
+rck_mc	ce:walks_kept	species F1 (blind)	36	0.4544	25	5	9.702e-05	0.0004851
+rck_mc	ce:walks_kept	J_seg (blind)	36	0.1132	22	2	0.0002993	0.001197
+rck_mc	ce:walks_kept	J_adj (blind)	36	0	16	10	0.05674	0.1135
+rck_mc	ce:walks_kept	exact cycles	36	1	19	13	0.0004671	0.001401
+rck_mc	ce:walks_dropped	ecDNA CN recall	36	0.01664	23	0	0.0001721	0.0008607
+rck_mc	ce:walks_dropped	ecDNA CN precision	36	0.6194	27	9	5.606e-06	3.924e-05
+rck_mc	ce:walks_dropped	proportion TV	36	-0.2239	29	1	2.213e-05	0.0001328
+rck_mc	ce:walks_dropped	species F1 (blind)	36	0.375	23	6	0.0007919	0.001584
+rck_mc	ce:walks_dropped	J_seg (blind)	36	0.1132	22	2	0.0002993	0.001197
+rck_mc	ce:walks_dropped	J_adj (blind)	36	0	16	10	0.05674	0.05674
+rck_mc	ce:walks_dropped	exact cycles	36	1	19	13	0.0004671	0.001401

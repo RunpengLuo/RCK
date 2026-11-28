@@ -1,0 +1,331 @@
+case	m	method_variant	truth	inferred	truth_proportion	inferred_proportion	kind
+simple_S1_s11001	rck_mc	rck_mc	ecdna1	ec1	1.0	1.0	matched
+simple_S1_s11001	coral	coral:walks_kept	ecdna1	cycle1	1.0	0.8333333333333334	matched
+simple_S1_s11001	coral	coral:walks_kept		cycle2	0.0	0.1666666666666666	false
+simple_S1_s11001	ce	ce:walks_kept	ecdna1	cycle1	1.0	0.7142857142857143	matched
+simple_S1_s11001	ce	ce:walks_kept		cycle2	0.0	0.1428571428571428	false
+simple_S1_s11001	ce	ce:walks_kept		cycle3	0.0	0.1428571428571428	false
+simple_S1_s11002	rck_mc	rck_mc	ecdna1	ec1	1.0	1.0	matched
+simple_S1_s11002	coral	coral:walks_kept	ecdna1	cycle1	1.0	0.6666666666666666	matched
+simple_S1_s11002	coral	coral:walks_kept		cycle2	0.0	0.3333333333333333	false
+simple_S1_s11002	ce	ce:walks_kept	ecdna1	cycle1	1.0	0.5	matched
+simple_S1_s11002	ce	ce:walks_kept		cycle2	0.0	0.25	false
+simple_S1_s11002	ce	ce:walks_kept		cycle3	0.0	0.125	false
+simple_S1_s11002	ce	ce:walks_kept		cycle4	0.0	0.125	false
+simple_S1_s11003	rck_mc	rck_mc	ecdna1	ec1	1.0	1.0	matched
+simple_S1_s11003	coral	coral:walks_kept	ecdna1	cycle1	1.0	0.6666666666666666	matched
+simple_S1_s11003	coral	coral:walks_kept		cycle2	0.0	0.3333333333333333	false
+simple_S1_s11003	ce	ce:walks_kept	ecdna1	cycle1	1.0	0.3333333333333333	matched
+simple_S1_s11003	ce	ce:walks_kept		cycle2	0.0	0.25	false
+simple_S1_s11003	ce	ce:walks_kept		cycle3	0.0	0.1666666666666666	false
+simple_S1_s11003	ce	ce:walks_kept		cycle4	0.0	0.0833333333333333	false
+simple_S1_s11003	ce	ce:walks_kept		cycle5	0.0	0.1666666666666666	false
+simple_S1_s11004	rck_mc	rck_mc	ecdna1	ec1	1.0	0.6772126559126519	matched
+simple_S1_s11004	rck_mc	rck_mc		ec2	0.0	0.161393672043674	false
+simple_S1_s11004	rck_mc	rck_mc		ec3	0.0	0.161393672043674	false
+simple_S1_s11004	coral	coral:walks_kept	ecdna1	cycle1	1.0	1.0	matched
+simple_S1_s11004	ce	ce:walks_kept	ecdna1	cycle1	1.0	0.5555555555555556	matched
+simple_S1_s11004	ce	ce:walks_kept		cycle2	0.0	0.2222222222222222	false
+simple_S1_s11004	ce	ce:walks_kept		cycle3	0.0	0.2222222222222222	false
+simple_S2_s12002	rck_mc	rck_mc	ecdna1	ec2	0.460366130643162	0.4468733994562007	matched
+simple_S2_s12002	rck_mc	rck_mc	ecdna2	ec1	0.539633869356838	0.5531266005437994	matched
+simple_S2_s12002	coral	coral:walks_kept	ecdna1	cycle2	0.460366130643162	0.46875	matched
+simple_S2_s12002	coral	coral:walks_kept	ecdna2	cycle1	0.539633869356838	0.53125	matched
+simple_S2_s12002	ce	ce:walks_kept	ecdna1	cycle2	0.460366130643162	0.46875	matched
+simple_S2_s12002	ce	ce:walks_kept	ecdna2	cycle1	0.539633869356838	0.53125	matched
+simple_S2_s12003	rck_mc	rck_mc	ecdna1	ec2	0.1836267141406605	0.1836267141406605	matched
+simple_S2_s12003	rck_mc	rck_mc	ecdna2	ec1	0.8163732858593395	0.8163732858593394	matched
+simple_S2_s12003	coral	coral:walks_kept	ecdna1	cycle2	0.1836267141406605	0.2352941176470588	matched
+simple_S2_s12003	coral	coral:walks_kept	ecdna2	cycle1	0.8163732858593395	0.7647058823529411	matched
+simple_S2_s12003	ce	ce:walks_kept	ecdna1	cycle2	0.1836267141406605	0.1904761904761904	matched
+simple_S2_s12003	ce	ce:walks_kept	ecdna2	cycle1	0.8163732858593395	0.8095238095238095	matched
+simple_S2_s12004	rck_mc	rck_mc	ecdna1	ec1	0.6770163342822938	0.4037028861570593	matched
+simple_S2_s12004	rck_mc	rck_mc	ecdna2	ec3	0.3229836657177062	0.1925942276858813	matched
+simple_S2_s12004	rck_mc	rck_mc		ec2	0.0	0.4037028861570593	false
+simple_S2_s12004	coral	coral:walks_kept	ecdna1	cycle1	0.6770163342822938	0.8461538461538461	matched
+simple_S2_s12004	coral	coral:walks_kept	ecdna2	cycle2	0.3229836657177062	0.1538461538461538	matched
+simple_S2_s12004	ce	ce:walks_kept	ecdna1	cycle1	0.6770163342822938	0.5238095238095238	matched
+simple_S2_s12004	ce	ce:walks_kept	ecdna2	cycle3	0.3229836657177062	0.0952380952380952	matched
+simple_S2_s12004	ce	ce:walks_kept		cycle2	0.0	0.0952380952380952	false
+simple_S2_s12004	ce	ce:walks_kept		cycle4	0.0	0.0952380952380952	false
+simple_S2_s12004	ce	ce:walks_kept		cycle5	0.0	0.0952380952380952	false
+simple_S2_s12004	ce	ce:walks_kept		cycle6	0.0	0.0952380952380952	false
+simple_S2_s12005	rck_mc	rck_mc	ecdna1	ec1	0.7222210120503467	0.7189332157873126	matched
+simple_S2_s12005	rck_mc	rck_mc	ecdna2	ec2	0.2777789879496532	0.2810667842126874	matched
+simple_S2_s12005	coral	coral:walks_kept	ecdna1	cycle1	0.7222210120503467	0.7205882352941176	matched
+simple_S2_s12005	coral	coral:walks_kept	ecdna2	cycle2	0.2777789879496532	0.2794117647058823	matched
+simple_S2_s12005	ce	ce:walks_kept	ecdna1	cycle1	0.7222210120503467	0.7205882352941176	matched
+simple_S2_s12005	ce	ce:walks_kept	ecdna2	cycle2	0.2777789879496532	0.2794117647058823	matched
+simple_S4_s13001	rck_mc	rck_mc	ecdna1	ec2	0.2894353821447415	0.2894353821447416	matched
+simple_S4_s13001	rck_mc	rck_mc	ecdna2	ec4	0.1013013056222053	0.1013013056222053	matched
+simple_S4_s13001	rck_mc	rck_mc	ecdna3	ec3	0.2329951591879807	0.2329951591879807	matched
+simple_S4_s13001	rck_mc	rck_mc	ecdna4	ec1	0.3762681530450724	0.3762681530450724	matched
+simple_S4_s13001	coral	coral:walks_kept	ecdna1		0.2894353821447415	0.0	missed
+simple_S4_s13001	coral	coral:walks_kept	ecdna2		0.1013013056222053	0.0	missed
+simple_S4_s13001	coral	coral:walks_kept	ecdna3	cycle2	0.2329951591879807	0.358974358974359	matched
+simple_S4_s13001	coral	coral:walks_kept	ecdna4	cycle1	0.3762681530450724	0.6410256410256411	matched
+simple_S4_s13001	ce	ce:walks_kept	ecdna1	cycle2	0.2894353821447415	0.2878787878787879	matched
+simple_S4_s13001	ce	ce:walks_kept	ecdna2	cycle4	0.1013013056222053	0.106060606060606	matched
+simple_S4_s13001	ce	ce:walks_kept	ecdna3	cycle3	0.2329951591879807	0.2272727272727272	matched
+simple_S4_s13001	ce	ce:walks_kept	ecdna4	cycle1	0.3762681530450724	0.3787878787878788	matched
+simple_S4_s13002	rck_mc	rck_mc	ecdna1	ec7	0.21487501539577	0.0359564595721344	matched
+simple_S4_s13002	rck_mc	rck_mc	ecdna2	ec4	0.21487501539577	0.1556923625849988	matched
+simple_S4_s13002	rck_mc	rck_mc	ecdna3	ec1	0.322312523093655	0.2335385438774983	matched
+simple_S4_s13002	rck_mc	rck_mc	ecdna4	ec2	0.2479374461148049	0.1796484653546405	matched
+simple_S4_s13002	rck_mc	rck_mc		ec3	0.0	0.1556923625849988	false
+simple_S4_s13002	rck_mc	rck_mc		ec5	0.0	0.1197359030128645	false
+simple_S4_s13002	rck_mc	rck_mc		ec6	0.0	0.1197359030128645	false
+simple_S4_s13002	coral	coral:walks_kept	ecdna1	cycle1	0.21487501539577	0.5	matched
+simple_S4_s13002	coral	coral:walks_kept	ecdna2	cycle4	0.21487501539577	0.1	matched
+simple_S4_s13002	coral	coral:walks_kept	ecdna3	cycle3	0.322312523093655	0.2	matched
+simple_S4_s13002	coral	coral:walks_kept	ecdna4	cycle2	0.2479374461148049	0.2	matched
+simple_S4_s13002	ce	ce:walks_kept	ecdna1	cycle2	0.21487501539577	0.1162790697674418	matched
+simple_S4_s13002	ce	ce:walks_kept	ecdna2	cycle3	0.21487501539577	0.1162790697674418	matched
+simple_S4_s13002	ce	ce:walks_kept	ecdna3	cycle1	0.322312523093655	0.1860465116279069	matched
+simple_S4_s13002	ce	ce:walks_kept	ecdna4	cycle4	0.2479374461148049	0.0697674418604651	matched
+simple_S4_s13002	ce	ce:walks_kept		cycle5	0.0	0.0465116279069767	false
+simple_S4_s13002	ce	ce:walks_kept		cycle6	0.0	0.0232558139534883	false
+simple_S4_s13002	ce	ce:walks_kept		cycle7	0.0	0.0232558139534883	false
+simple_S4_s13002	ce	ce:walks_kept		cycle8	0.0	0.0697674418604651	false
+simple_S4_s13002	ce	ce:walks_kept		cycle9	0.0	0.0697674418604651	false
+simple_S4_s13002	ce	ce:walks_kept		cycle10	0.0	0.0465116279069767	false
+simple_S4_s13002	ce	ce:walks_kept		cycle11	0.0	0.0465116279069767	false
+simple_S4_s13002	ce	ce:walks_kept		cycle12	0.0	0.0465116279069767	false
+simple_S4_s13002	ce	ce:walks_kept		cycle13	0.0	0.0465116279069767	false
+simple_S4_s13002	ce	ce:walks_kept		cycle14	0.0	0.0465116279069767	false
+simple_S4_s13002	ce	ce:walks_kept		cycle15	0.0	0.0232558139534883	false
+simple_S4_s13002	ce	ce:walks_kept		cycle16	0.0	0.0232558139534883	false
+simple_S4_s13003	rck_mc	rck_mc	ecdna1	ec4	0.0819820666323637	0.0819820666323637	matched
+simple_S4_s13003	rck_mc	rck_mc	ecdna2	ec2	0.3747751617479485	0.3747751617479485	matched
+simple_S4_s13003	rck_mc	rck_mc	ecdna3	ec3	0.1288289618508573	0.1288289618508573	matched
+simple_S4_s13003	rck_mc	rck_mc	ecdna4	ec1	0.4144138097688304	0.4144138097688303	matched
+simple_S4_s13003	coral	coral:walks_kept	ecdna1	cycle4	0.0819820666323637	0.0934579439252336	matched
+simple_S4_s13003	coral	coral:walks_kept	ecdna2	cycle2	0.3747751617479485	0.3644859813084112	matched
+simple_S4_s13003	coral	coral:walks_kept	ecdna3	cycle3	0.1288289618508573	0.1214953271028037	matched
+simple_S4_s13003	coral	coral:walks_kept	ecdna4	cycle1	0.4144138097688304	0.4205607476635514	matched
+simple_S4_s13003	ce	ce:walks_kept	ecdna1		0.0819820666323637	0.0	missed
+simple_S4_s13003	ce	ce:walks_kept	ecdna2	cycle2	0.3747751617479485	0.4158415841584158	matched
+simple_S4_s13003	ce	ce:walks_kept	ecdna3	cycle3	0.1288289618508573	0.1386138613861386	matched
+simple_S4_s13003	ce	ce:walks_kept	ecdna4	cycle1	0.4144138097688304	0.4455445544554455	matched
+simple_S4_s13004	rck_mc	rck_mc	ecdna1	ec4	0.1471613874786829	0.1471613874786829	matched
+simple_S4_s13004	rck_mc	rck_mc	ecdna2	ec2	0.2074472300727528	0.2074472300727528	matched
+simple_S4_s13004	rck_mc	rck_mc	ecdna3	ec5	0.1152484611515293	0.1152484611515293	matched
+simple_S4_s13004	rck_mc	rck_mc	ecdna4	ec1	0.530142921297035	0.4183552165282158	matched
+simple_S4_s13004	rck_mc	rck_mc		ec3	0.0	0.1117877047688191	false
+simple_S4_s13004	coral	coral:walks_kept	ecdna1	cycle3	0.1471613874786829	0.1264330525057081	matched
+simple_S4_s13004	coral	coral:walks_kept	ecdna2	cycle2	0.2074472300727528	0.240706684808139	matched
+simple_S4_s13004	coral	coral:walks_kept	ecdna3	cycle4	0.1152484611515293	0.1203533424040695	matched
+simple_S4_s13004	coral	coral:walks_kept	ecdna4	cycle1	0.530142921297035	0.5125069202820832	matched
+simple_S4_s13004	ce	ce:walks_kept	ecdna1	cycle3	0.1471613874786829	0.1481481481481481	matched
+simple_S4_s13004	ce	ce:walks_kept	ecdna2	cycle2	0.2074472300727528	0.2222222222222222	matched
+simple_S4_s13004	ce	ce:walks_kept	ecdna3	cycle4	0.1152484611515293	0.1111111111111111	matched
+simple_S4_s13004	ce	ce:walks_kept	ecdna4	cycle1	0.530142921297035	0.5185185185185185	matched
+hard_S1_s14001	rck_mc	rck_mc	ecdna1	ec1	1.0	1.0	matched
+hard_S1_s14001	coral	coral:walks_kept	ecdna1	cycle1	1.0	0.8333333333333334	matched
+hard_S1_s14001	coral	coral:walks_kept		cycle2	0.0	0.1666666666666666	false
+hard_S1_s14001	ce	ce:walks_kept	ecdna1	cycle1	1.0	0.6666666666666666	matched
+hard_S1_s14001	ce	ce:walks_kept		cycle2	0.0	0.1333333333333333	false
+hard_S1_s14001	ce	ce:walks_kept		cycle3	0.0	0.0666666666666666	false
+hard_S1_s14001	ce	ce:walks_kept		cycle4	0.0	0.1333333333333333	false
+hard_S1_s14003	rck_mc	rck_mc	ecdna1	ec1	1.0	1.0	matched
+hard_S1_s14003	coral	coral:walks_kept	ecdna1	cycle1	1.0	0.6	matched
+hard_S1_s14003	coral	coral:walks_kept		cycle2	0.0	0.4	false
+hard_S1_s14003	ce	ce:walks_kept	ecdna1	cycle1	1.0	0.4285714285714285	matched
+hard_S1_s14003	ce	ce:walks_kept		cycle2	0.0	0.2857142857142857	false
+hard_S1_s14003	ce	ce:walks_kept		cycle3	0.0	0.2857142857142857	false
+hard_S1_s14004	rck_mc	rck_mc	ecdna1	ec1	1.0	1.0	matched
+hard_S1_s14004	coral	coral:walks_kept	ecdna1	cycle1	1.0	1.0	matched
+hard_S1_s14004	ce	ce:walks_kept	ecdna1	cycle1	1.0	0.5555555555555556	matched
+hard_S1_s14004	ce	ce:walks_kept		cycle2	0.0	0.2222222222222222	false
+hard_S1_s14004	ce	ce:walks_kept		cycle3	0.0	0.2222222222222222	false
+hard_S1_s14006	rck_mc	rck_mc	ecdna1	ec1	1.0	1.0	matched
+hard_S1_s14006	coral	coral:walks_kept	ecdna1	cycle1	1.0	0.9090909090909092	matched
+hard_S1_s14006	coral	coral:walks_kept		cycle2	0.0	0.0909090909090909	false
+hard_S1_s14006	ce	ce:walks_kept	ecdna1	cycle1	1.0	0.9090909090909092	matched
+hard_S1_s14006	ce	ce:walks_kept		cycle2	0.0	0.0909090909090909	false
+hard_S2_s15001	rck_mc	rck_mc	ecdna1	ec1	0.5652173913043479	0.5652173913043478	matched
+hard_S2_s15001	rck_mc	rck_mc	ecdna2	ec2	0.4347826086956521	0.4347826086956521	matched
+hard_S2_s15001	coral	coral:walks_kept	ecdna1	cycle2	0.5652173913043479	0.3888888888888889	matched
+hard_S2_s15001	coral	coral:walks_kept	ecdna2	cycle1	0.4347826086956521	0.5	matched
+hard_S2_s15001	coral	coral:walks_kept		cycle3	0.0	0.1111111111111111	false
+hard_S2_s15001	ce	ce:walks_kept	ecdna1	cycle4	0.5652173913043479	0.1111111111111111	matched
+hard_S2_s15001	ce	ce:walks_kept	ecdna2	cycle2	0.4347826086956521	0.1666666666666666	matched
+hard_S2_s15001	ce	ce:walks_kept		cycle1	0.0	0.6111111111111112	false
+hard_S2_s15001	ce	ce:walks_kept		cycle3	0.0	0.1111111111111111	false
+hard_S2_s15003	rck_mc	rck_mc	ecdna1	ec2	0.1839617668780876	0.202308156072908	matched
+hard_S2_s15003	rck_mc	rck_mc	ecdna2	ec1	0.8160382331219125	0.7976918439270918	matched
+hard_S2_s15003	coral	coral:walks_kept	ecdna1	cycle1	0.1839617668780876	0.75	matched
+hard_S2_s15003	coral	coral:walks_kept	ecdna2	cycle2	0.8160382331219125	0.25	matched
+hard_S2_s15003	ce	ce:walks_kept	ecdna1	cycle5	0.1839617668780876	0.1194029850746268	matched
+hard_S2_s15003	ce	ce:walks_kept	ecdna2	cycle2	0.8160382331219125	0.2238805970149253	matched
+hard_S2_s15003	ce	ce:walks_kept		cycle1	0.0	0.4029850746268656	false
+hard_S2_s15003	ce	ce:walks_kept		cycle3	0.0	0.1194029850746268	false
+hard_S2_s15003	ce	ce:walks_kept		cycle4	0.0	0.1343283582089552	false
+hard_S2_s15004	rck_mc	rck_mc	ecdna1	ec2	0.4841246378607863	0.4841246378607863	matched
+hard_S2_s15004	rck_mc	rck_mc	ecdna2	ec1	0.5158753621392136	0.5158753621392136	matched
+hard_S2_s15004	coral	coral:walks_kept	ecdna1	cycle1	0.4841246378607863	0.8	matched
+hard_S2_s15004	coral	coral:walks_kept	ecdna2	cycle2	0.5158753621392136	0.2	matched
+hard_S2_s15004	ce	ce:walks_kept	ecdna1	cycle1	0.4841246378607863	0.5294117647058824	matched
+hard_S2_s15004	ce	ce:walks_kept	ecdna2	cycle3	0.5158753621392136	0.0588235294117647	matched
+hard_S2_s15004	ce	ce:walks_kept		cycle2	0.0	0.1176470588235294	false
+hard_S2_s15004	ce	ce:walks_kept		cycle4	0.0	0.0588235294117647	false
+hard_S2_s15004	ce	ce:walks_kept		cycle5	0.0	0.1176470588235294	false
+hard_S2_s15004	ce	ce:walks_kept		cycle6	0.0	0.0588235294117647	false
+hard_S2_s15004	ce	ce:walks_kept		cycle7	0.0	0.0588235294117647	false
+hard_S2_s15005	rck_mc	rck_mc	ecdna1	ec2	0.1966266270546691	0.1966266270546691	matched
+hard_S2_s15005	rck_mc	rck_mc	ecdna2	ec1	0.8033733729453308	0.8033733729453307	matched
+hard_S2_s15005	coral	coral:walks_kept	ecdna1	cycle2	0.1966266270546691	0.1612903225806451	matched
+hard_S2_s15005	coral	coral:walks_kept	ecdna2	cycle1	0.8033733729453308	0.8387096774193549	matched
+hard_S2_s15005	ce	ce:walks_kept	ecdna1	cycle2	0.1966266270546691	0.1612903225806451	matched
+hard_S2_s15005	ce	ce:walks_kept	ecdna2	cycle1	0.8033733729453308	0.8387096774193549	matched
+hard_S4_s16002	rck_mc	rck_mc	ecdna1	ec1	0.4569539691142494	0.4569539691142495	matched
+hard_S4_s16002	rck_mc	rck_mc	ecdna2	ec3	0.1556317529139959	0.1556317529139959	matched
+hard_S4_s16002	rck_mc	rck_mc	ecdna3	ec2	0.258276185314503	0.258276185314503	matched
+hard_S4_s16002	rck_mc	rck_mc	ecdna4	ec4	0.1291380926572515	0.1291380926572515	matched
+hard_S4_s16002	coral	coral:walks_kept	ecdna1	cycle1	0.4569539691142494	0.4285714285714285	matched
+hard_S4_s16002	coral	coral:walks_kept	ecdna2	cycle3	0.1556317529139959	0.2857142857142857	matched
+hard_S4_s16002	coral	coral:walks_kept	ecdna3	cycle2	0.258276185314503	0.2857142857142857	matched
+hard_S4_s16002	coral	coral:walks_kept	ecdna4		0.1291380926572515	0.0	missed
+hard_S4_s16002	ce	ce:walks_kept	ecdna1	cycle3	0.4569539691142494	0.125	matched
+hard_S4_s16002	ce	ce:walks_kept	ecdna2	cycle4	0.1556317529139959	0.125	matched
+hard_S4_s16002	ce	ce:walks_kept	ecdna3	cycle5	0.258276185314503	0.125	matched
+hard_S4_s16002	ce	ce:walks_kept	ecdna4	cycle1	0.1291380926572515	0.375	matched
+hard_S4_s16002	ce	ce:walks_kept		cycle2	0.0	0.25	false
+hard_S4_s16003	rck_mc	rck_mc	ecdna1	ec4	0.1462598824196411	0.1196325327339053	matched
+hard_S4_s16003	rck_mc	rck_mc	ecdna2	ec3	0.1462598824196411	0.1272995269582741	matched
+hard_S4_s16003	rck_mc	rck_mc	ecdna3	ec1	0.517002838043532	0.4662583697043392	matched
+hard_S4_s16003	rck_mc	rck_mc	ecdna4	ec2	0.1904773971171859	0.1671770378695759	matched
+hard_S4_s16003	rck_mc	rck_mc		ec5	0.0	0.1196325327339053	false
+hard_S4_s16003	coral	coral:walks_kept	ecdna1	cycle1	0.1462598824196411	1.0	matched
+hard_S4_s16003	coral	coral:walks_kept	ecdna2		0.1462598824196411	0.0	missed
+hard_S4_s16003	coral	coral:walks_kept	ecdna3		0.517002838043532	0.0	missed
+hard_S4_s16003	coral	coral:walks_kept	ecdna4		0.1904773971171859	0.0	missed
+hard_S4_s16003	ce	ce:walks_kept	ecdna1	cycle2	0.1462598824196411	0.1875	matched
+hard_S4_s16003	ce	ce:walks_kept	ecdna2		0.1462598824196411	0.0	missed
+hard_S4_s16003	ce	ce:walks_kept	ecdna3	cycle1	0.517002838043532	0.8125	matched
+hard_S4_s16003	ce	ce:walks_kept	ecdna4		0.1904773971171859	0.0	missed
+hard_S4_s16005	rck_mc	rck_mc	ecdna1	ec4	0.0847828199390106	0.0847828199390106	matched
+hard_S4_s16005	rck_mc	rck_mc	ecdna2	ec1	0.5989132899288458	0.5989132899288458	matched
+hard_S4_s16005	rck_mc	rck_mc	ecdna3	ec2	0.2173906002032976	0.2173906002032977	matched
+hard_S4_s16005	rck_mc	rck_mc	ecdna4	ec3	0.0989132899288458	0.0989132899288458	matched
+hard_S4_s16005	coral	coral:walks_kept	ecdna1		0.0847828199390106	0.0	missed
+hard_S4_s16005	coral	coral:walks_kept	ecdna2	cycle1	0.5989132899288458	1.0	matched
+hard_S4_s16005	coral	coral:walks_kept	ecdna3		0.2173906002032976	0.0	missed
+hard_S4_s16005	coral	coral:walks_kept	ecdna4		0.0989132899288458	0.0	missed
+hard_S4_s16005	ce	ce:walks_kept	ecdna1		0.0847828199390106	0.0	missed
+hard_S4_s16005	ce	ce:walks_kept	ecdna2	cycle1	0.5989132899288458	1.0	matched
+hard_S4_s16005	ce	ce:walks_kept	ecdna3		0.2173906002032976	0.0	missed
+hard_S4_s16005	ce	ce:walks_kept	ecdna4		0.0989132899288458	0.0	missed
+hard_S4_s16006	rck_mc	rck_mc	ecdna1	ec2	0.2326627889514206	0.2326627889514206	matched
+hard_S4_s16006	rck_mc	rck_mc	ecdna2	ec3	0.2147630872889554	0.2147630872889554	matched
+hard_S4_s16006	rck_mc	rck_mc	ecdna3	ec1	0.4541424309463788	0.4541424309463788	matched
+hard_S4_s16006	rck_mc	rck_mc	ecdna4	ec4	0.0984316928132451	0.0984316928132451	matched
+hard_S4_s16006	coral	coral:walks_kept	ecdna1	cycle1	0.2326627889514206	0.7333333333333333	matched
+hard_S4_s16006	coral	coral:walks_kept	ecdna2	cycle2	0.2147630872889554	0.2666666666666666	matched
+hard_S4_s16006	coral	coral:walks_kept	ecdna3		0.4541424309463788	0.0	missed
+hard_S4_s16006	coral	coral:walks_kept	ecdna4		0.0984316928132451	0.0	missed
+hard_S4_s16006	ce	ce:walks_kept	ecdna1	cycle6	0.2326627889514206	0.0689655172413793	matched
+hard_S4_s16006	ce	ce:walks_kept	ecdna2	cycle5	0.2147630872889554	0.1034482758620689	matched
+hard_S4_s16006	ce	ce:walks_kept	ecdna3	cycle2	0.4541424309463788	0.1724137931034483	matched
+hard_S4_s16006	ce	ce:walks_kept	ecdna4	cycle4	0.0984316928132451	0.1379310344827586	matched
+hard_S4_s16006	ce	ce:walks_kept		cycle1	0.0	0.3793103448275862	false
+hard_S4_s16006	ce	ce:walks_kept		cycle3	0.0	0.1379310344827586	false
+sib_opp_mirror_s17003	rck_mc	rck_mc	ecdna1	ec1	0.5797912113937456	0.5797912113937456	matched
+sib_opp_mirror_s17003	rck_mc	rck_mc	ecdna2	ec2	0.4202087886062545	0.4202087886062545	matched
+sib_opp_mirror_s17003	coral	coral:walks_kept	ecdna1	cycle1	0.5797912113937456	0.52	matched
+sib_opp_mirror_s17003	coral	coral:walks_kept	ecdna2	cycle2	0.4202087886062545	0.36	matched
+sib_opp_mirror_s17003	coral	coral:walks_kept		cycle3	0.0	0.12	false
+sib_opp_mirror_s17003	ce	ce:walks_kept	ecdna1	cycle1	0.5797912113937456	0.52	matched
+sib_opp_mirror_s17003	ce	ce:walks_kept	ecdna2	cycle2	0.4202087886062545	0.36	matched
+sib_opp_mirror_s17003	ce	ce:walks_kept		cycle3	0.0	0.12	false
+sib_opp_mirror_s17004	rck_mc	rck_mc	ecdna1	ec2	0.4284283662785355	0.4284283662785354	matched
+sib_opp_mirror_s17004	rck_mc	rck_mc	ecdna2	ec1	0.5715716337214645	0.5715716337214646	matched
+sib_opp_mirror_s17004	coral	coral:walks_kept	ecdna1	cycle3	0.4284283662785355	0.1428571428571428	matched
+sib_opp_mirror_s17004	coral	coral:walks_kept	ecdna2	cycle1	0.5715716337214645	0.5714285714285714	matched
+sib_opp_mirror_s17004	coral	coral:walks_kept		cycle2	0.0	0.2857142857142857	false
+sib_opp_mirror_s17004	ce	ce:walks_kept	ecdna1	cycle1	0.4284283662785355	0.3333333333333333	matched
+sib_opp_mirror_s17004	ce	ce:walks_kept	ecdna2	cycle3	0.5715716337214645	0.2222222222222222	matched
+sib_opp_mirror_s17004	ce	ce:walks_kept		cycle2	0.0	0.2222222222222222	false
+sib_opp_mirror_s17004	ce	ce:walks_kept		cycle4	0.0	0.2222222222222222	false
+sib_opp_mirror_s17006	rck_mc	rck_mc	ecdna1	ec1	0.8480591821491766	0.7498520457767904	matched
+sib_opp_mirror_s17006	rck_mc	rck_mc	ecdna2	ec2	0.1519408178508232	0.1519408178508232	matched
+sib_opp_mirror_s17006	rck_mc	rck_mc		ec3	0.0	0.0982071363723862	false
+sib_opp_mirror_s17006	coral	coral:walks_kept	ecdna1	cycle3	0.8480591821491766	0.0813953488372093	matched
+sib_opp_mirror_s17006	coral	coral:walks_kept	ecdna2	cycle1	0.1519408178508232	0.5348837209302325	matched
+sib_opp_mirror_s17006	coral	coral:walks_kept		cycle2	0.0	0.3837209302325581	false
+sib_opp_mirror_s17006	ce	ce:walks_kept	ecdna1	cycle3	0.8480591821491766	0.1089108910891089	matched
+sib_opp_mirror_s17006	ce	ce:walks_kept	ecdna2	cycle10	0.1519408178508232	0.0792079207920792	matched
+sib_opp_mirror_s17006	ce	ce:walks_kept		cycle1	0.0	0.4158415841584158	false
+sib_opp_mirror_s17006	ce	ce:walks_kept		cycle2	0.0	0.2475247524752475	false
+sib_opp_mirror_s17006	ce	ce:walks_kept		cycle4	0.0	0.0495049504950495	false
+sib_opp_mirror_s17006	ce	ce:walks_kept		cycle9	0.0	0.099009900990099	false
+sib_opp_mirror_s17008	rck_mc	rck_mc	ecdna1	ec2	0.3144769879036328	0.2905516589525054	matched
+sib_opp_mirror_s17008	rck_mc	rck_mc	ecdna2	ec1	0.6855230120963672	0.7094483410474947	matched
+sib_opp_mirror_s17008	coral	coral:walks_kept	ecdna1	cycle1	0.3144769879036328	0.8	matched
+sib_opp_mirror_s17008	coral	coral:walks_kept	ecdna2	cycle2	0.6855230120963672	0.2	matched
+sib_opp_mirror_s17008	ce	ce:walks_kept	ecdna1	cycle1	0.3144769879036328	0.5	matched
+sib_opp_mirror_s17008	ce	ce:walks_kept	ecdna2	cycle4	0.6855230120963672	0.125	matched
+sib_opp_mirror_s17008	ce	ce:walks_kept		cycle2	0.0	0.125	false
+sib_opp_mirror_s17008	ce	ce:walks_kept		cycle3	0.0	0.125	false
+sib_opp_mirror_s17008	ce	ce:walks_kept		cycle5	0.0	0.125	false
+sib_opp_shared_s18002	rck_mc	rck_mc	ecdna1	ec2	0.3157912681707839	0.240218892437402	matched
+sib_opp_shared_s18002	rck_mc	rck_mc	ecdna2	ec1	0.684208731829216	0.6842087318292162	matched
+sib_opp_shared_s18002	rck_mc	rck_mc		ec3	0.0	0.0755723757333819	false
+sib_opp_shared_s18002	coral	coral:walks_kept	ecdna1	cycle1	0.3157912681707839	1.0	matched
+sib_opp_shared_s18002	coral	coral:walks_kept	ecdna2		0.684208731829216	0.0	missed
+sib_opp_shared_s18002	ce	ce:walks_kept	ecdna1	cycle1	0.3157912681707839	1.0	matched
+sib_opp_shared_s18002	ce	ce:walks_kept	ecdna2		0.684208731829216	0.0	missed
+sib_opp_shared_s18004	rck_mc	rck_mc	ecdna1	ec2	0.2777777777777778	0.2777777777777778	matched
+sib_opp_shared_s18004	rck_mc	rck_mc	ecdna2	ec1	0.7222222222222222	0.7222222222222222	matched
+sib_opp_shared_s18004	coral	coral:walks_kept	ecdna1	cycle1	0.2777777777777778	1.0	matched
+sib_opp_shared_s18004	coral	coral:walks_kept	ecdna2		0.7222222222222222	0.0	missed
+sib_opp_shared_s18004	ce	ce:walks_kept	ecdna1	cycle1	0.2777777777777778	0.8571428571428571	matched
+sib_opp_shared_s18004	ce	ce:walks_kept	ecdna2	cycle2	0.7222222222222222	0.1428571428571428	matched
+sib_opp_shared_s18006	rck_mc	rck_mc	ecdna1	ec2	0.4858790353012329	0.4858790353012329	matched
+sib_opp_shared_s18006	rck_mc	rck_mc	ecdna2	ec1	0.5141209646987672	0.5141209646987671	matched
+sib_opp_shared_s18006	coral	coral:walks_kept	ecdna1	cycle1	0.4858790353012329	0.6666666666666666	matched
+sib_opp_shared_s18006	coral	coral:walks_kept	ecdna2	cycle2	0.5141209646987672	0.3333333333333333	matched
+sib_opp_shared_s18006	ce	ce:walks_kept	ecdna1	cycle1	0.4858790353012329	0.5454545454545454	matched
+sib_opp_shared_s18006	ce	ce:walks_kept	ecdna2	cycle3	0.5141209646987672	0.0909090909090909	matched
+sib_opp_shared_s18006	ce	ce:walks_kept		cycle2	0.0	0.1818181818181818	false
+sib_opp_shared_s18006	ce	ce:walks_kept		cycle4	0.0	0.1818181818181818	false
+sib_opp_shared_s18007	rck_mc	rck_mc	ecdna1	ec2	0.4506074808557195	0.3117518847991412	matched
+sib_opp_shared_s18007	rck_mc	rck_mc	ecdna2	ec1	0.5493925191442804	0.3800961160532045	matched
+sib_opp_shared_s18007	rck_mc	rck_mc		ec3	0.0	0.3081519991476542	false
+sib_opp_shared_s18007	coral	coral:walks_kept	ecdna1	cycle1	0.4506074808557195	1.0	matched
+sib_opp_shared_s18007	coral	coral:walks_kept	ecdna2		0.5493925191442804	0.0	missed
+sib_opp_shared_s18007	ce	ce:walks_kept	ecdna1	cycle1	0.4506074808557195	0.7857142857142857	matched
+sib_opp_shared_s18007	ce	ce:walks_kept	ecdna2	cycle2	0.5493925191442804	0.2142857142857142	matched
+sib_mixed_mirror_s19002	rck_mc	rck_mc	ecdna1	ec1	0.8332517228568906	0.8332517228568906	matched
+sib_mixed_mirror_s19002	rck_mc	rck_mc	ecdna2	ec2	0.1667482771431094	0.1667482771431094	matched
+sib_mixed_mirror_s19002	coral	coral:walks_kept	ecdna1	cycle1	0.8332517228568906	0.8571428571428571	matched
+sib_mixed_mirror_s19002	coral	coral:walks_kept	ecdna2	cycle2	0.1667482771431094	0.1428571428571428	matched
+sib_mixed_mirror_s19002	ce	ce:walks_kept	ecdna1	cycle5	0.8332517228568906	0.0675675675675675	matched
+sib_mixed_mirror_s19002	ce	ce:walks_kept	ecdna2	cycle2	0.1667482771431094	0.1486486486486486	matched
+sib_mixed_mirror_s19002	ce	ce:walks_kept		cycle1	0.0	0.3243243243243243	false
+sib_mixed_mirror_s19002	ce	ce:walks_kept		cycle3	0.0	0.1351351351351351	false
+sib_mixed_mirror_s19002	ce	ce:walks_kept		cycle4	0.0	0.1216216216216216	false
+sib_mixed_mirror_s19002	ce	ce:walks_kept		cycle6	0.0	0.1351351351351351	false
+sib_mixed_mirror_s19002	ce	ce:walks_kept		cycle7	0.0	0.0675675675675675	false
+sib_mixed_mirror_s19006	rck_mc	rck_mc	ecdna1	ec1	0.7386463338801098	0.7299667077491484	matched
+sib_mixed_mirror_s19006	rck_mc	rck_mc	ecdna2	ec2	0.2613536661198902	0.2700332922508516	matched
+sib_mixed_mirror_s19006	coral	coral:walks_kept	ecdna1	cycle1	0.7386463338801098	1.0	matched
+sib_mixed_mirror_s19006	coral	coral:walks_kept	ecdna2		0.2613536661198902	0.0	missed
+sib_mixed_mirror_s19006	ce	ce:walks_kept	ecdna1	cycle1	0.7386463338801098	0.7555555555555555	matched
+sib_mixed_mirror_s19006	ce	ce:walks_kept	ecdna2	cycle2	0.2613536661198902	0.2444444444444444	matched
+sib_mixed_mirror_s19008	rck_mc	rck_mc	ecdna1	ec2	0.3052669138668665	0.3052669138668665	matched
+sib_mixed_mirror_s19008	rck_mc	rck_mc	ecdna2	ec1	0.6947330861331336	0.6947330861331334	matched
+sib_mixed_mirror_s19008	coral	coral:walks_kept	ecdna1	cycle2	0.3052669138668665	0.2307692307692307	matched
+sib_mixed_mirror_s19008	coral	coral:walks_kept	ecdna2	cycle1	0.6947330861331336	0.6153846153846154	matched
+sib_mixed_mirror_s19008	coral	coral:walks_kept		cycle3	0.0	0.1538461538461538	false
+sib_mixed_mirror_s19008	ce	ce:walks_kept	ecdna1	cycle2	0.3052669138668665	0.1875	matched
+sib_mixed_mirror_s19008	ce	ce:walks_kept	ecdna2	cycle1	0.6947330861331336	0.5	matched
+sib_mixed_mirror_s19008	ce	ce:walks_kept		cycle3	0.0	0.125	false
+sib_mixed_mirror_s19008	ce	ce:walks_kept		cycle4	0.0	0.125	false
+sib_mixed_mirror_s19008	ce	ce:walks_kept		cycle5	0.0	0.0625	false
+sib_mixed_mirror_s19012	rck_mc	rck_mc	ecdna1	ec1	0.8430637388765064	0.8430637388765064	matched
+sib_mixed_mirror_s19012	rck_mc	rck_mc	ecdna2	ec2	0.1569362611234935	0.1569362611234936	matched
+sib_mixed_mirror_s19012	coral	coral:walks_kept	ecdna1	cycle1	0.8430637388765064	1.0	matched
+sib_mixed_mirror_s19012	coral	coral:walks_kept	ecdna2		0.1569362611234935	0.0	missed
+sib_mixed_mirror_s19012	ce	ce:walks_kept	ecdna1	cycle1	0.8430637388765064	0.8620689655172413	matched
+sib_mixed_mirror_s19012	ce	ce:walks_kept	ecdna2	cycle2	0.1569362611234935	0.1379310344827586	matched
